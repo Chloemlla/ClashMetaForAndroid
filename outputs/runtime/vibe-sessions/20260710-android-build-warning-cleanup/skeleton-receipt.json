@@ -1,0 +1,9 @@
+{
+  "stage": "skeleton_check",
+  "branch": "main",
+  "upstream": "origin/main",
+  "worktreeInitiallyClean": true,
+  "repositoryInstructionsRead": true,
+  "localBuildsForbidden": true,
+  "existingCanonicalArtifactsPreserved": true
+}
