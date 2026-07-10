@@ -30,20 +30,40 @@ class ProxyPageAdapter(
         proxies: List<Proxy>,
         selectable: Boolean,
         parent: ProxyState,
-        links: Map<String, ProxyState>
+        links: Map<String, ProxyState>,
+        animateDelay: Boolean,
     ) {
-        val states = withContext(Dispatchers.Default) {
-            proxies.map {
-                val link = if (it.isGroup) links[it.name] else null
-
-                ProxyViewState(config, it, parent, link)
-            }
+        val adapter = adapters[position]
+        val oldStates = adapter.states
+        val oldProxies = oldStates.map { it.proxy }
+        val diff = withContext(Dispatchers.Default) {
+            oldProxies.diffWith(
+                proxies,
+                detectMove = true,
+                id = { it.name },
+            )
         }
 
         withContext(Dispatchers.Main) {
-            adapters[position].apply {
-                this.selectable = selectable
-                this.swapDataSet(this::states, states, false)
+            val oldStatesByName = oldStates.associateBy { it.proxy.name }
+            val newStates = proxies.map { proxy ->
+                oldStatesByName[proxy.name]?.apply {
+                    updateProxy(proxy, animateDelay)
+                } ?: ProxyViewState(
+                    config,
+                    proxy,
+                    parent,
+                    if (proxy.isGroup) links[proxy.name] else null,
+                )
+            }
+            val selectableChanged = adapter.selectable != selectable
+
+            adapter.selectable = selectable
+            adapter.states = newStates
+            diff.dispatchUpdatesTo(adapter)
+
+            if (selectableChanged && oldStates.isNotEmpty() && newStates.isNotEmpty()) {
+                adapter.notifyItemRangeChanged(0, newStates.size)
             }
 
             requestRedrawVisible()

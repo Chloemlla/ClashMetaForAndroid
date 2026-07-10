@@ -4,6 +4,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.github.kr328.clash.design.view.VerticalScrollableHost
 
 class ProxyPageFactory(private val config: ProxyViewConfig) {
@@ -47,6 +48,9 @@ class ProxyPageFactory(private val config: ProxyViewConfig) {
 
             setRecycledViewPool(childrenPool)
 
+            (itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
+            itemAnimator?.moveDuration = PROXY_MOVE_ANIMATION_DURATION
+
             clipToPadding = false
         }
 
@@ -57,5 +61,9 @@ class ProxyPageFactory(private val config: ProxyViewConfig) {
 
     fun fromRoot(root: View): Holder {
         return root.tag!! as Holder
+    }
+
+    private companion object {
+        const val PROXY_MOVE_ANIMATION_DURATION = 220L
     }
 }

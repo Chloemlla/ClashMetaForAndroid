@@ -61,7 +61,7 @@ class ProxyView(
         val state = state ?: return super.draw(canvas)
 
         if (state.update(false))
-            postInvalidate()
+            postInvalidateOnAnimation()
 
         val width = width.toFloat()
         val height = height.toFloat()
@@ -169,9 +169,11 @@ class ProxyView(
         // draw delay
         canvas.apply {
             val x = width - state.config.layoutPadding - state.config.contentPadding - delayWidth
-            val y = height / 2f - textOffset
+            val y = height / 2f - textOffset + state.delayOffset
 
+            paint.alpha = (state.delayAlpha * 255).toInt()
             drawText(state.delayText, 0, delayCount, x, y, paint)
+            paint.alpha = 255
         }
 
         // draw title

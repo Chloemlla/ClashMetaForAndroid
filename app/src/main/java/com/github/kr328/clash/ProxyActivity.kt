@@ -6,6 +6,8 @@ import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.design.ProxyDesign
 import com.github.kr328.clash.design.model.ProxyState
 import com.github.kr328.clash.util.withClash
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -28,6 +30,31 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
         )
 
         setContentDesign(design)
+
+        suspend fun reloadGroup(
+            index: Int,
+            animateDelay: Boolean = false,
+            completeUrlTest: Boolean = true,
+        ) {
+            val group = reloadLock.withPermit {
+                withClash {
+                    queryProxyGroup(names[index], uiStore.proxySort)
+                }
+            }
+            val state = states[index]
+
+            state.now = group.now
+
+            design.updateGroup(
+                index,
+                group.proxies,
+                group.type == "Selector",
+                state,
+                unorderedStates,
+                animateDelay,
+                completeUrlTest,
+            )
+        }
 
         design.requests.send(ProxyDesign.Request.ReloadAll)
 
@@ -63,22 +90,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                         }
                         is ProxyDesign.Request.Reload -> {
                             launch {
-                                val group = reloadLock.withPermit {
-                                    withClash {
-                                        queryProxyGroup(names[it.index], uiStore.proxySort)
-                                    }
-                                }
-                                val state = states[it.index]
-
-                                state.now = group.now
-
-                                design.updateGroup(
-                                    it.index,
-                                    group.proxies,
-                                    group.type == "Selector",
-                                    state,
-                                    unorderedStates
-                                )
+                                reloadGroup(it.index)
                             }
                         }
                         is ProxyDesign.Request.Select -> {
@@ -92,11 +104,31 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                         }
                         is ProxyDesign.Request.UrlTest -> {
                             launch {
-                                withClash {
-                                    healthCheck(names[it.index])
+                                val refreshJob = launch {
+                                    while (isActive) {
+                                        delay(URL_TEST_REFRESH_INTERVAL_MILLIS)
+
+                                        reloadGroup(
+                                            it.index,
+                                            animateDelay = true,
+                                            completeUrlTest = false,
+                                        )
+                                    }
                                 }
 
-                                design.requests.send(ProxyDesign.Request.Reload(it.index))
+                                try {
+                                    withClash {
+                                        healthCheck(names[it.index])
+                                    }
+                                } finally {
+                                    refreshJob.cancelAndJoin()
+
+                                    reloadGroup(
+                                        it.index,
+                                        animateDelay = true,
+                                        completeUrlTest = true,
+                                    )
+                                }
                             }
                         }
                         is ProxyDesign.Request.PatchMode -> {
@@ -114,5 +146,9 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                 }
             }
         }
+    }
+
+    private companion object {
+        const val URL_TEST_REFRESH_INTERVAL_MILLIS = 100L
     }
 }

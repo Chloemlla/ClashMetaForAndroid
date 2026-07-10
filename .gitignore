@@ -64,3 +64,7 @@ google-services.json
 
 # MacOS
 .DS_Store
+setup-android-signing.ps1
+fuck-my-shit-mountain/
+Install-CodexTrellis.ps1
+keystore_base64.txt

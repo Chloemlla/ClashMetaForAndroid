@@ -68,11 +68,15 @@ class ProxyDesign(
         proxies: List<Proxy>,
         selectable: Boolean,
         parent: ProxyState,
-        links: Map<String, ProxyState>
+        links: Map<String, ProxyState>,
+        animateDelay: Boolean = false,
+        completeUrlTest: Boolean = true,
     ) {
-        adapter.updateAdapter(position, proxies, selectable, parent, links)
+        adapter.updateAdapter(position, proxies, selectable, parent, links, animateDelay)
 
-        adapter.states[position].urlTesting = false
+        if (completeUrlTest) {
+            adapter.states[position].urlTesting = false
+        }
 
         updateUrlTestButtonStatus()
     }

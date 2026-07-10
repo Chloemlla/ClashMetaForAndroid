@@ -11,7 +11,7 @@ import kotlin.math.max
 
 class ProxyViewState(
     val config: ProxyViewConfig,
-    val proxy: Proxy,
+    proxy: Proxy,
     private val parent: ProxyState,
     private val link: ProxyState?
 ) {
@@ -24,6 +24,13 @@ class ProxyViewState(
     var delayText: String = ""
     var background: Int = config.unselectedBackground
     var controls: Int = config.unselectedControl
+    var delayAlpha: Float = 1f
+        private set
+    var delayOffset: Float = 0f
+        private set
+
+    var proxy: Proxy = proxy
+        private set
 
     private var delay: Int = 0
     private var selected: Boolean = false
@@ -31,6 +38,23 @@ class ProxyViewState(
     private var linkNow: String? = null
 
     private var lastFrameTime = System.currentTimeMillis()
+    private var delayAnimationStartedAt = 0L
+
+    fun updateProxy(proxy: Proxy, animateDelay: Boolean) {
+        val delayChanged = this.proxy.delay != proxy.delay
+
+        this.proxy = proxy
+
+        if (delayChanged && animateDelay) {
+            delayAnimationStartedAt = System.currentTimeMillis()
+            delayAlpha = 0f
+            delayOffset = config.textSize * DELAY_ANIMATION_OFFSET_FACTOR
+        } else if (!animateDelay) {
+            delayAnimationStartedAt = 0L
+            delayAlpha = 1f
+            delayOffset = 0f
+        }
+    }
 
     fun update(snap: Boolean): Boolean {
         val frameTime = System.currentTimeMillis()
@@ -59,6 +83,26 @@ class ProxyViewState(
         if (delay != proxy.delay) {
             delay = proxy.delay
             delayText = if (proxy.delay in 0..Short.MAX_VALUE) proxy.delay.toString() else ""
+        }
+
+        if (delayAnimationStartedAt != 0L) {
+            val progress = ((frameTime - delayAnimationStartedAt).toFloat() /
+                    DELAY_ANIMATION_DURATION_MS.toFloat())
+                .coerceIn(0f, 1f)
+            val remaining = 1f - progress
+            val easedProgress = 1f - remaining * remaining * remaining
+
+            delayAlpha = easedProgress
+            delayOffset = (1f - easedProgress) *
+                    config.textSize * DELAY_ANIMATION_OFFSET_FACTOR
+
+            if (progress < 1f) {
+                invalidate = true
+            } else {
+                delayAnimationStartedAt = 0L
+                delayAlpha = 1f
+                delayOffset = 0f
+            }
         }
 
         if (parentNow !== parent.now) {
@@ -123,5 +167,10 @@ class ProxyViewState(
         lastFrameTime = frameTime
 
         return invalidate
+    }
+
+    private companion object {
+        const val DELAY_ANIMATION_DURATION_MS = 220L
+        const val DELAY_ANIMATION_OFFSET_FACTOR = 0.35f
     }
 }
