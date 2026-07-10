@@ -52,13 +52,15 @@ L: several coupled files require serial changes and review, but no delegation is
 
 1. Extend list diffing and proxy view state so delay changes can update and animate without recreating every row.
 2. Add 100 ms refresh orchestration while health checks run, preserving final spinner semantics.
-3. Review static correctness, commit only task files, push, and observe the GitHub Build Debug workflow.
+3. Replace the pre-release and release publishing chains with pinned automatic release steps and explicit write permissions.
+4. Review static correctness, commit only task files, push, and observe the triggered GitHub workflows.
 
 ## Ownership Boundaries
 
 - App module owns test lifecycle and polling.
 - Design module owns per-page testing state, row diffs, and animation rendering.
 - Native and service interfaces remain unchanged.
+- GitHub workflows own release metadata, tag naming, permissions, and APK publication.
 
 ## Verification Commands
 

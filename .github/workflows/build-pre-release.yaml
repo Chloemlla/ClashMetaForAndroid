@@ -5,12 +5,25 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   BuildPreRelease:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
+
+      - name: Set release metadata
+        shell: bash
+        run: |
+          VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' build.gradle.kts | head -n 1)
+          SHORT_HASH=$(git rev-parse --short=7 HEAD)
+
+          test -n "$VERSION_NAME"
+          echo "CMFA_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "CMFA_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
       
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
@@ -69,28 +82,15 @@ jobs:
         if: success()
         run: ./gradlew --no-daemon app:assembleAlphaRelease
 
-      # Delete old Prerelease-alpha
-      - uses: dev-drprasad/delete-tag-and-release@v1.1
+      - name: Automatic release
+        if: success() && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
-          tag_name: Prerelease-alpha
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          delete_release: true
-
-      - name: Tag Repo
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: Prerelease-alpha
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Alpha
-        uses: softprops/action-gh-release@v2
-        if: ${{  success() }}
-        with:
-          tag_name: Prerelease-alpha
-          files: app/build/outputs/apk/alpha/release/*
-          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
           generate_release_notes: true
-
-      - name: Release Changelog Builder
-        uses: mikepenz/release-changelog-builder-action@v4
+          tag_name: "v${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}"
+          prerelease: true
+          name: "ClashMetaForAndroid Alpha ${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}"
+          files: app/build/outputs/apk/alpha/release/*.apk

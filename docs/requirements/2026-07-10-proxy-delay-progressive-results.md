@@ -84,3 +84,12 @@ Implementation-forward with inferred details because the requested behavior and 
 - `ProxyActivity` currently reloads only after `healthCheck()` returns.
 - The pinned mihomo implementation writes each proxy's delay history when its individual `URLTest` completes.
 - The pinned provider health check runs node tests through an errgroup with a concurrency limit of 10.
+
+## Scope Amendment: Release Workflows
+
+The same delivery also replaces the deprecated pre-release/release publishing chain with the pinned `softprops/action-gh-release` action.
+
+- Pre-release tags must be unique per commit using the app version and seven-character commit hash.
+- Formal releases must use the manually supplied release tag.
+- Both workflows must grant `contents: write` to `GITHUB_TOKEN`.
+- The old delete-release, forced-tag-update, and unused changelog-builder steps must be removed.
