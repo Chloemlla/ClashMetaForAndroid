@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.core.app.ServiceCompat
 
 fun Context.startForegroundServiceCompat(intent: Intent) {
     if (Build.VERSION.SDK_INT >= 26) {
@@ -21,4 +22,8 @@ fun Service.startForegroundCompat(id: Int, notification: Notification) {
     } else {
         startForeground(id, notification)
     }
+}
+
+fun Service.stopForegroundCompat() {
+    ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
 }
