@@ -52,17 +52,18 @@ jobs:
 
       - name: Signing properties
         env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          touch signing.properties
-          echo keystore.password="$SIGNING_STORE_PASSWORD" > signing.properties
-          echo key.alias="$SIGNING_KEY_ALIAS" >> signing.properties
-          echo key.password="$SIGNING_KEY_PASSWORD" >> signing.properties
-            
-          echo "cat signing.properties"
-          cat signing.properties
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          chmod 600 release.keystore
+          printf '%s\n' \
+            "keystore.password=$KEYSTORE_PASSWORD" \
+            "key.alias=$KEY_ALIAS" \
+            "key.password=$KEY_PASSWORD" \
+            > signing.properties
 
       - name: Pre-release Build
         if: success()
