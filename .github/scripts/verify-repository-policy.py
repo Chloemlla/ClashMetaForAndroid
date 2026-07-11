@@ -119,6 +119,18 @@ require(
     "release test/lint/build/verify/push order is unsafe",
 )
 require("cat signing.properties" not in release_workflow, "release workflow prints signing properties")
+for secret_name in ("KEYSTORE_BASE64", "KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD"):
+    require(
+        f"secrets.{secret_name}" in release_workflow,
+        f"release workflow does not use the shared {secret_name} secret",
+    )
+require(
+    "SIGNING_KEYSTORE_BASE64" not in release_workflow
+    and "SIGNING_STORE_PASSWORD" not in release_workflow
+    and "SIGNING_KEY_ALIAS" not in release_workflow
+    and "SIGNING_KEY_PASSWORD" not in release_workflow,
+    "release workflow still uses legacy stable-only signing secret names",
+)
 
 if errors:
     for error in errors:

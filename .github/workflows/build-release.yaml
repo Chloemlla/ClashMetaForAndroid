@@ -107,23 +107,23 @@ jobs:
 
       - name: Prepare signing credentials
         env:
-          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          : "${SIGNING_KEYSTORE_BASE64:?SIGNING_KEYSTORE_BASE64 is required}"
-          : "${SIGNING_STORE_PASSWORD:?SIGNING_STORE_PASSWORD is required}"
-          : "${SIGNING_KEY_ALIAS:?SIGNING_KEY_ALIAS is required}"
-          : "${SIGNING_KEY_PASSWORD:?SIGNING_KEY_PASSWORD is required}"
+          : "${KEYSTORE_BASE64:?KEYSTORE_BASE64 is required}"
+          : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
+          : "${KEY_ALIAS:?KEY_ALIAS is required}"
+          : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
           KEYSTORE_FILE="$RUNNER_TEMP/cmfa-release.keystore"
-          printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
           chmod 600 "$KEYSTORE_FILE"
           printf '%s\n' \
             "keystore.file=$KEYSTORE_FILE" \
-            "keystore.password=$SIGNING_STORE_PASSWORD" \
-            "key.alias=$SIGNING_KEY_ALIAS" \
-            "key.password=$SIGNING_KEY_PASSWORD" \
+            "keystore.password=$KEYSTORE_PASSWORD" \
+            "key.alias=$KEY_ALIAS" \
+            "key.password=$KEY_PASSWORD" \
             > signing.properties
 
       - name: Build signed release APKs
