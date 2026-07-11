@@ -40,6 +40,9 @@ class ProxyViewState(
     private var lastFrameTime = System.currentTimeMillis()
     private var delayAnimationStartedAt = 0L
 
+    val isSelected: Boolean
+        get() = selected
+
     fun updateProxy(proxy: Proxy, animateDelay: Boolean) {
         val delayChanged = this.proxy.delay != proxy.delay
 

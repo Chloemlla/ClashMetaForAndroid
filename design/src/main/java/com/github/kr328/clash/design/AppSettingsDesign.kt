@@ -5,18 +5,18 @@ import android.view.View
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.model.DarkMode
+import com.github.kr328.clash.design.model.ServiceSettings
 import com.github.kr328.clash.design.preference.*
 import com.github.kr328.clash.design.store.UiStore
 import com.github.kr328.clash.design.util.applyFrom
 import com.github.kr328.clash.design.util.bindAppBarElevation
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.root
-import com.github.kr328.clash.service.store.ServiceStore
 
 class AppSettingsDesign(
     context: Context,
     uiStore: UiStore,
-    srvStore: ServiceStore,
+    srvStore: ServiceSettings,
     behavior: Behavior,
     running: Boolean,
     onHideIconChange: (hide: Boolean) -> Unit,

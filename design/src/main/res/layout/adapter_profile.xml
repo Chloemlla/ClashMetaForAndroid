@@ -3,7 +3,7 @@
     <data>
         <variable
             name="profile"
-            type="com.github.kr328.clash.service.model.Profile" />
+            type="com.github.kr328.clash.design.model.Profile" />
         <variable
             name="currentTime"
             type="com.github.kr328.clash.design.ui.ObservableCurrentTime" />

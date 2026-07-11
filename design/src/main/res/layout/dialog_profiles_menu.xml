@@ -10,9 +10,9 @@
             type="android.app.Dialog" />
         <variable
             name="profile"
-            type="com.github.kr328.clash.service.model.Profile" />
+            type="com.github.kr328.clash.design.model.Profile" />
 
-        <import type="com.github.kr328.clash.service.model.Profile.Type" />
+        <import type="com.github.kr328.clash.design.model.Profile.Type" />
         <import type="android.view.View" />
     </data>
 

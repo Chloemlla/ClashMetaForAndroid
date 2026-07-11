@@ -32,41 +32,96 @@ class ProxyPageAdapter(
         parent: ProxyState,
         links: Map<String, ProxyState>,
         animateDelay: Boolean,
+        preserveOrder: Boolean,
     ) {
         val adapter = adapters[position]
         val oldStates = adapter.states
-        val oldProxies = oldStates.map { it.proxy }
-        val diff = withContext(Dispatchers.Default) {
-            oldProxies.diffWith(
-                proxies,
-                detectMove = true,
-                id = { it.name },
+        val update = withContext(Dispatchers.Default) {
+            val oldProxies = oldStates.map { it.proxy }
+            val normalized = if (preserveOrder && oldProxies.isNotEmpty()) {
+                proxies.preserveOrderFrom(oldProxies) { it.name }
+            } else {
+                proxies
+            }
+
+            val sameStructure = oldProxies.size == normalized.size &&
+                oldProxies.indices.all { index ->
+                    oldProxies[index].name == normalized[index].name &&
+                        oldProxies[index].isGroup == normalized[index].isGroup
+                }
+
+            AdapterUpdate(
+                proxies = normalized,
+                changedIndices = if (sameStructure) {
+                    oldProxies.indices.filter { oldProxies[it] != normalized[it] }
+                } else {
+                    emptyList()
+                },
+                diff = if (sameStructure) null else oldProxies.diffWith(
+                    normalized,
+                    detectMove = !preserveOrder,
+                    id = { it.name },
+                ),
             )
         }
 
         withContext(Dispatchers.Main) {
-            val oldStatesByName = oldStates.associateBy { it.proxy.name }
-            val newStates = proxies.map { proxy ->
-                oldStatesByName[proxy.name]?.apply {
-                    updateProxy(proxy, animateDelay)
-                } ?: ProxyViewState(
-                    config,
-                    proxy,
-                    parent,
-                    if (proxy.isGroup) links[proxy.name] else null,
-                )
-            }
+            val displayProxies = update.proxies
             val selectableChanged = adapter.selectable != selectable
+            val diff = update.diff
 
             adapter.selectable = selectable
+
+            if (diff == null) {
+                update.changedIndices.forEach { index ->
+                    oldStates[index].updateProxy(displayProxies[index], animateDelay)
+                    adapter.notifyItemChanged(index, ProxyAdapter.PAYLOAD_PROXY)
+                }
+
+                if (selectableChanged && oldStates.isNotEmpty()) {
+                    adapter.notifyItemRangeChanged(
+                        0,
+                        oldStates.size,
+                        ProxyAdapter.PAYLOAD_SELECTION,
+                    )
+                }
+                return@withContext
+            }
+
+            val oldStatesByName = oldStates.associateBy { it.proxy.name }
+            val newStates = displayProxies.map { proxy ->
+                oldStatesByName[proxy.name]
+                    ?.takeIf { it.proxy.isGroup == proxy.isGroup }
+                    ?.apply { updateProxy(proxy, animateDelay) }
+                    ?: ProxyViewState(
+                        config,
+                        proxy,
+                        parent,
+                        if (proxy.isGroup) links[proxy.name] else null,
+                    )
+            }
+
             adapter.states = newStates
             diff.dispatchUpdatesTo(adapter)
 
             if (selectableChanged && oldStates.isNotEmpty() && newStates.isNotEmpty()) {
-                adapter.notifyItemRangeChanged(0, newStates.size)
+                adapter.notifyItemRangeChanged(
+                    0,
+                    newStates.size,
+                    ProxyAdapter.PAYLOAD_SELECTION,
+                )
             }
+        }
+    }
 
-            requestRedrawVisible()
+    fun notifySelectionChanged(position: Int) {
+        val adapter = adapters[position]
+        if (adapter.states.isNotEmpty()) {
+            adapter.notifyItemRangeChanged(
+                0,
+                adapter.states.size,
+                ProxyAdapter.PAYLOAD_SELECTION,
+            )
         }
     }
 
@@ -129,4 +184,10 @@ class ProxyPageAdapter(
         set(value) {
             tag = value
         }
+
+    private data class AdapterUpdate(
+        val proxies: List<Proxy>,
+        val changedIndices: List<Int>,
+        val diff: androidx.recyclerview.widget.DiffUtil.DiffResult?,
+    )
 }

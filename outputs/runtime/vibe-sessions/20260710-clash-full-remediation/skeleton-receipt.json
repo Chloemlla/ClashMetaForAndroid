@@ -1,0 +1,9 @@
+{
+  "run_id": "20260710-clash-full-remediation",
+  "stage": "skeleton_check",
+  "repo": "F:/Repositories/GitHub/ClashMetaForAndroid",
+  "branch": "main",
+  "audit_report": "audit-report-ClashMetaForAndroid-2026-07-10.md",
+  "constraints": ["no local Gradle", "no local Flutter", "build and tests only in GitHub workflow"],
+  "status": "complete"
+}

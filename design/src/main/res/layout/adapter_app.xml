@@ -24,7 +24,6 @@
             android:layout_height="@dimen/item_header_component_size"
             android:layout_centerVertical="true"
             android:layout_marginHorizontal="@dimen/item_header_margin"
-            android:background="@{app.icon}"
             android:clickable="false"
             android:focusable="false" />
 

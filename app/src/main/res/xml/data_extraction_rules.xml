@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="imported" />
+        <exclude domain="file" path="pending" />
+        <exclude domain="file" path="clash" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="imported" />
+        <exclude domain="file" path="pending" />
+        <exclude domain="file" path="clash" />
+    </device-transfer>
+</data-extraction-rules>

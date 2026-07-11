@@ -203,6 +203,9 @@
     <string name="more">更多</string>
     <string name="save">保存</string>
     <string name="delay_test">延迟测试</string>
+    <string name="selected">已选择</string>
+    <string name="format_delay_milliseconds">%1$s 毫秒</string>
+    <string name="format_proxy_accessibility">%1$s，%2$s，%3$s</string>
     <string name="format_provider_type">%1$s(%2$s)</string>
     <string name="rule">规则</string>
     <string name="http">HTTP</string>
@@ -280,4 +283,12 @@
     <string name="shortcut_start_long">启动 Clash 服务</string>
     <string name="shortcut_stop_short">停止 Clash</string>
     <string name="shortcut_stop_long">停止 Clash 服务</string>
+    <string name="delete_profile">删除配置</string>
+    <string name="delete_profile_confirmation">确定删除配置“%1$s”吗？此操作无法撤销。</string>
+    <string name="update_all_in_progress">正在更新全部配置</string>
+    <string name="access_control_restart_timeout">设置已保存，但 Clash 未能及时停止。请在主页面重新启动服务。</string>
+    <string name="notification_permission_title">允许 Clash 发送通知？</string>
+    <string name="notification_permission_rationale">Clash 会在 VPN 服务运行时显示通知，方便你查看运行状态并返回应用。</string>
+    <string name="notification_permission_denied">通知已关闭。Clash 仍可运行，但服务状态通知将不会显示。</string>
+    <string name="continue_">继续</string>
 </resources>

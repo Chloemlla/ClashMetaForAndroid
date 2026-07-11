@@ -4,7 +4,7 @@ import android.content.Context
 import com.github.kr328.clash.common.compat.preferredLocale
 import com.github.kr328.clash.core.model.Provider
 import com.github.kr328.clash.design.R
-import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.design.model.Profile
 import java.text.SimpleDateFormat
 import java.util.*
 

@@ -261,4 +261,12 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">相機權限受限，請前往設定開啟。</string>
     <string name="import_from_qr_exception">發生系統未知異常，操作失敗。</string>
+    <string name="delete_profile">刪除配置</string>
+    <string name="delete_profile_confirmation">確定刪除配置「%1$s」嗎？此操作無法復原。</string>
+    <string name="update_all_in_progress">正在更新全部配置</string>
+    <string name="access_control_restart_timeout">設定已儲存，但 Clash 未能及時停止。請在主頁重新啟動服務。</string>
+    <string name="notification_permission_title">允許 Clash 傳送通知？</string>
+    <string name="notification_permission_rationale">Clash 會在 VPN 服務執行時顯示通知，方便你查看狀態並返回應用程式。</string>
+    <string name="notification_permission_denied">通知已關閉。Clash 仍可執行，但服務狀態通知將不會顯示。</string>
+    <string name="continue_">繼續</string>
 </resources>

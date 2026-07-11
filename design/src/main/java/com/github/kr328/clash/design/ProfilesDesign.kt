@@ -6,13 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import androidx.core.view.ViewCompat
 import com.github.kr328.clash.design.adapter.ProfileAdapter
 import com.github.kr328.clash.design.databinding.DesignProfilesBinding
 import com.github.kr328.clash.design.databinding.DialogProfilesMenuBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
+import com.github.kr328.clash.design.model.Profile
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
-import com.github.kr328.clash.service.model.Profile
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -31,11 +33,8 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         .inflate(context.layoutInflater, context.root, false)
     private val adapter = ProfileAdapter(context, this::requestActive, this::showMenu)
 
-    private var allUpdating: Boolean
-        get() = adapter.states.allUpdating;
-        set(value) {
-            adapter.states.allUpdating = value
-        }
+    private val allUpdating: Boolean
+        get() = adapter.states.allUpdating
     private val rotateAnimation : Animation = AnimationUtils.loadAnimation(context, R.anim.rotate_infinite)
 
     override val root: View
@@ -93,13 +92,16 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
     }
 
     fun requestUpdateAll() {
-        allUpdating = true;
+        if (!adapter.states.beginUpdateAll()) return
+
         changeUpdateAllButtonStatus()
-        requests.trySend(Request.UpdateAll)
+        if (requests.trySend(Request.UpdateAll).isFailure) {
+            finishUpdateAll()
+        }
     }
 
     fun finishUpdateAll() {
-        allUpdating = false;
+        adapter.states.finishUpdateAll()
         changeUpdateAllButtonStatus()
     }
 
@@ -130,12 +132,27 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
     }
 
     fun requestDelete(dialog: Dialog, profile: Profile) {
-        requests.trySend(Request.Delete(profile))
-
         dialog.dismiss()
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.delete_profile)
+            .setMessage(context.getString(R.string.delete_profile_confirmation, profile.name))
+            .setPositiveButton(R.string.delete) { _, _ ->
+                requests.trySend(Request.Delete(profile))
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun changeUpdateAllButtonStatus() {
+        binding.updateView.isEnabled = !allUpdating
+        binding.updateView.isClickable = !allUpdating
+        binding.updateView.alpha = if (allUpdating) 0.6f else 1f
+        ViewCompat.setStateDescription(
+            binding.updateView,
+            if (allUpdating) context.getString(R.string.update_all_in_progress) else null
+        )
+
         if (allUpdating) {
             binding.updateView.startAnimation(rotateAnimation)
         } else {

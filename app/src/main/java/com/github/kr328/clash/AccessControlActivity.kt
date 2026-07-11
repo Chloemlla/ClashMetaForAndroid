@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.design.AccessControlDesign
 import com.github.kr328.clash.design.model.AppInfo
@@ -18,6 +19,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import com.github.kr328.clash.design.R as DesignR
 
 class AccessControlActivity : BaseActivity<AccessControlDesign>() {
     override suspend fun main() {
@@ -33,10 +36,24 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
                 service.accessControlPackages = selected
                 if (clashRunning && changed) {
                     stopClashService()
-                    while (clashRunning) {
-                        delay(200)
+                    val stopped = withTimeoutOrNull(SERVICE_STOP_TIMEOUT_MILLIS) {
+                        while (clashRunning) {
+                            delay(200)
+                        }
+                        true
+                    } == true
+
+                    if (stopped) {
+                        startClashService()
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                applicationContext,
+                                DesignR.string.access_control_restart_timeout,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
-                    startClashService()
                 }
             }
         }
@@ -153,4 +170,8 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
         get() {
             return applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) != 0
         }
+
+    companion object {
+        private const val SERVICE_STOP_TIMEOUT_MILLIS = 10_000L
+    }
 }

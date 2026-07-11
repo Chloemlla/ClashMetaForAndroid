@@ -2,12 +2,12 @@ package com.github.kr328.clash
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.PersistableBundle
+import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -15,21 +15,41 @@ import androidx.core.graphics.drawable.IconCompat
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
+import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
-import com.github.kr328.clash.core.bridge.*
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
+    private val notificationPermissionLauncher =
+        registerForActivityResult(RequestPermission()) { granted ->
+            if (!granted) {
+                launch {
+                    design?.showToast(
+                        DesignR.string.notification_permission_denied,
+                        ToastDuration.Indefinite
+                    ) {
+                        setAction(DesignR.string.settings) {
+                            openNotificationSettings()
+                        }
+                    }
+                }
+            }
+        }
+
     override suspend fun main() {
         val design = MainDesign(this)
 
@@ -125,6 +145,8 @@ class MainActivity : BaseActivity<MainDesign>() {
             return
         }
 
+        if (!requestNotificationPermissionIfNeeded()) return
+
         val vpnRequest = startClashService()
 
         try {
@@ -150,19 +172,51 @@ class MainActivity : BaseActivity<MainDesign>() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val requestPermissionLauncher =
-                registerForActivityResult(RequestPermission()
-                ) { isGranted: Boolean ->
-                }
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
         setupShortcuts()
+    }
+
+    private suspend fun requestNotificationPermissionIfNeeded(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) return true
+
+        val continueRequest = suspendCancellableCoroutine { continuation ->
+            val dialog = MaterialAlertDialogBuilder(this)
+                .setTitle(DesignR.string.notification_permission_title)
+                .setMessage(DesignR.string.notification_permission_rationale)
+                .setPositiveButton(DesignR.string.continue_) { _, _ ->
+                    if (continuation.isActive) continuation.resume(true)
+                }
+                .setNegativeButton(DesignR.string.cancel) { _, _ ->
+                    if (continuation.isActive) continuation.resume(false)
+                }
+                .show()
+
+            dialog.setOnDismissListener {
+                if (continuation.isActive) continuation.resume(false)
+            }
+            continuation.invokeOnCancellation { dialog.dismiss() }
+        }
+
+        if (continueRequest) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        return continueRequest
+    }
+
+    private fun openNotificationSettings() {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.fromParts("package", packageName, null))
+        }
+        startActivity(intent)
     }
 
     private fun setupShortcuts() {
@@ -179,7 +233,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_all))
             .setIntent(
                 Intent(Intents.ACTION_TOGGLE_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
+                    .setClassName(this, InternalControlActivity::class.java.name)
                     .addFlags(flags)
             )
             .setRank(0)
@@ -191,7 +245,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_on))
             .setIntent(
                 Intent(Intents.ACTION_START_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
+                    .setClassName(this, InternalControlActivity::class.java.name)
                     .addFlags(flags)
             )
             .setRank(1)
@@ -203,7 +257,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_off))
             .setIntent(
                 Intent(Intents.ACTION_STOP_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
+                    .setClassName(this, InternalControlActivity::class.java.name)
                     .addFlags(flags)
             )
             .setRank(2)

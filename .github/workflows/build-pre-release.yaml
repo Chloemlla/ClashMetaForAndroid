@@ -1,4 +1,5 @@
 name: Build Pre-Release
+
 on:
   workflow_dispatch:
   push:
@@ -20,18 +21,17 @@ jobs:
         run: |
           VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' build.gradle.kts | head -n 1)
           SHORT_HASH=$(git rev-parse --short=7 HEAD)
-
           test -n "$VERSION_NAME"
           echo "CMFA_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "CMFA_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
-      
+
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
 
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
-          distribution: "temurin"
+          distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
@@ -40,13 +40,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
         with:
-          go-download-base-url: 'https://github.com/MetaCubeX/go/releases/download/build'
+          go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
           go-version: '1.26'
 
       - name: Apply Patches
         run: |
-          cd $(go env GOROOT)
-          for p in $GITHUB_WORKSPACE/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
+          cd "$(go env GOROOT)"
+          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
 
       - uses: actions/cache@v5
         with:
@@ -59,38 +59,71 @@ jobs:
 
       - name: Update CA
         run: |
-          sudo apt-get update && sudo apt-get install ca-certificates
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates
           sudo update-ca-certificates
           cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
-      - name: Signing properties
+      - name: Repository policy checks
+        run: python3 .github/scripts/verify-repository-policy.py
+
+      - name: JVM unit tests
+        run: ./gradlew --no-daemon testAlphaDebugUnitTest
+
+      - name: Upload JVM test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pre-release-jvm-test-reports
+          path: '**/build/reports/tests/**'
+          if-no-files-found: warn
+
+      - name: Android Lint
+        run: ./gradlew --no-daemon lintAlphaRelease
+
+      - name: Prepare signing credentials
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-          chmod 600 release.keystore
+          : "${KEYSTORE_BASE64:?KEYSTORE_BASE64 is required}"
+          : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
+          : "${KEY_ALIAS:?KEY_ALIAS is required}"
+          : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
+          KEYSTORE_FILE="$RUNNER_TEMP/cmfa-alpha-release.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+          chmod 600 "$KEYSTORE_FILE"
           printf '%s\n' \
+            "keystore.file=$KEYSTORE_FILE" \
             "keystore.password=$KEYSTORE_PASSWORD" \
             "key.alias=$KEY_ALIAS" \
             "key.password=$KEY_PASSWORD" \
             > signing.properties
 
-      - name: Pre-release Build
-        if: success()
+      - name: Build pre-release APKs
         run: ./gradlew --no-daemon app:assembleAlphaRelease
 
+      - name: Verify signed APKs
+        env:
+          SIGNING_CERT_SHA256: ${{ secrets.SIGNING_CERT_SHA256 }}
+        run: bash .github/scripts/verify-apk-signing.sh app/build/outputs/apk/alpha/release
+
       - name: Automatic release
-        if: success() && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           make_latest: true
           generate_release_notes: true
-          tag_name: "v${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}"
+          tag_name: v${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}
           prerelease: true
-          name: "ClashMetaForAndroid Alpha ${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}"
-          files: app/build/outputs/apk/alpha/release/*.apk
+          name: ClashMetaForAndroid Alpha ${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}
+          files: |
+            app/build/outputs/apk/alpha/release/*.apk
+            app/build/outputs/apk/alpha/release/SHA256SUMS
+
+      - name: Remove signing credentials
+        if: always()
+        run: rm -f signing.properties "$RUNNER_TEMP/cmfa-alpha-release.keystore"

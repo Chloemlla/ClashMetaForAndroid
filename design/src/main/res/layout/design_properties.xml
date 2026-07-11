@@ -7,12 +7,12 @@
             type="com.github.kr328.clash.design.PropertiesDesign" />
         <variable
             name="profile"
-            type="com.github.kr328.clash.service.model.Profile" />
+            type="com.github.kr328.clash.design.model.Profile" />
         <variable
             name="processing"
             type="boolean" />
 
-        <import type="com.github.kr328.clash.service.model.Profile.Type" />
+        <import type="com.github.kr328.clash.design.model.Profile.Type" />
         <import type="android.view.View" />
     </data>
 
@@ -137,14 +137,14 @@
                     android:layout_marginStart="@dimen/item_tailing_margin">
 
                     <ProgressBar
-                        android:layout_width="@dimen/item_tailing_component_size"
-                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:layout_width="@dimen/toolbar_image_action_size"
+                        android:layout_height="@dimen/toolbar_image_action_size"
                         android:indeterminate="true"
                         android:visibility="@{processing ? View.VISIBLE : View.GONE}" />
 
                     <ImageView
-                        android:layout_width="@dimen/item_tailing_component_size"
-                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:layout_width="@dimen/toolbar_image_action_size"
+                        android:layout_height="@dimen/toolbar_image_action_size"
                         android:layout_gravity="end|center_vertical"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:clickable="true"

@@ -13,14 +13,18 @@ class LogcatCache {
 
     private var removed: Int = 0
     private var appended: Int = 0
+    private var reportedSize: Int = 0
 
     suspend fun append(msg: LogMessage) {
         lock.withLock {
             if (array.size() >= CAPACITY) {
                 array.removeFromStart(1)
 
-                removed++
-                appended--
+                if (removed < reportedSize) {
+                    removed++
+                } else {
+                    appended--
+                }
             }
 
             array.addLast(msg)
@@ -38,10 +42,11 @@ class LogcatCache {
             Snapshot(
                 List(array.size()) { array[it] },
                 removed,
-                if (full) array.size() + appended else appended
+                if (full) array.size() else appended
             ).also {
                 removed = 0
                 appended = 0
+                reportedSize = array.size()
             }
         }
     }

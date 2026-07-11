@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
+    <!-- Only non-sensitive UI preferences are eligible for legacy Auto Backup. -->
     <include
         domain="sharedpref"
         path="." />
-    <include
+
+    <!-- Profiles contain subscription sources and ageSecretKey values. -->
+    <exclude
         domain="database"
         path="." />
-    <include
+    <exclude
         domain="file"
         path="imported" />
-    <include
+    <exclude
         domain="file"
         path="pending" />
-    <include
+    <exclude
         domain="file"
-        path="clash/override.json" />
+        path="clash" />
 </full-backup-content>

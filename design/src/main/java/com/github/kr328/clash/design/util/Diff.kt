@@ -2,6 +2,25 @@ package com.github.kr328.clash.design.util
 
 import androidx.recyclerview.widget.DiffUtil
 
+fun <T, K> List<T>.preserveOrderFrom(
+    previous: List<T>,
+    id: (T) -> K,
+): List<T> {
+    if (isEmpty() || previous.isEmpty()) return this
+
+    val incomingById = associateBy(id)
+    val previousIds = previous.asSequence().map(id).toHashSet()
+
+    return buildList(size) {
+        previous.forEach { old ->
+            incomingById[id(old)]?.let(::add)
+        }
+        this@preserveOrderFrom.forEach { item ->
+            if (id(item) !in previousIds) add(item)
+        }
+    }
+}
+
 fun <T> List<T>.diffWith(
     newList: List<T>,
     detectMove: Boolean = false,

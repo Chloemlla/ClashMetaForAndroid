@@ -8,8 +8,8 @@
 
     <ImageView
         android:id="@+id/activity_bar_close_view"
-        android:layout_width="@dimen/item_header_component_size"
-        android:layout_height="@dimen/item_header_component_size"
+        android:layout_width="@dimen/toolbar_image_action_size"
+        android:layout_height="@dimen/toolbar_image_action_size"
         android:layout_marginHorizontal="@dimen/item_header_margin"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"

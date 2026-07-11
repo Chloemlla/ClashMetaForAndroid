@@ -35,6 +35,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
             index: Int,
             animateDelay: Boolean = false,
             completeUrlTest: Boolean = true,
+            preserveOrder: Boolean = false,
         ) {
             val group = reloadLock.withPermit {
                 withClash {
@@ -42,6 +43,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                 }
             }
             val state = states[index]
+            val selectionChanged = state.now != group.now
 
             state.now = group.now
 
@@ -53,6 +55,8 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                 unorderedStates,
                 animateDelay,
                 completeUrlTest,
+                preserveOrder,
+                selectionChanged,
             )
         }
 
@@ -100,7 +104,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                                 states[it.index].now = it.name
                             }
 
-                            design.requestRedrawVisible()
+                            design.notifySelectionChanged(it.index)
                         }
                         is ProxyDesign.Request.UrlTest -> {
                             launch {
@@ -112,6 +116,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                                             it.index,
                                             animateDelay = true,
                                             completeUrlTest = false,
+                                            preserveOrder = true,
                                         )
                                     }
                                 }
@@ -149,6 +154,6 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
     }
 
     private companion object {
-        const val URL_TEST_REFRESH_INTERVAL_MILLIS = 100L
+        const val URL_TEST_REFRESH_INTERVAL_MILLIS = 400L
     }
 }

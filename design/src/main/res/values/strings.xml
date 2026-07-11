@@ -292,6 +292,9 @@
     <string name="more">More</string>
     <string name="save">Save</string>
     <string name="delay_test">Delay Test</string>
+    <string name="selected">Selected</string>
+    <string name="format_delay_milliseconds">%1$s milliseconds</string>
+    <string name="format_proxy_accessibility">%1$s, %2$s, %3$s</string>
 
     <string name="format_provider_type">%1$s(%2$s)</string>
     <string name="rule">Rule</string>
@@ -379,4 +382,12 @@
     <string name="shortcut_start_long">Start Clash service</string>
     <string name="shortcut_stop_short">Stop Clash</string>
     <string name="shortcut_stop_long">Stop Clash service</string>
+    <string name="delete_profile">Delete profile</string>
+    <string name="delete_profile_confirmation">Delete profile “%1$s”? This cannot be undone.</string>
+    <string name="update_all_in_progress">Updating all profiles</string>
+    <string name="access_control_restart_timeout">Changes were saved, but Clash did not stop in time. Restart the service from the main screen.</string>
+    <string name="notification_permission_title">Allow Clash notifications?</string>
+    <string name="notification_permission_rationale">Clash uses a notification while the VPN service is running so you can see its status and return to the app.</string>
+    <string name="notification_permission_denied">Notifications are disabled. Clash can run, but service status notifications will be hidden.</string>
+    <string name="continue_">Continue</string>
 </resources>

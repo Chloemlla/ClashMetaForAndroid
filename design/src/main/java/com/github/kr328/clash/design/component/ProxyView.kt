@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Button
 import com.github.kr328.clash.common.compat.getDrawableCompat
 import com.github.kr328.clash.design.store.UiStore
 
@@ -12,6 +14,7 @@ class ProxyView(
     context: Context,
     config: ProxyViewConfig,
 ) : View(context) {
+    var selectable: Boolean = false
 
     init {
         background = context.getDrawableCompat(config.clickableBackground)
@@ -193,5 +196,13 @@ class ProxyView(
 
             drawText(state.subtitle, 0, subtitleCount, x, y, paint)
         }
+    }
+
+    override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+
+        info.className = if (selectable) Button::class.java.name else View::class.java.name
+        info.isClickable = selectable
+        info.isSelected = selectable && state?.isSelected == true
     }
 }

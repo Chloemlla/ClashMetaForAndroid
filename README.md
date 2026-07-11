@@ -24,7 +24,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
    git submodule update --init --recursive
    ```
 
-2. Install **OpenJDK 11**, **Android SDK**, **CMake** and **Golang**
+2. Install **OpenJDK 21**, **Android SDK**, **CMake** and **Golang**
 
 3. Create `local.properties` in project root with
 
@@ -39,11 +39,12 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
    custom.application.id=com.my.compile.clash
    # remove application id suffix, or the applicaion id will be 'com.github.metacubex.clash.alpha'
    remove.suffix=true
+   ```
 
 5. Create `signing.properties` in project root with
 
    ```properties
-   keystore.path=/path/to/keystore/file
+   keystore.file=/absolute/path/to/keystore/file
    keystore.password=<key store password>
    key.alias=<key alias>
    key.password=<key password>
@@ -57,14 +58,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 ### Automation
 
-APP package name is `com.github.metacubex.clash.meta`
-
-- Toggle Clash.Meta service status
-  - Send intent to activity `com.github.kr328.clash.ExternalControlActivity` with action `com.github.metacubex.clash.meta.action.TOGGLE_CLASH`
-- Start Clash.Meta service
-  - Send intent to activity `com.github.kr328.clash.ExternalControlActivity` with action `com.github.metacubex.clash.meta.action.START_CLASH`
-- Stop Clash.Meta service
-  - Send intent to activity `com.github.kr328.clash.ExternalControlActivity` with action `com.github.metacubex.clash.meta.action.STOP_CLASH`
+- VPN start, stop, and toggle actions are app-private. Dynamic launcher shortcuts remain available, but third-party apps cannot invoke them.
 - Import a profile
   - URL Scheme `clash://install-config?url=<encoded URI>` or `clashmeta://install-config?url=<encoded URI>`
 

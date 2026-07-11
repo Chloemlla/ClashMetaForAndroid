@@ -12,7 +12,6 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.fileName
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
-import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.design.LogcatDesign
 import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.design.model.LogFile
@@ -47,7 +46,9 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
 
     private suspend fun mainLocalFile(file: LogFile) {
         val messages = try {
-            LogcatReader(this, file).readAll()
+            withContext(Dispatchers.IO) {
+                LogcatReader(this@LogcatActivity, file).use { it.readAll() }
+            }
         } catch (e: Exception) {
             Log.e("Fail to read log file ${file.fileName}: ${e.message}")
             return showInvalid()
@@ -77,7 +78,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
                     if (output != null) {
                         try {
                             withContext(Dispatchers.IO) {
-                                writeLogTo(messages, file, output)
+                                writeLogTo(file, output)
                             }
 
                             design.showToast(R.string.file_exported, ToastDuration.Long)
@@ -156,25 +157,23 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun writeLogTo(messages: List<LogMessage>, file: LogFile, uri: Uri) {
+    private suspend fun writeLogTo(file: LogFile, uri: Uri) {
         LogcatFilter(OutputStreamWriter(contentResolver.openOutputStream(uri)), this).use {
             withContext(Dispatchers.Main) {
                 withModelProgressBar {
                     configure {
                         isIndeterminate = true
-                        max = messages.size
                     }
 
                     withContext(Dispatchers.IO) {
                         it.writeHeader(file.date)
 
-                        messages.forEachIndexed { idx, msg ->
-                            configure {
-                                isIndeterminate = false
-                                progress = idx
-                            }
-
-                            it.writeMessage(msg)
+                        LogcatReader(
+                            this@LogcatActivity,
+                            file,
+                            maxReadBytes = null,
+                        ).use { reader ->
+                            reader.forEachMessage(it::writeMessage)
                         }
                     }
                 }

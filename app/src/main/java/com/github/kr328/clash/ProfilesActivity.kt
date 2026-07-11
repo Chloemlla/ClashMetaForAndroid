@@ -9,7 +9,8 @@ import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.ProfilesDesign
 import com.github.kr328.clash.design.ui.ToastDuration
-import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.model.Profile as ServiceProfile
+import com.github.kr328.clash.util.toDesignProfile
 import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -42,20 +43,20 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                     when (it) {
                         ProfilesDesign.Request.Create ->
                             startActivity(NewProfileActivity::class.intent)
-                        ProfilesDesign.Request.UpdateAll ->
-                            withProfile {
-                                try {
+                        ProfilesDesign.Request.UpdateAll -> {
+                            try {
+                                withProfile {
                                     queryAll().forEach { p ->
-                                        if (p.imported && p.type != Profile.Type.File)
+                                        if (p.imported && p.type != ServiceProfile.Type.File)
                                             update(p.uuid)
                                     }
                                 }
-                                finally {
-                                    withContext(Dispatchers.Main) {
-                                        design.finishUpdateAll();
-                                    }
+                            } finally {
+                                withContext(Dispatchers.Main) {
+                                    design.finishUpdateAll()
                                 }
                             }
+                        }
                         is ProfilesDesign.Request.Update ->
                             withProfile { update(it.profile.uuid) }
                         is ProfilesDesign.Request.Delete ->
@@ -65,7 +66,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                         is ProfilesDesign.Request.Active -> {
                             withProfile {
                                 if (it.profile.imported)
-                                    setActive(it.profile)
+                                    queryByUUID(it.profile.uuid)?.let { profile ->
+                                        setActive(profile)
+                                    }
                                 else
                                     design.requestSave(it.profile)
                             }
@@ -88,7 +91,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
 
     private suspend fun ProfilesDesign.fetch() {
         withProfile {
-            patchProfiles(queryAll())
+            patchProfiles(queryAll().map { it.toDesignProfile() })
         }
     }
 

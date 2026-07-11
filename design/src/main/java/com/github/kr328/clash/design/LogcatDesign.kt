@@ -37,12 +37,9 @@ class LogcatDesign(
 
     suspend fun patchMessages(messages: List<LogMessage>, removed: Int, appended: Int) {
         withContext(Dispatchers.Main) {
-            adapter.messages = messages
+            adapter.submitMessages(messages, removed, appended)
 
-            adapter.notifyItemRangeInserted(adapter.messages.size, appended)
-            adapter.notifyItemRangeRemoved(0, removed)
-
-            if (streaming && binding.recyclerList.isTop) {
+            if (streaming && messages.isNotEmpty() && binding.recyclerList.isTop) {
                 binding.recyclerList.scrollToPosition(messages.size - 1)
             }
         }

@@ -7,8 +7,8 @@ import com.github.kr328.clash.design.databinding.DesignPropertiesBinding
 import com.github.kr328.clash.design.dialog.ModelProgressBarConfigure
 import com.github.kr328.clash.design.dialog.requestModelTextInput
 import com.github.kr328.clash.design.dialog.withModelProgressBar
+import com.github.kr328.clash.design.model.Profile
 import com.github.kr328.clash.design.util.*
-import com.github.kr328.clash.service.model.Profile
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -71,8 +71,22 @@ class ProxyDesign(
         links: Map<String, ProxyState>,
         animateDelay: Boolean = false,
         completeUrlTest: Boolean = true,
+        preserveOrder: Boolean = false,
+        selectionChanged: Boolean = false,
     ) {
-        adapter.updateAdapter(position, proxies, selectable, parent, links, animateDelay)
+        adapter.updateAdapter(
+            position,
+            proxies,
+            selectable,
+            parent,
+            links,
+            animateDelay,
+            preserveOrder,
+        )
+
+        if (selectionChanged) {
+            adapter.notifySelectionChanged(position)
+        }
 
         if (completeUrlTest) {
             adapter.states[position].urlTesting = false
@@ -81,9 +95,9 @@ class ProxyDesign(
         updateUrlTestButtonStatus()
     }
 
-    suspend fun requestRedrawVisible() {
+    suspend fun notifySelectionChanged(position: Int) {
         withContext(Dispatchers.Main) {
-            adapter.requestRedrawVisible()
+            adapter.notifySelectionChanged(position)
         }
     }
 

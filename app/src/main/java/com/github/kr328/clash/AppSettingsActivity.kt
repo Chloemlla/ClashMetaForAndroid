@@ -6,6 +6,7 @@ import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.design.AppSettingsDesign
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
+import com.github.kr328.clash.store.ServiceSettingsAdapter
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.ApplicationObserver
 import kotlinx.coroutines.isActive
@@ -16,7 +17,7 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
         val design = AppSettingsDesign(
             this,
             uiStore,
-            ServiceStore(this),
+            ServiceSettingsAdapter(ServiceStore(this)),
             this,
             clashRunning,
             ::onHideIconChange,

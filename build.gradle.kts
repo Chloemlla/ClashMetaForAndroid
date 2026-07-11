@@ -2,6 +2,7 @@
 
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.BaseExtension
+import org.gradle.api.GradleException
 import java.net.URL
 import java.util.*
 
@@ -30,6 +31,10 @@ subprojects {
     val isApp = name == "app"
 
     apply(plugin = if (isApp) "com.android.application" else "com.android.library")
+
+    if (name == "design" || name == "app") {
+        dependencies.add("testImplementation", libs.test.junit)
+    }
 
     fun queryConfigProperty(key: String): Any? {
         val localProperties = Properties()
@@ -143,18 +148,64 @@ subprojects {
             }
         }
 
-        signingConfigs {
-            val keystore = rootProject.file("signing.properties")
-            if (keystore.exists()) {
-                create("release") {
-                    val prop = Properties().apply {
-                        keystore.inputStream().use(this::load)
-                    }
+        val signingPropertiesFile = rootProject.file("signing.properties")
+        val signingProperties = Properties()
+        val releaseKeystore = if (isApp && signingPropertiesFile.isFile) {
+            signingPropertiesFile.inputStream().use { signingProperties.load(it) }
 
-                    storeFile = rootProject.file("release.keystore")
-                    storePassword = prop.getProperty("keystore.password")!!
-                    keyAlias = prop.getProperty("key.alias")!!
-                    keyPassword = prop.getProperty("key.password")!!
+            val requiredProperties = listOf(
+                "keystore.file",
+                "keystore.password",
+                "key.alias",
+                "key.password",
+            )
+            val missingProperties = requiredProperties.filter {
+                signingProperties.getProperty(it).isNullOrBlank()
+            }
+            if (missingProperties.isNotEmpty()) {
+                throw GradleException(
+                    "Invalid signing.properties; missing: ${missingProperties.joinToString()}"
+                )
+            }
+
+            rootProject.file(signingProperties.getProperty("keystore.file")).also {
+                if (!it.isFile) {
+                    throw GradleException("Release keystore does not exist: ${it.absolutePath}")
+                }
+            }
+        } else {
+            null
+        }
+
+        if (isApp) {
+            val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
+            val releaseBuildRequested = requestedTasks.any {
+                val taskName = it.lowercase(Locale.ROOT)
+                taskName == "build" ||
+                    taskName == "assemble" ||
+                    taskName == "bundle" ||
+                    (taskName.contains("release") &&
+                        (taskName.startsWith("assemble") ||
+                            taskName.startsWith("bundle") ||
+                            taskName.startsWith("package") ||
+                            taskName.startsWith("publish") ||
+                            taskName.startsWith("sign")))
+            }
+            if (releaseBuildRequested && releaseKeystore == null) {
+                throw GradleException(
+                    "Release signing is required. Create signing.properties with " +
+                        "keystore.file, keystore.password, key.alias, and key.password."
+                )
+            }
+
+            signingConfigs {
+                if (releaseKeystore != null) {
+                    create("release") {
+                        storeFile = releaseKeystore
+                        storePassword = signingProperties.getProperty("keystore.password")
+                        keyAlias = signingProperties.getProperty("key.alias")
+                        keyPassword = signingProperties.getProperty("key.password")
+                    }
                 }
             }
         }
@@ -163,7 +214,9 @@ subprojects {
             named("release") {
                 isMinifyEnabled = isApp
                 isShrinkResources = isApp
-                signingConfig = signingConfigs.findByName("release") ?: signingConfigs["debug"]
+                if (isApp) {
+                    signingConfig = signingConfigs.findByName("release")
+                }
                 proguardFiles(
                     getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro"

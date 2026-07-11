@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.design.databinding.AdapterLogMessageBinding
+import com.github.kr328.clash.design.util.calculateLogUpdate
 import com.github.kr328.clash.design.util.layoutInflater
 
 class LogMessageAdapter(
@@ -15,6 +16,25 @@ class LogMessageAdapter(
     class Holder(val binding: AdapterLogMessageBinding) : RecyclerView.ViewHolder(binding.root)
 
     var messages: List<LogMessage> = emptyList()
+        private set
+
+    fun submitMessages(updated: List<LogMessage>, removed: Int, appended: Int) {
+        val update = calculateLogUpdate(messages.size, updated.size, removed, appended)
+
+        messages = updated
+
+        if (update == null) {
+            notifyDataSetChanged()
+            return
+        }
+
+        if (update.removed > 0) {
+            notifyItemRangeRemoved(0, update.removed)
+        }
+        if (update.appended > 0) {
+            notifyItemRangeInserted(update.insertionStart, update.appended)
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         return Holder(

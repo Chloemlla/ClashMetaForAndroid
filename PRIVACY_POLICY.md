@@ -1,50 +1,41 @@
-## Privacy Policy
+# Privacy Policy
 
-The Clash for Android is built as an Open Source software. This app is provided by personal at no cost and is intended for use as is.
+ClashMetaForAndroid is open-source software that runs primarily on your device. The project does not operate an account system or a server that receives your proxy profiles.
 
-This page is used to inform visitors regarding our policies with the collection, use, and disclosure of Personal Information if anyone decided to use our app.
+## Data handled by the app
 
-If you choose to use our app, then you agree to the collection and use of information in relation to this policy. The Personal Information that we collect is used for providing and improving the app. We will not use or share your information with anyone except as described in this Privacy Policy.
+To provide VPN and profile-management features, the app may store the following data locally:
 
-The terms used in this Privacy Policy have the same meanings as in our Terms and Conditions, which is accessible at Clash for Android unless otherwise defined in this Privacy Policy.
+- profile names, profile types, subscription source URLs, update intervals, and traffic metadata;
+- imported and pending configuration files, override settings, selected proxies, and optional `ageSecretKey` values used to decrypt profiles;
+- VPN, access-control, and user-interface preferences;
+- the installed-app list needed to configure per-app VPN access control; and
+- diagnostic logs when the user explicitly enables log recording.
 
-**Information Collection and Use**
+Subscription URLs, provider URLs, and configuration-defined endpoints are contacted only to perform the actions requested by the user. Their operators receive the network information normally exposed by such a request, including the source IP address.
 
-For a better experience, while using our app, we may require you to provide us with certain personally identifiable information. The information that we request will be retained by us and used as described in this privacy policy.
+## System backup and device transfer
 
-The app does use third party services that may collect information used to identify you.
+Android backup is limited to non-sensitive app preferences. The app explicitly excludes the profile database, imported and pending profile files, and Clash configuration/override files from cloud backup and device-to-device transfer. These exclusions cover subscription sources and `ageSecretKey` values stored in the profile database.
 
-Link to privacy policy of third party service providers used by the app
+Older versions of the app used broader backup rules. Updating the app cannot delete copies that an Android backup provider may already hold; users should manage or remove existing device backups through their Android or cloud-account settings when needed.
 
-*   [Google Play Services](https://www.google.com/policies/privacy/)
-*   [AppCenter](https://docs.microsoft.com/en-us/appcenter/gdpr/)
+## Logs and sharing
 
-**Log Data**
+Diagnostic logs remain on the device unless the user chooses to export or share them. Logs may contain connection details or configuration-derived values, so users should review them before sharing. The project does not automatically upload app logs to an operator-controlled service.
 
-We want to inform you that whenever you use our app, in a case of an error in the app we collect data and information (through third party products) on your phone called Log Data. This Log Data may include information such as your device Internet Protocol (“IP”) address, device name, operating system version, the configuration of the app when utilizing our App, the time and date of your use of the app, and other statistics.
+## Platform and third-party processing
 
-**Cookies**
+Android, the device vendor, the configured VPN/proxy endpoints, subscription providers, and any app store used to obtain the app may process data under their own policies. ClashMetaForAndroid does not control those services.
 
-Cookies are files with a small amount of data that are commonly used as anonymous unique identifiers. These are sent to your browser from the websites that you visit and are stored on your device's internal memory.
+## Security
 
-This app does not use these “cookies” explicitly. However, the app may use third party code and libraries that use “cookies” to collect information and improve their services. You have the option to either accept or refuse these cookies and know when a cookie is being sent to your device. If you choose to refuse our cookies, you may not be able to use some portions of this app.
+The project uses reasonable safeguards, but no software, network transmission, or local storage method can be guaranteed completely secure. Users should protect subscription credentials, exported profiles, logs, and decryption keys as sensitive information.
 
-**Security**
+## Children
 
-We value your trust in providing us your Personal Information, thus we are striving to use commercially acceptable means of protecting it. But remember that no method of transmission over the internet, or method of electronic storage is 100% secure and reliable, and we cannot guarantee its absolute security.
+The app is not directed to children under 13 and does not knowingly operate a service that collects personal information from children.
 
-**Links to Other Sites**
+## Changes and contact
 
-This app may contain links to other sites. If you click on a third-party link, you will be directed to that site. Note that these external sites are not operated by us. Therefore, we strongly advise you to review the Privacy Policy of these websites. We have no control over and assume no responsibility for the content, privacy policies, or practices of any third-party sites or services.
-
-**Children’s Privacy**
-
-These Services do not address anyone under the age of 13\. We do not knowingly collect personally identifiable information from children under 13\. In the case we discover that a child under 13 has provided us with personal information, we immediately delete this from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we will be able to do necessary actions.
-
-**Changes to This Privacy Policy**
-
-We may update our Privacy Policy from time to time. Thus, you are advised to review this page periodically for any changes. We will notify you of any changes by posting the new Privacy Policy on this page. These changes are effective immediately after they are posted on this page.
-
-**Contact Us**
-
-If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us.
+This policy may be updated with the source code. Questions or security reports can be submitted through the project's GitHub repository.

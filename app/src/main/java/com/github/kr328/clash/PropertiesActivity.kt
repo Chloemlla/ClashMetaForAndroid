@@ -4,9 +4,10 @@ import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.design.PropertiesDesign
+import com.github.kr328.clash.design.model.Profile
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
-import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.util.toDesignProfile
 import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
@@ -24,7 +25,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         val uuid = intent.uuid ?: return finish()
         val design = PropertiesDesign(this)
 
-        original = withProfile { queryByUUID(uuid) } ?: return finish()
+        original = withProfile { queryByUUID(uuid) }?.toDesignProfile() ?: return finish()
 
         design.profile = original
 

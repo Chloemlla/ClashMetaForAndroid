@@ -3,6 +3,7 @@ package com.github.kr328.clash
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.NetworkSettingsDesign
 import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.store.ServiceSettingsAdapter
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 
@@ -11,7 +12,7 @@ class NetworkSettingsActivity : BaseActivity<NetworkSettingsDesign>() {
         val design = NetworkSettingsDesign(
             this,
             uiStore,
-            ServiceStore(this),
+            ServiceSettingsAdapter(ServiceStore(this)),
             clashRunning,
         )
 

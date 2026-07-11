@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.view.View
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
+import com.github.kr328.clash.design.model.AccessControlMode
+import com.github.kr328.clash.design.model.ServiceSettings
 import com.github.kr328.clash.design.preference.*
 import com.github.kr328.clash.design.store.UiStore
 import com.github.kr328.clash.design.ui.ToastDuration
@@ -11,14 +13,12 @@ import com.github.kr328.clash.design.util.applyFrom
 import com.github.kr328.clash.design.util.bindAppBarElevation
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.root
-import com.github.kr328.clash.service.model.AccessControlMode
-import com.github.kr328.clash.service.store.ServiceStore
 import kotlinx.coroutines.launch
 
 class NetworkSettingsDesign(
     context: Context,
     uiStore: UiStore,
-    srvStore: ServiceStore,
+    srvStore: ServiceSettings,
     running: Boolean,
 ) : Design<NetworkSettingsDesign.Request>(context) {
     enum class Request {
