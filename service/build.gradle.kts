@@ -1,6 +1,5 @@
 plugins {
     kotlin("android")
-    id("kotlin-parcelize")
     id("kotlinx-serialization")
     id("com.android.library")
     id("com.google.devtools.ksp")
@@ -10,7 +9,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":common"))
 
-    ksp(libs.kaidl.compiler)
+    ksp("com.github.kr328.kaidl.patched:kaidl-compiler-patch:1.15.1")
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.kotlin.coroutine)

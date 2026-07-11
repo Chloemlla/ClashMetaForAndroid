@@ -7,6 +7,8 @@ include(":design")
 include(":common")
 include(":hideapi")
 
+includeBuild("kaidl-compiler-patch")
+
 pluginManagement {
     repositories {
         mavenLocal()
