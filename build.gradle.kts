@@ -32,10 +32,6 @@ subprojects {
 
     apply(plugin = if (isApp) "com.android.application" else "com.android.library")
 
-    if (name == "design" || name == "app") {
-        dependencies.add("testImplementation", libs.test.junit)
-    }
-
     fun queryConfigProperty(key: String): Any? {
         val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
