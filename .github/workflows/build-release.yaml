@@ -92,7 +92,7 @@ jobs:
         run: python3 .github/scripts/verify-repository-policy.py
 
       - name: JVM unit tests
-        run: ./gradlew --no-daemon --stacktrace --info testAlphaDebugUnitTest
+        run: python3 .github/scripts/run-jvm-tests.py
 
       - name: Upload JVM test reports
         if: always()
