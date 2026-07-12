@@ -149,8 +149,26 @@ val downloadGeoFiles by tasks.registering {
     }
 }
 
+// Geo assets land in src/main/assets. Tasks that package or inspect those
+// files must depend on downloadGeoFiles so Gradle can validate the task graph.
 tasks.configureEach {
-    if (name.startsWith("assemble") || name.startsWith("bundle")) {
+    if (name == downloadGeoFiles.name) {
+        return@configureEach
+    }
+
+    val lower = name.lowercase()
+    val consumesGeoAssets =
+        name.startsWith("assemble") ||
+            name.startsWith("bundle") ||
+            (name.startsWith("pre") && name.endsWith("Build")) ||
+            lower.contains("lint") ||
+            lower.contains("assets") ||
+            lower.contains("sourcesetpaths") ||
+            lower.contains("mergesource") ||
+            lower.contains("processapplicationmanifest") ||
+            lower.contains("processmanifest")
+
+    if (consumesGeoAssets) {
         dependsOn(downloadGeoFiles)
     }
 }
