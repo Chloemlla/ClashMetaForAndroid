@@ -81,7 +81,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 - When `MetaCubeX/Clash.Meta` kernel is updated to a new version, the `Update Dependencies` actions in this repo will be triggered automatically.
   - It will pull the new version of the meta kernel, update all the golang dependencies, and create a PR without manual intervention.
   - If there is any compile error in PR, you need to fix it before merging. Alternatively, you may merge the PR directly.
-- Manually triggering `Build Pre-Release` actions will compile and publish a `PreRelease` version.
+- Pushing to `main` on the Chloemlla fork triggers **Build Release on Push**: signed **Meta** APKs, GitHub **full release** (`prerelease: false`), and **`make_latest: true`** (tag `v{version}-{shortsha}`). Manual `Build Release` remains for version-bumped `vX.Y.Z` tags.
 - Manually triggering `Build Release` actions will compile, tag and publish a `Release` version.
   - You must fill the blank `Release Tag` with the tag you want to release in the format of `v1.2.3`.
   - `versionName` and `versionCode` in `build.gradle.kts` will be automatically bumped to the tag you filled above.
@@ -178,7 +178,8 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 相关提交包括：`c76ede2`、`d4fff9c`、`83fe497`、`01aedc7`、`1135e04`、`884bc8a`、`c3ba6ae` 等。
 
-- **统一签名密钥契约**：Pre-Release / Release 均通过 Secrets（`KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`）注入；在 `$RUNNER_TEMP` 解码 keystore 并生成临时 `signing.properties`，`always()` 清理。
+- **main 推送正式包**：`build-pre-release.yaml` 对 Chloemlla fork 使用 `app:assembleMetaRelease` + `prerelease: false` + `make_latest: true`，不再产出 Alpha / Pre-release。
+- **统一签名密钥契约**：main 推送正式包 / 手动 Release 均通过 Secrets（`KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`）注入；在 `$RUNNER_TEMP` 解码 keystore 并生成临时 `signing.properties`，`always()` 清理。
 - **产物完整性**：发布 APK 生成 `SHA256SUMS`；移除对缺失的 `SIGNING_CERT_SHA256` 校验依赖，避免因未配置 secret 阻断流水线。
 - **版本元数据**：工作流正确写入 release metadata 与 version 变量；正式发布顺序与审计 F-16 对齐。
 - **测试可见性**：单元测试失败输出完整堆栈；Gradle 隐藏失败被注解到 Job 日志。
@@ -240,7 +241,7 @@ i18n        多语言缺失串补全 · 合理 MissingTranslation 策略
 
 ### 10. 验证说明
 
-- **不要**把本机 Gradle/Flutter 跑通当作发布门禁；本 fork 约定真实验证在 **GitHub Actions**（debug / pre-release / release 工作流）。
+- **不要**把本机 Gradle/Flutter 跑通当作发布门禁；本 fork 约定真实验证在 **GitHub Actions**（debug / main 推送 Meta 正式包 / 手动 versioned release 工作流）。
 - 推送后请在 Actions 中查看：assemble、unit test、lint 报告产物、签名与 `SHA256SUMS`。
 - 若需对照审计条目与代码落点，优先阅读审计报告 §4 与 `docs/plans/2026-07-10-full-audit-remediation-execution-plan.md`。
 

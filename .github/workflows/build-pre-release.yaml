@@ -1,4 +1,4 @@
-name: Build Pre-Release
+name: Build Release on Push
 
 on:
   workflow_dispatch:
@@ -10,7 +10,9 @@ permissions:
   contents: write
 
 jobs:
-  BuildPreRelease:
+  BuildReleaseOnPush:
+    # Only auto-publish full Meta releases from the Chloemlla fork.
+    if: github.repository_owner == 'Chloemlla' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -24,6 +26,7 @@ jobs:
           test -n "$VERSION_NAME"
           echo "CMFA_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "CMFA_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
+          echo "CMFA_RELEASE_TAG=v${VERSION_NAME}-${SHORT_HASH}" >> "$GITHUB_ENV"
 
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
@@ -74,12 +77,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: pre-release-jvm-test-reports
+          name: push-release-jvm-test-reports
           path: '**/build/reports/tests/**'
           if-no-files-found: warn
 
       - name: Android Lint
-        run: ./gradlew --no-daemon lintAlphaRelease
+        run: ./gradlew --no-daemon lintMetaRelease
 
       - name: Print full Android Lint reports
         if: always()
@@ -89,7 +92,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: pre-release-android-lint-reports
+          name: push-release-android-lint-reports
           path: |
             **/build/reports/lint-results-*.*
             **/build/intermediates/lint_intermediate_text_report/**/lint-results-*.txt
@@ -107,7 +110,7 @@ jobs:
           : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
           : "${KEY_ALIAS:?KEY_ALIAS is required}"
           : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
-          KEYSTORE_FILE="$RUNNER_TEMP/cmfa-alpha-release.keystore"
+          KEYSTORE_FILE="$RUNNER_TEMP/cmfa-release.keystore"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
           chmod 600 "$KEYSTORE_FILE"
           printf '%s\n' \
@@ -117,12 +120,12 @@ jobs:
             "key.password=$KEY_PASSWORD" \
             > signing.properties
 
-      - name: Build pre-release APKs
-        run: ./gradlew --no-daemon app:assembleAlphaRelease
+      - name: Build signed Meta release APKs
+        run: ./gradlew --no-daemon app:assembleMetaRelease
 
       - name: Generate APK checksums
         run: |
-          cd app/build/outputs/apk/alpha/release
+          cd app/build/outputs/apk/meta/release
           sha256sum ./*.apk > SHA256SUMS
 
       - name: Automatic release
@@ -132,13 +135,13 @@ jobs:
           draft: false
           make_latest: true
           generate_release_notes: true
-          tag_name: v${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}
-          prerelease: true
-          name: ClashMetaForAndroid Alpha ${{ env.CMFA_VERSION_NAME }}-${{ env.CMFA_SHORT_HASH }}
+          tag_name: ${{ env.CMFA_RELEASE_TAG }}
+          prerelease: false
+          name: ClashMetaForAndroid ${{ env.CMFA_VERSION_NAME }} (${{ env.CMFA_SHORT_HASH }})
           files: |
-            app/build/outputs/apk/alpha/release/*.apk
-            app/build/outputs/apk/alpha/release/SHA256SUMS
+            app/build/outputs/apk/meta/release/*.apk
+            app/build/outputs/apk/meta/release/SHA256SUMS
 
       - name: Remove signing credentials
         if: always()
-        run: rm -f signing.properties "$RUNNER_TEMP/cmfa-alpha-release.keystore"
+        run: rm -f signing.properties "$RUNNER_TEMP/cmfa-release.keystore"
