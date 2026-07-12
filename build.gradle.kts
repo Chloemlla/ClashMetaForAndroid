@@ -246,6 +246,15 @@ subprojects {
             sourceCompatibility = JavaVersion.VERSION_21
             targetCompatibility = JavaVersion.VERSION_21
         }
+
+        // Keep CI lint as a quality gate while suppressing known generated-source false positives.
+        lintOptions {
+            isAbortOnError = true
+            isCheckReleaseBuilds = true
+            lintConfig = rootProject.file("lint.xml")
+            // RoomOpenHelper.Delegate is restricted; generated Room *_Impl classes trigger this en masse.
+            disable("RestrictedApi")
+        }
     }
 }
 

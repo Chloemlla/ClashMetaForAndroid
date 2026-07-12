@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      Room KSP generates Database_Impl that subclasses restricted RoomOpenHelper.Delegate.
+      This project adds KSP outputs to variant sourceSets for compilation, so Lint treats
+      those generated files as first-party sources and reports hundreds of RestrictedApi false positives.
+    -->
+    <issue id="RestrictedApi">
+        <ignore path="**/build/generated/**" />
+        <ignore regexp=".*_Impl\.java" />
+    </issue>
+</lint>
