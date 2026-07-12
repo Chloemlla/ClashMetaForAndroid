@@ -38,7 +38,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/item_text_margin"
-                    android:layout_marginEnd="@dimen/item_tailing_component_size"
+                    android:layout_marginEnd="@dimen/item_action_size"
                     android:ellipsize="start"
                     android:singleLine="true"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
@@ -50,12 +50,12 @@
             </LinearLayout>
 
             <ImageView
-                android:layout_width="@dimen/item_tailing_component_size"
-                android:layout_height="@dimen/item_tailing_component_size"
+                android:layout_width="@dimen/item_action_size"
+                android:layout_height="@dimen/item_action_size"
                 android:layout_gravity="bottom|end"
                 android:layout_marginBottom="@dimen/divider_size"
                 android:contentDescription="@string/edit"
-                android:padding="@dimen/item_image_action_padding"
+                android:padding="@dimen/item_action_padding"
                 android:src="@drawable/ic_baseline_edit" />
         </FrameLayout>
     </LinearLayout>

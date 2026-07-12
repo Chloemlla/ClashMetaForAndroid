@@ -16,6 +16,9 @@
     <dimen name="toolbar_elevation">5dp</dimen>
     <dimen name="toolbar_image_action_size">48dp</dimen>
     <dimen name="toolbar_image_action_padding">12dp</dimen>
+    <!-- Shared 48dp target for list row icon actions (menus, updates). -->
+    <dimen name="item_action_size">48dp</dimen>
+    <dimen name="item_action_padding">12dp</dimen>
     <dimen name="item_image_action_padding">5dp</dimen>
 
     <!--  Tab Layout  -->

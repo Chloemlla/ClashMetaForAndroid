@@ -132,6 +132,49 @@ require(
     "release workflow still uses legacy stable-only signing secret names",
 )
 
+
+dimens = (ROOT / "design/src/main/res/values/dimens.xml").read_text(encoding="utf-8")
+require(
+    re.search(r'<dimen name="toolbar_image_action_size">48dp</dimen>', dimens) is not None,
+    "toolbar image actions are not 48dp",
+)
+require(
+    re.search(r'<dimen name="item_action_size">48dp</dimen>', dimens) is not None,
+    "list row icon actions are not 48dp",
+)
+
+interactive_layouts = [
+    ROOT / "design/src/main/res/layout/adapter_profile.xml",
+    ROOT / "design/src/main/res/layout/adapter_file.xml",
+    ROOT / "design/src/main/res/layout/adapter_provider.xml",
+    ROOT / "design/src/main/res/layout/component_action_text_field.xml",
+]
+for layout in interactive_layouts:
+    content = layout.read_text(encoding="utf-8")
+    require(
+        "item_action_size" in content,
+        f"{layout.name} does not use the shared 48dp item action size",
+    )
+    require(
+        not re.search(
+            r'android:id="@\+id/(menu_view|end_view)"[^>]*android:layout_width="wrap_content"',
+            content,
+            re.S,
+        ),
+        f"{layout.name} still uses wrap_content for an interactive row action",
+    )
+
+history_paths = subprocess.check_output(
+    ["git", "log", "--all", "--name-only", "--pretty=format:", "--", "release.keystore"],
+    cwd=ROOT,
+    text=True,
+    encoding="utf-8",
+)
+require(
+    "release.keystore" not in history_paths,
+    "release.keystore is still reachable from Git history",
+)
+
 if errors:
     for error in errors:
         print(f"policy error: {error}", file=sys.stderr)

@@ -2,9 +2,9 @@
 
 ## Signing-key incident note
 
-`release.keystore` was previously committed to this repository. Removing it from the current tree and adding ignore/CI checks prevents normal reuse, but does not remove it from Git history or existing clones.
+`release.keystore` was previously committed to this repository. It has been removed from the current tree and purged from rewritten Git history on this fork. Existing forks, mirrors, local clones, CI caches, and third-party archives created before the purge may still retain the blob.
 
-Maintainers must determine whether that key ever signed a production build. If it did, assess exposure and rotate or revoke it through the applicable distribution channel (preferably Play App Signing or another managed signing service). This repository intentionally does not rewrite history or rotate a real production key automatically.
+That historical exposure is irreversible for any copy that already left the repository. Maintainers must assume the leaked container is public, determine whether it ever signed a production build, and rotate or revoke the corresponding certificate through the applicable distribution channel (preferably Play App Signing or another managed signing service). Do not reuse a historically committed keystore for new production builds.
 
 ## CI signing contract
 

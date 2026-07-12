@@ -81,24 +81,25 @@
             android:layout_centerVertical="true"
             android:layout_toStartOf="@id/menu_view"
             android:background="?attr/colorControlHighlight"
-            android:minHeight="@{@dimen/item_tailing_component_size * 1.5f}" />
+            android:minHeight="@dimen/item_action_size" />
 
         <FrameLayout
             android:id="@+id/menu_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="@dimen/item_action_size"
+            android:layout_height="@dimen/item_action_size"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
+            android:contentDescription="@string/more"
             android:focusable="true"
             android:nextFocusLeft="@id/root_view"
-            android:onClick="@{more}">
+            android:onClick="@{more}"
+            android:padding="@dimen/item_action_padding">
 
             <View
-                android:layout_width="@dimen/item_tailing_component_size"
-                android:layout_height="@dimen/item_tailing_component_size"
-                android:layout_margin="@dimen/item_tailing_margin"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:background="@drawable/ic_baseline_more_vert" />
         </FrameLayout>
     </RelativeLayout>
