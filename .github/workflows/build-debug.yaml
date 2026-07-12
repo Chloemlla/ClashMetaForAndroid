@@ -81,6 +81,21 @@ jobs:
       - name: Android Lint
         run: ./gradlew --no-daemon lintAlphaDebug
 
+      - name: Print full Android Lint reports
+        if: always()
+        run: bash .github/scripts/print-lint-reports.sh
+
+      - name: Upload Android Lint reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: debug-android-lint-reports
+          path: |
+            **/build/reports/lint-results-*.*
+            **/build/intermediates/lint_intermediate_text_report/**/lint-results-*.txt
+            **/build/reports/lint-results-*.html
+          if-no-files-found: warn
+
       - name: Build debug APKs
         run: ./gradlew --no-daemon app:assembleAlphaDebug
 
