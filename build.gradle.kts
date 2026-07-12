@@ -248,28 +248,27 @@ subprojects {
         }
 
         // Keep CI lint as a quality gate while suppressing known false positives / noise.
-        // AGP 8+ prefers the lint {} DSL over deprecated lintOptions {}.
-        lint {
-            abortOnError = true
-            checkReleaseBuilds = true
+        // Configured via BaseExtension.lintOptions (still the supported API on BaseExtension).
+        // Issue suppressions also live in root lint.xml for merge/path-based ignores.
+        lintOptions {
+            isAbortOnError = true
+            isCheckReleaseBuilds = true
             lintConfig = rootProject.file("lint.xml")
-            // Keep suppressions in lint.xml as the source of truth; also disable here so
-            // variant lint tasks honor them even when config merge differs.
-            disable += "RestrictedApi"
-            disable += "MissingTranslation"
-            disable += "ExtraTranslation"
-            disable += "GradleDependency"
-            disable += "AndroidGradlePluginVersion"
-            disable += "UseTomlInstead"
-            disable += "IconLauncherShape"
-            disable += "IconDipSize"
-            disable += "IconDuplicatesConfig"
-            disable += "IconLocation"
-            disable += "IconDensities"
-            disable += "IconMissingDensityFolder"
-            disable += "UnusedResources"
-            disable += "VectorPath"
-            disable += "VectorRaster"
+            disable("RestrictedApi")
+            disable("MissingTranslation")
+            disable("ExtraTranslation")
+            disable("GradleDependency")
+            disable("AndroidGradlePluginVersion")
+            disable("UseTomlInstead")
+            disable("IconLauncherShape")
+            disable("IconDipSize")
+            disable("IconDuplicatesConfig")
+            disable("IconLocation")
+            disable("IconDensities")
+            disable("IconMissingDensityFolder")
+            disable("UnusedResources")
+            disable("VectorPath")
+            disable("VectorRaster")
         }
     }
 }
