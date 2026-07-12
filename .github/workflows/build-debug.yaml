@@ -79,7 +79,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Android Lint
-        run: ./gradlew --no-daemon lintAlphaDebug
+        run: python3 .github/scripts/run-android-lint.py lintAlphaDebug
 
       - name: Print full Android Lint reports
         if: always()

@@ -103,7 +103,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Android Lint
-        run: ./gradlew --no-daemon lintMetaRelease
+        run: python3 .github/scripts/run-android-lint.py lintMetaRelease
 
       - name: Print full Android Lint reports
         if: always()

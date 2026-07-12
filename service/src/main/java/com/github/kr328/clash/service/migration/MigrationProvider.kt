@@ -16,6 +16,9 @@ import java.io.File
 class MigrationProvider : ContentProvider() {
     private val matcher = UriMatcher(UriMatcher.NO_MATCH)
 
+    @Volatile
+    private var cachedBundle: File? = null
+
     override fun onCreate(): Boolean {
         val authority = context?.packageName?.let(Migration::authorityFor) ?: return false
         matcher.addURI(authority, Migration.BUNDLE_PATH, CODE_BUNDLE)
@@ -33,15 +36,7 @@ class MigrationProvider : ContentProvider() {
         if (matcher.match(uri) != CODE_BUNDLE) return null
 
         val ctx = context ?: return null
-        // Ensure Room is ready before export.
-        Database.database
-
-        val file = bundleFile(ctx)
-        val ok = runBlocking { MigrationBundle.exportToZip(ctx, file) }
-        if (!ok || !file.isFile) {
-            Log.w("MigrationProvider: export failed")
-            return null
-        }
+        val file = ensureBundle(ctx) ?: return null
 
         return MatrixCursor(arrayOf("size", "package")).apply {
             addRow(arrayOf(file.length(), ctx.packageName))
@@ -54,12 +49,8 @@ class MigrationProvider : ContentProvider() {
         if (mode != "r") throw SecurityException("read-only migration bundle")
 
         val ctx = context ?: return null
-        Database.database
-        val file = bundleFile(ctx)
-        val ok = runBlocking { MigrationBundle.exportToZip(ctx, file) }
-        if (!ok || !file.isFile) {
-            throw IllegalStateException("migration export failed")
-        }
+        val file = ensureBundle(ctx)
+            ?: throw IllegalStateException("migration export failed")
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
@@ -75,6 +66,21 @@ class MigrationProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String>?,
     ): Int = 0
+
+    private fun ensureBundle(ctx: android.content.Context): File? {
+        cachedBundle?.takeIf { it.isFile && it.length() > 0L }?.let { return it }
+
+        // Ensure Room is ready before export.
+        Database.database
+        val file = bundleFile(ctx)
+        val ok = runBlocking { MigrationBundle.exportToZip(ctx, file) }
+        if (!ok || !file.isFile || file.length() <= 0L) {
+            Log.w("MigrationProvider: export failed")
+            return null
+        }
+        cachedBundle = file
+        return file
+    }
 
     private fun enforceCaller() {
         val ctx = context ?: throw SecurityException("no context")

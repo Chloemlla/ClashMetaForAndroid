@@ -37,4 +37,13 @@
     <issue id="UniquePermission">
         <ignore regexp=".*MIGRATE_DATA.*" />
     </issue>
+
+    <!--
+      MigrationProvider is exported on purpose with a signature-level permission and
+      an additional same-signature runtime check. Treat as intentional, not a defect.
+    -->
+    <issue id="ExportedContentProvider">
+        <ignore path="**/service/src/main/AndroidManifest.xml" />
+        <ignore regexp=".*MigrationProvider.*" />
+    </issue>
 </lint>
