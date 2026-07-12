@@ -328,4 +328,62 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">Доступ к камере ограничен. Разрешите его в настройках.</string>
     <string name="import_from_qr_exception">Произошла не обрабатываемая системная ошибка.</string>
+
+    <!-- Completed missing community translations -->
+    <string name="launch_name_meta">Clash Meta</string>
+    <string name="launch_name_alpha">Clash Meta Alpha</string>
+    <string name="application_name_meta">Clash Meta for Android</string>
+    <string name="application_name_alpha">Clash Meta for Android Alpha</string>
+    <string name="script_mode">Режим скрипта</string>
+    <string name="qr" translatable="false">QR Code</string>
+    <string name="age_key_type_x25519" translatable="false">X25519</string>
+    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
+    <string name="allow_ipv6">Разрешить IPv6</string>
+    <string name="allow_ipv6_summary">Разрешить IPv6-трафик через VpnService</string>
+    <string name="external_controller">Внешний контроллер</string>
+    <string name="external_controller_tls">Внешний контроллер TLS</string>
+    <string name="allow_origins">Разрешённые источники внешнего контроллера</string>
+    <string name="allow_private_network">Разрешить частную сеть для внешнего контроллера</string>
+    <string name="secret">Секрет</string>
+    <string name="sideload_geoip">Сторонний GEOIP</string>
+    <string name="sideload_geoip_summary">Внешняя база GEOIP</string>
+    <string name="fakeip_filter_mode">Режим фильтра Fake-IP</string>
+    <string name="blacklist">Чёрный список</string>
+    <string name="whitelist">Белый список</string>
+    <string name="tun_stack_mode">Режим стека</string>
+    <string name="tun_stack_system">Системный стек</string>
+    <string name="tun_stack_gvisor">Стек Gvisor</string>
+    <string name="tun_stack_mixed">Смешанный стек</string>
+    <string name="selected">Выбрано</string>
+    <string name="format_delay_milliseconds">%1$s мс</string>
+    <string name="format_proxy_accessibility">%1$s, %2$s, %3$s</string>
+    <string name="inline">Встроенный</string>
+    <string name="sniff">Сниффинг</string>
+    <string name="skip_src_address">Пропускать исходный адрес</string>
+    <string name="skip_dst_address">Пропускать адрес назначения</string>
+    <string name="sniff_http_ports">Сниффинг портов HTTP</string>
+    <string name="sniff_tls_ports">Сниффинг портов TLS</string>
+    <string name="sniff_quic_ports">Сниффинг портов QUIC</string>
+    <string name="sniff_http_override_destination">HTTP-сниффинг: переопределять назначение</string>
+    <string name="sniff_tls_override_destination">TLS-сниффинг: переопределять назначение</string>
+    <string name="sniff_quic_override_destination">QUIC-сниффинг: переопределять назначение</string>
+    <string name="import_asn_file">Импорт базы ASN</string>
+    <string name="hide_app_icon_title">Скрыть значок приложения</string>
+    <string name="hide_app_icon_desc">Наберите *#*#252746382#*#*, чтобы открыть приложение</string>
+    <string name="hide_from_recents_title">Скрыть из недавних</string>
+    <string name="hide_from_recents_desc">Скрыть приложение с экрана недавних</string>
+    <string name="shortcut_toggle_short">Переключить Clash</string>
+    <string name="shortcut_toggle_long">Включить/выключить службу Clash</string>
+    <string name="shortcut_start_short">Запустить Clash</string>
+    <string name="shortcut_start_long">Запустить службу Clash</string>
+    <string name="shortcut_stop_short">Остановить Clash</string>
+    <string name="shortcut_stop_long">Остановить службу Clash</string>
+    <string name="delete_profile">Удалить профиль</string>
+    <string name="delete_profile_confirmation">Удалить профиль “%1$s”? Это действие нельзя отменить.</string>
+    <string name="update_all_in_progress">Обновление всех профилей</string>
+    <string name="access_control_restart_timeout">Изменения сохранены, но Clash не остановился вовремя. Перезапустите службу с главного экрана.</string>
+    <string name="notification_permission_title">Разрешить уведомления Clash?</string>
+    <string name="notification_permission_rationale">Пока работает VPN-служба, Clash показывает уведомление, чтобы вы могли видеть статус и вернуться в приложение.</string>
+    <string name="notification_permission_denied">Уведомления отключены. Clash может работать, но уведомления о состоянии службы скрыты.</string>
+    <string name="continue_">Продолжить</string>
 </resources>

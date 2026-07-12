@@ -123,9 +123,7 @@
     <string name="format_provider_type">%1$s(%2$s)</string>
     <string name="format_traffic_forwarded">%s được sử dụng</string>
     <string name="format_type_unsaved">%s (Chưa lưu)</string>
-    <string name="format_update_complete">Cập nhật %s thành công</string>
-    <string name="format_update_failure">Cập nhật %1$s: %2$s</string>
-    <string name="format_update_provider_failure">Cập nhật %1$s: %2$s</string>
+<string name="format_update_provider_failure">Cập nhật %1$s: %2$s</string>
     <string name="format_years_ago">%d năm trước</string>
     <string name="general">Chung</string>
     <string name="geoip_fallback">Dự phòng GeoIP</string>
@@ -179,16 +177,10 @@
     <string name="package_name">Tên gói</string>
     <string name="profile">Cấu hình</string>
     <string name="profile_name">Tên cấu hình</string>
-    <string name="profile_process_result">Kết quả xử lý cấu hình</string>
-    <string name="profile_process_status">Trạng thái xử lý cấu hình</string>
-    <string name="profile_service_status">Trạng thái dịch vụ cấu hình</string>
-    <string name="profile_updater">Trình cập nhật cấu hình</string>
-    <string name="profile_updating">Cập nhật cấu hình</string>
-    <string name="profile_url">Liên kết URL cấu hình</string>
+<string name="profile_url">Liên kết URL cấu hình</string>
     <string name="profiles">Cấu hình</string>
     <string name="properties">Thuộc tính</string>
-    <string name="provider_files">Tệp nhà cung cấp</string>
-    <string name="providers">Nhà cung cấp</string>
+<string name="providers">Nhà cung cấp</string>
     <string name="proxy">Proxy</string>
     <string name="proxy_empty_tips">Không có nhóm nào được hiển thị</string>
     <string name="recently">Vừa xong</string>
@@ -235,9 +227,7 @@
     <string name="unavailable">Không có sẵn</string>
     <string name="update">Cập nhật</string>
     <string name="update_all">Cập nhật tất cả</string>
-    <string name="update_failure">Cập nhật thất bại</string>
-    <string name="update_successfully">Cập nhật thành công</string>
-    <string name="update_time">Thời gian cập nhật</string>
+<string name="update_time">Thời gian cập nhật</string>
     <string name="url">Liên kết URL</string>
     <string name="use_built_in">Sử dụng tích hợp</string>
     <string name="use_hosts">Sử dụng Hosts</string>
@@ -250,4 +240,95 @@
     <string name="import_from_qr">Nhập từ Mã QR</string>
     <string name="import_from_qr_no_permission">Quyền truy cập camera bị hạn chế. Vui lòng bật trong Cài đặt.</string>
     <string name="import_from_qr_exception">Đã xảy ra ngoại lệ hệ thống không xử lý được.</string>
+
+    <!-- Completed missing community translations -->
+    <string name="qr" translatable="false">QR Code</string>
+    <string name="age_key_type_x25519" translatable="false">X25519</string>
+    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
+    <string name="raw_cn" translatable="false">cn</string>
+    <string name="prefer_h3">Ưu tiên h3</string>
+    <string name="external_controller">Bộ điều khiển ngoài</string>
+    <string name="external_controller_tls">Bộ điều khiển ngoài TLS</string>
+    <string name="allow_origins">Nguồn cho phép của bộ điều khiển ngoài</string>
+    <string name="allow_private_network">Cho phép mạng riêng cho bộ điều khiển ngoài</string>
+    <string name="secret">Bí mật</string>
+    <string name="fakeip_filter_mode">Chế độ lọc Fake-IP</string>
+    <string name="blacklist">Danh sách đen</string>
+    <string name="whitelist">Danh sách trắng</string>
+    <string name="off">Tắt</string>
+    <string name="strict">Nghiêm ngặt</string>
+    <string name="always">Luôn luôn</string>
+    <string name="clash_wiki">Wiki Clash</string>
+    <string name="google_play">Google Play</string>
+    <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
+    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
+    <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
+    <string name="doubles">Nhấn đúp</string>
+    <string name="selected">Đã chọn</string>
+    <string name="format_delay_milliseconds">%1$s mili giây</string>
+    <string name="format_proxy_accessibility">%1$s, %2$s, %3$s</string>
+    <string name="inline">Nội tuyến</string>
+    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    <string name="unified_delay">Độ trễ thống nhất</string>
+    <string name="geodata_mode">Chế độ dữ liệu địa lý</string>
+    <string name="tcp_concurrent">TCP đồng thời</string>
+    <string name="find_process_mode">Chế độ tìm tiến trình</string>
+    <string name="sniffer_setting">Cài đặt sniffer</string>
+    <string name="sniffer">Sniffer</string>
+    <string name="sniff">Sniff</string>
+    <string name="sniffing">Chế độ sniffer</string>
+    <string name="force_dns_mapping">Ép ánh xạ DNS</string>
+    <string name="parse_pure_ip">Phân tích IP thuần</string>
+    <string name="override_destination">Ghi đè đích</string>
+    <string name="force_domain">Ép miền</string>
+    <string name="skip_domain">Bỏ qua miền</string>
+    <string name="port_whitelist">Danh sách cổng cho phép</string>
+    <string name="disable_sniffer">Tắt sniffer</string>
+    <string name="sniffer_config">Tải sniffer từ cấu hình</string>
+    <string name="sniffer_override">Ghi đè cấu hình sniffer</string>
+    <string name="skip_src_address">Bỏ qua địa chỉ nguồn</string>
+    <string name="skip_dst_address">Bỏ qua địa chỉ đích</string>
+    <string name="sniff_http_ports">Sniff cổng HTTP</string>
+    <string name="sniff_tls_ports">Sniff cổng TLS</string>
+    <string name="sniff_quic_ports">Sniff cổng QUIC</string>
+    <string name="sniff_http_override_destination">Sniff HTTP ghi đè đích</string>
+    <string name="sniff_tls_override_destination">Sniff TLS ghi đè đích</string>
+    <string name="sniff_quic_override_destination">Sniff QUIC ghi đè đích</string>
+    <string name="geox_url_setting">Cài đặt URL GeoX</string>
+    <string name="geox_geoip">URL GeoIP</string>
+    <string name="geox_mmdb">URL MMDB</string>
+    <string name="geox_geosite">URL Geosite</string>
+    <string name="geoip_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat</string>
+    <string name="mmdb_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/country.mmdb</string>
+    <string name="geosite_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat</string>
+    <string name="geox_files" >Tệp địa lý</string>
+    <string name="import_geoip_file">Nhập cơ sở dữ liệu GeoIP</string>
+    <string name="import_geosite_file">Nhập cơ sở dữ liệu GeoSite</string>
+    <string name="import_country_file">Nhập cơ sở dữ liệu Country</string>
+    <string name="import_asn_file">Nhập cơ sở dữ liệu ASN</string>
+    <string name="geofile_unknown_db_format">Định dạng cơ sở dữ liệu không xác định</string>
+    <string name="geofile_unknown_db_format_message">Chỉ hỗ trợ %1$s</string>
+    <string name="geofile_imported">Đã nhập %1$s</string>
+    <string name="external_control_activity">Điều khiển ngoài</string>
+    <string name="external_control_started">Dịch vụ Clash.Meta đã khởi động</string>
+    <string name="external_control_stopped">Dịch vụ Clash.Meta đã dừng</string>
+    <string name="hide_app_icon_title">Ẩn biểu tượng ứng dụng</string>
+    <string name="hide_app_icon_desc">Quay *#*#252746382#*#* để mở ứng dụng này</string>
+    <string name="hide_from_recents_title">Ẩn khỏi ứng dụng gần đây</string>
+    <string name="hide_from_recents_desc">Ẩn ứng dụng khỏi màn hình ứng dụng gần đây</string>
+    <string name="shortcut_toggle_short">Bật/tắt Clash</string>
+    <string name="shortcut_toggle_long">Bật/tắt dịch vụ Clash</string>
+    <string name="shortcut_start_short">Khởi động Clash</string>
+    <string name="shortcut_start_long">Khởi động dịch vụ Clash</string>
+    <string name="shortcut_stop_short">Dừng Clash</string>
+    <string name="shortcut_stop_long">Dừng dịch vụ Clash</string>
+    <string name="delete_profile">Xóa cấu hình</string>
+    <string name="delete_profile_confirmation">Xóa cấu hình “%1$s”? Thao tác này không thể hoàn tác.</string>
+    <string name="update_all_in_progress">Đang cập nhật tất cả cấu hình</string>
+    <string name="access_control_restart_timeout">Đã lưu thay đổi, nhưng Clash không dừng kịp. Hãy khởi động lại dịch vụ từ màn hình chính.</string>
+    <string name="notification_permission_title">Cho phép thông báo Clash?</string>
+    <string name="notification_permission_rationale">Khi dịch vụ VPN đang chạy, Clash hiển thị thông báo để bạn xem trạng thái và quay lại ứng dụng.</string>
+    <string name="notification_permission_denied">Thông báo đã tắt. Clash vẫn chạy được, nhưng thông báo trạng thái dịch vụ sẽ bị ẩn.</string>
+    <string name="continue_">Tiếp tục</string>
 </resources>

@@ -269,4 +269,66 @@
     <string name="notification_permission_rationale">Clash 會在 VPN 服務執行時顯示通知，方便你查看狀態並返回應用程式。</string>
     <string name="notification_permission_denied">通知已關閉。Clash 仍可執行，但服務狀態通知將不會顯示。</string>
     <string name="continue_">繼續</string>
+
+    <!-- Completed missing community translations -->
+    <string name="launch_name_meta">Clash Meta</string>
+    <string name="launch_name_alpha">Clash Meta Alpha</string>
+    <string name="application_name_meta">Clash Meta for Android</string>
+    <string name="application_name_alpha">Clash Meta for Android Alpha</string>
+    <string name="script_mode">指令碼模式</string>
+    <string name="qr" translatable="false">QR Code</string>
+    <string name="age_key_type_x25519" translatable="false">X25519</string>
+    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
+    <string name="raw_cn" translatable="false">cn</string>
+    <string name="allow_bypass">允許略過</string>
+    <string name="allow_bypass_summary">允許所有應用程式略過此 VPN 連線</string>
+    <string name="allow_ipv6">允許 IPv6</string>
+    <string name="allow_ipv6_summary">允許透過 VpnService 傳輸 IPv6 流量</string>
+    <string name="external_controller">外部控制器</string>
+    <string name="external_controller_tls">外部控制器 TLS</string>
+    <string name="allow_origins">外部控制器允許來源</string>
+    <string name="allow_private_network">外部控制器允許私人網路</string>
+    <string name="secret">密鑰</string>
+    <string name="sideload_geoip">旁載 GEOIP</string>
+    <string name="sideload_geoip_summary">使用外部 GEOIP 資料庫</string>
+    <string name="fakeip_filter_mode">Fake-IP 過濾模式</string>
+    <string name="geoip_fallback_code">GeoIP 後備代碼</string>
+    <string name="blacklist">黑名單</string>
+    <string name="whitelist">白名單</string>
+    <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
+    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
+    <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
+    <string name="tun_stack_mode">通訊協定堆疊模式</string>
+    <string name="tun_stack_system">系統通訊協定堆疊</string>
+    <string name="tun_stack_gvisor">Gvisor 通訊協定堆疊</string>
+    <string name="tun_stack_mixed">混合通訊協定堆疊</string>
+    <string name="selected">已選取</string>
+    <string name="format_delay_milliseconds">%1$s 毫秒</string>
+    <string name="format_proxy_accessibility">%1$s，%2$s，%3$s</string>
+    <string name="inline">內嵌</string>
+    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    <string name="sniff">嗅探</string>
+    <string name="skip_src_address">略過來源位址</string>
+    <string name="skip_dst_address">略過目標位址</string>
+    <string name="sniff_http_ports">嗅探 HTTP 連接埠</string>
+    <string name="sniff_tls_ports">嗅探 TLS 連接埠</string>
+    <string name="sniff_quic_ports">嗅探 QUIC 連接埠</string>
+    <string name="sniff_http_override_destination">HTTP 嗅探覆寫目標</string>
+    <string name="sniff_tls_override_destination">TLS 嗅探覆寫目標</string>
+    <string name="sniff_quic_override_destination">QUIC 嗅探覆寫目標</string>
+    <string name="geoip_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat</string>
+    <string name="mmdb_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/country.mmdb</string>
+    <string name="geosite_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat</string>
+    <string name="import_asn_file">匯入 ASN 資料庫</string>
+    <string name="hide_app_icon_title">隱藏應用程式圖示</string>
+    <string name="hide_app_icon_desc">可撥號 *#*#252746382#*#* 開啟本應用程式</string>
+    <string name="hide_from_recents_title">從最近使用的應用程式中隱藏</string>
+    <string name="hide_from_recents_desc">在最近使用的應用程式畫面中隱藏本應用程式</string>
+    <string name="shortcut_toggle_short">切換 Clash</string>
+    <string name="shortcut_toggle_long">開啟或關閉 Clash 服務</string>
+    <string name="shortcut_start_short">啟動 Clash</string>
+    <string name="shortcut_start_long">啟動 Clash 服務</string>
+    <string name="shortcut_stop_short">停止 Clash</string>
+    <string name="shortcut_stop_long">停止 Clash 服務</string>
 </resources>

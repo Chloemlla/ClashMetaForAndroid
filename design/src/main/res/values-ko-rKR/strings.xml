@@ -264,4 +264,71 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">카메라 접근이 제한되었습니다. 설정에서 허용해 주세요.</string>
     <string name="import_from_qr_exception">처리되지 않은 시스템 예외가 발생했습니다.</string>
+
+    <!-- Completed missing community translations -->
+    <string name="launch_name_meta">Clash Meta</string>
+    <string name="launch_name_alpha">Clash Meta Alpha</string>
+    <string name="application_name_meta">Clash Meta for Android</string>
+    <string name="application_name_alpha">Clash Meta for Android Alpha</string>
+    <string name="script_mode">스크립트 모드</string>
+    <string name="qr" translatable="false">QR Code</string>
+    <string name="age_key_type_x25519" translatable="false">X25519</string>
+    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
+    <string name="raw_cn" translatable="false">cn</string>
+    <string name="allow_ipv6">IPv6 허용</string>
+    <string name="allow_ipv6_summary">VpnService를 통한 IPv6 트래픽 허용</string>
+    <string name="external_controller">외부 컨트롤러</string>
+    <string name="external_controller_tls">외부 컨트롤러 TLS</string>
+    <string name="allow_origins">외부 컨트롤러 허용 출처</string>
+    <string name="allow_private_network">외부 컨트롤러 사설 네트워크 허용</string>
+    <string name="secret">시크릿</string>
+    <string name="sideload_geoip">GEOIP 사이드로드</string>
+    <string name="sideload_geoip_summary">외부 GEOIP 데이터베이스 사용</string>
+    <string name="fakeip_filter_mode">Fake-IP 필터 모드</string>
+    <string name="blacklist">블랙리스트</string>
+    <string name="whitelist">화이트리스트</string>
+    <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
+    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
+    <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
+    <string name="tun_stack_mode">스택 모드</string>
+    <string name="tun_stack_system">시스템 스택</string>
+    <string name="tun_stack_gvisor">Gvisor 스택</string>
+    <string name="tun_stack_mixed">혼합 스택</string>
+    <string name="selected">선택됨</string>
+    <string name="format_delay_milliseconds">%1$s밀리초</string>
+    <string name="format_proxy_accessibility">%1$s, %2$s, %3$s</string>
+    <string name="inline">인라인</string>
+    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    <string name="sniff">스니프</string>
+    <string name="skip_src_address">소스 주소 건너뛰기</string>
+    <string name="skip_dst_address">대상 주소 건너뛰기</string>
+    <string name="sniff_http_ports">HTTP 포트 스니프</string>
+    <string name="sniff_tls_ports">TLS 포트 스니프</string>
+    <string name="sniff_quic_ports">QUIC 포트 스니프</string>
+    <string name="sniff_http_override_destination">HTTP 스니프 대상 재정의</string>
+    <string name="sniff_tls_override_destination">TLS 스니프 대상 재정의</string>
+    <string name="sniff_quic_override_destination">QUIC 스니프 대상 재정의</string>
+    <string name="geoip_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat</string>
+    <string name="mmdb_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/country.mmdb</string>
+    <string name="geosite_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat</string>
+    <string name="import_asn_file">ASN 데이터베이스 가져오기</string>
+    <string name="hide_app_icon_title">앱 아이콘 숨기기</string>
+    <string name="hide_app_icon_desc">*#*#252746382#*#* 를 눌러 이 앱을 열 수 있습니다</string>
+    <string name="hide_from_recents_title">최근 앱에서 숨기기</string>
+    <string name="hide_from_recents_desc">최근 앱 화면에서 이 앱을 숨깁니다</string>
+    <string name="shortcut_toggle_short">Clash 전환</string>
+    <string name="shortcut_toggle_long">Clash 서비스 켜기/끄기</string>
+    <string name="shortcut_start_short">Clash 시작</string>
+    <string name="shortcut_start_long">Clash 서비스 시작</string>
+    <string name="shortcut_stop_short">Clash 중지</string>
+    <string name="shortcut_stop_long">Clash 서비스 중지</string>
+    <string name="delete_profile">프로필 삭제</string>
+    <string name="delete_profile_confirmation">프로필 “%1$s”을(를) 삭제할까요? 이 작업은 취소할 수 없습니다.</string>
+    <string name="update_all_in_progress">모든 프로필 업데이트 중</string>
+    <string name="access_control_restart_timeout">변경 사항은 저장되었지만 Clash가 제때 중지되지 않았습니다. 메인 화면에서 서비스를 다시 시작하세요.</string>
+    <string name="notification_permission_title">Clash 알림을 허용할까요?</string>
+    <string name="notification_permission_rationale">VPN 서비스가 실행 중일 때 Clash는 상태 확인과 앱 복귀를 위해 알림을 표시합니다.</string>
+    <string name="notification_permission_denied">알림이 꺼져 있습니다. Clash는 실행될 수 있지만 서비스 상태 알림은 숨겨집니다.</string>
+    <string name="continue_">계속</string>
 </resources>

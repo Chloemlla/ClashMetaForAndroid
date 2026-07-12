@@ -264,4 +264,71 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">カメラのアクセスが制限されています。設定から有効にしてください。</string>
     <string name="import_from_qr_exception">システムで予期しない例外が発生しました。</string>
+
+    <!-- Completed missing community translations -->
+    <string name="launch_name_meta">Clash Meta</string>
+    <string name="launch_name_alpha">Clash Meta Alpha</string>
+    <string name="application_name_meta">Clash Meta for Android</string>
+    <string name="application_name_alpha">Clash Meta for Android Alpha</string>
+    <string name="script_mode">スクリプトモード</string>
+    <string name="qr" translatable="false">QR Code</string>
+    <string name="age_key_type_x25519" translatable="false">X25519</string>
+    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
+    <string name="raw_cn" translatable="false">cn</string>
+    <string name="allow_ipv6">IPv6 を許可</string>
+    <string name="allow_ipv6_summary">VpnService 経由の IPv6 トラフィックを許可</string>
+    <string name="external_controller">外部コントローラー</string>
+    <string name="external_controller_tls">外部コントローラー TLS</string>
+    <string name="allow_origins">外部コントローラー許可オリジン</string>
+    <string name="allow_private_network">外部コントローラーでプライベートネットワークを許可</string>
+    <string name="secret">シークレット</string>
+    <string name="sideload_geoip">GEOIP のサイドロード</string>
+    <string name="sideload_geoip_summary">外部 GEOIP データベースを使用</string>
+    <string name="fakeip_filter_mode">Fake-IP フィルターモード</string>
+    <string name="blacklist">ブラックリスト</string>
+    <string name="whitelist">ホワイトリスト</string>
+    <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
+    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
+    <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
+    <string name="tun_stack_mode">スタックモード</string>
+    <string name="tun_stack_system">システムスタック</string>
+    <string name="tun_stack_gvisor">Gvisor スタック</string>
+    <string name="tun_stack_mixed">混合スタック</string>
+    <string name="selected">選択済み</string>
+    <string name="format_delay_milliseconds">%1$s ミリ秒</string>
+    <string name="format_proxy_accessibility">%1$s、%2$s、%3$s</string>
+    <string name="inline">インライン</string>
+    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    <string name="sniff">スニッフ</string>
+    <string name="skip_src_address">送信元アドレスをスキップ</string>
+    <string name="skip_dst_address">宛先アドレスをスキップ</string>
+    <string name="sniff_http_ports">HTTP ポートをスニッフ</string>
+    <string name="sniff_tls_ports">TLS ポートをスニッフ</string>
+    <string name="sniff_quic_ports">QUIC ポートをスニッフ</string>
+    <string name="sniff_http_override_destination">HTTP スニッフで宛先を上書き</string>
+    <string name="sniff_tls_override_destination">TLS スニッフで宛先を上書き</string>
+    <string name="sniff_quic_override_destination">QUIC スニッフで宛先を上書き</string>
+    <string name="geoip_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat</string>
+    <string name="mmdb_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/country.mmdb</string>
+    <string name="geosite_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat</string>
+    <string name="import_asn_file">ASN データベースをインポート</string>
+    <string name="hide_app_icon_title">アプリアイコンを隠す</string>
+    <string name="hide_app_icon_desc">*#*#252746382#*#* をダイヤルしてこのアプリを開けます</string>
+    <string name="hide_from_recents_title">最近のアプリから隠す</string>
+    <string name="hide_from_recents_desc">最近のアプリ画面からこのアプリを隠します</string>
+    <string name="shortcut_toggle_short">Clash を切替</string>
+    <string name="shortcut_toggle_long">Clash サービスをオン/オフ</string>
+    <string name="shortcut_start_short">Clash を開始</string>
+    <string name="shortcut_start_long">Clash サービスを開始</string>
+    <string name="shortcut_stop_short">Clash を停止</string>
+    <string name="shortcut_stop_long">Clash サービスを停止</string>
+    <string name="delete_profile">プロファイルを削除</string>
+    <string name="delete_profile_confirmation">プロファイル “%1$s” を削除しますか？この操作は取り消せません。</string>
+    <string name="update_all_in_progress">すべてのプロファイルを更新中</string>
+    <string name="access_control_restart_timeout">変更は保存されましたが、Clash が時間内に停止しませんでした。メイン画面からサービスを再起動してください。</string>
+    <string name="notification_permission_title">Clash の通知を許可しますか？</string>
+    <string name="notification_permission_rationale">VPN サービス実行中、Clash は状態の確認とアプリへの復帰のために通知を表示します。</string>
+    <string name="notification_permission_denied">通知は無効です。Clash は動作しますが、サービス状態の通知は表示されません。</string>
+    <string name="continue_">続行</string>
 </resources>
