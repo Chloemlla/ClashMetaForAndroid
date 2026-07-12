@@ -247,7 +247,7 @@
     <string name="geox_geosite">Geosite URL</string>
     <string name="geox_files" >Geo Files</string>
     <string name="import_geoip_file">Import GeoIP Database</string>
-    <string name="press_to_import">Press to import...</string>
+    <string name="press_to_import">Press to import…</string>
     <string name="import_geosite_file">Import GeoSite Database</string>
     <string name="import_country_file">Import Country Database</string>
     <string name="geofile_import_failed">Import failed</string>
@@ -271,10 +271,10 @@
     <string name="application_name_meta">Clash Meta for Android</string>
     <string name="application_name_alpha">Clash Meta for Android Alpha</string>
     <string name="script_mode">スクリプトモード</string>
-    <string name="qr" translatable="false">QR Code</string>
-    <string name="age_key_type_x25519" translatable="false">X25519</string>
-    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
-    <string name="raw_cn" translatable="false">cn</string>
+    
+    
+    
+    
     <string name="allow_ipv6">IPv6 を許可</string>
     <string name="allow_ipv6_summary">VpnService 経由の IPv6 トラフィックを許可</string>
     <string name="external_controller">外部コントローラー</string>
@@ -287,10 +287,10 @@
     <string name="fakeip_filter_mode">Fake-IP フィルターモード</string>
     <string name="blacklist">ブラックリスト</string>
     <string name="whitelist">ホワイトリスト</string>
-    <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
-    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
-    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
-    <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
+    
+    
+    
+    
     <string name="tun_stack_mode">スタックモード</string>
     <string name="tun_stack_system">システムスタック</string>
     <string name="tun_stack_gvisor">Gvisor スタック</string>
@@ -299,7 +299,7 @@
     <string name="format_delay_milliseconds">%1$s ミリ秒</string>
     <string name="format_proxy_accessibility">%1$s、%2$s、%3$s</string>
     <string name="inline">インライン</string>
-    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    
     <string name="sniff">スニッフ</string>
     <string name="skip_src_address">送信元アドレスをスキップ</string>
     <string name="skip_dst_address">宛先アドレスをスキップ</string>
@@ -309,9 +309,9 @@
     <string name="sniff_http_override_destination">HTTP スニッフで宛先を上書き</string>
     <string name="sniff_tls_override_destination">TLS スニッフで宛先を上書き</string>
     <string name="sniff_quic_override_destination">QUIC スニッフで宛先を上書き</string>
-    <string name="geoip_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat</string>
-    <string name="mmdb_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/country.mmdb</string>
-    <string name="geosite_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat</string>
+    
+    
+    
     <string name="import_asn_file">ASN データベースをインポート</string>
     <string name="hide_app_icon_title">アプリアイコンを隠す</string>
     <string name="hide_app_icon_desc">*#*#252746382#*#* をダイヤルしてこのアプリを開けます</string>

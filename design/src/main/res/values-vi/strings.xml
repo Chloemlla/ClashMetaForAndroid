@@ -3,7 +3,7 @@
     <string name="geofile_import_failed">Nhập thất bại</string>
     <string name="toast_profile_updated_complete">Cập nhật thành công %s</string>
     <string name="toast_profile_updated_failed">Cập nhật không thành công %1$s %2$s</string>
-    <string name="press_to_import">Chạm để nhập...</string>
+    <string name="press_to_import">Chạm để nhập…</string>
     <string name="meta_features">Tính năng của Clash Meta</string>
     <string name="allow_ipv6">Cho phép Ipv6</string>
     <string name="allow_ipv6_summary">Cho phép lưu lượng ipv6 qua hệ thống Vpn</string>
@@ -242,10 +242,10 @@
     <string name="import_from_qr_exception">Đã xảy ra ngoại lệ hệ thống không xử lý được.</string>
 
     <!-- Completed missing community translations -->
-    <string name="qr" translatable="false">QR Code</string>
-    <string name="age_key_type_x25519" translatable="false">X25519</string>
-    <string name="age_key_type_hybrid" translatable="false">MLKEM768-X25519</string>
-    <string name="raw_cn" translatable="false">cn</string>
+    
+    
+    
+    
     <string name="prefer_h3">Ưu tiên h3</string>
     <string name="external_controller">Bộ điều khiển ngoài</string>
     <string name="external_controller_tls">Bộ điều khiển ngoài TLS</string>
@@ -260,16 +260,16 @@
     <string name="always">Luôn luôn</string>
     <string name="clash_wiki">Wiki Clash</string>
     <string name="google_play">Google Play</string>
-    <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
-    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
-    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
-    <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
+    
+    
+    
+    
     <string name="doubles">Nhấn đúp</string>
     <string name="selected">Đã chọn</string>
     <string name="format_delay_milliseconds">%1$s mili giây</string>
     <string name="format_proxy_accessibility">%1$s, %2$s, %3$s</string>
     <string name="inline">Nội tuyến</string>
-    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    
     <string name="unified_delay">Độ trễ thống nhất</string>
     <string name="geodata_mode">Chế độ dữ liệu địa lý</string>
     <string name="tcp_concurrent">TCP đồng thời</string>
@@ -299,9 +299,9 @@
     <string name="geox_geoip">URL GeoIP</string>
     <string name="geox_mmdb">URL MMDB</string>
     <string name="geox_geosite">URL Geosite</string>
-    <string name="geoip_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geoip.dat</string>
-    <string name="mmdb_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/country.mmdb</string>
-    <string name="geosite_url" translatable="false">https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat</string>
+    
+    
+    
     <string name="geox_files" >Tệp địa lý</string>
     <string name="import_geoip_file">Nhập cơ sở dữ liệu GeoIP</string>
     <string name="import_geosite_file">Nhập cơ sở dữ liệu GeoSite</string>

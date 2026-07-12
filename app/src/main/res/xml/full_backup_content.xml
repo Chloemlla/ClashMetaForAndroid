@@ -1,21 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Only non-sensitive UI preferences are eligible for legacy Auto Backup. -->
+    <!--
+      Only non-sensitive UI preferences are eligible for legacy Auto Backup.
+      Domain-level excludes are unnecessary (and rejected by Lint) when those
+      domains are never included.
+    -->
     <include
         domain="sharedpref"
         path="." />
-
-    <!-- Profiles contain subscription sources and ageSecretKey values. -->
-    <exclude
-        domain="database"
-        path="." />
-    <exclude
-        domain="file"
-        path="imported" />
-    <exclude
-        domain="file"
-        path="pending" />
-    <exclude
-        domain="file"
-        path="clash" />
 </full-backup-content>

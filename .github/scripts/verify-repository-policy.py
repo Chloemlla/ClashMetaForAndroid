@@ -73,25 +73,31 @@ require(
     "dynamic shortcuts do not exclusively target the internal control activity",
 )
 
-required_excludes = {
-    ("database", "."),
-    ("file", "imported"),
-    ("file", "pending"),
-    ("file", "clash"),
-}
+def backup_includes(root_nodes):
+    return {(node.get("domain"), node.get("path")) for node in root_nodes}
+
+
+def assert_sharedpref_only_backup(includes: set[tuple[str | None, str | None]], label: str) -> None:
+    require(includes == {("sharedpref", ".")}, f"{label} must include only sharedpref/.")
+    forbidden_domains = {"database", "file", "root", "external", "device_file", "device_root"}
+    require(
+        not any(domain in forbidden_domains for domain, _ in includes),
+        f"{label} includes a sensitive domain",
+    )
+
+
 legacy_backup = ET.parse(ROOT / "app/src/main/res/xml/full_backup_content.xml")
-legacy_excludes = {
-    (node.get("domain"), node.get("path")) for node in legacy_backup.findall("./exclude")
-}
-require(required_excludes <= legacy_excludes, "legacy backup rules include profile secrets")
+legacy_includes = backup_includes(legacy_backup.findall("./include"))
+legacy_excludes = legacy_backup.findall("./exclude")
+assert_sharedpref_only_backup(legacy_includes, "legacy backup rules")
+require(not legacy_excludes, "legacy backup rules should not need excludes when domains are opt-in")
 
 extraction = ET.parse(ROOT / "app/src/main/res/xml/data_extraction_rules.xml")
 for section in ("cloud-backup", "device-transfer"):
-    excludes = {
-        (node.get("domain"), node.get("path"))
-        for node in extraction.findall(f"./{section}/exclude")
-    }
-    require(required_excludes <= excludes, f"{section} includes profile secrets")
+    includes = backup_includes(extraction.findall(f"./{section}/include"))
+    excludes = extraction.findall(f"./{section}/exclude")
+    assert_sharedpref_only_backup(includes, section)
+    require(not excludes, f"{section} should not need excludes when domains are opt-in")
 
 app_build = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
 require("releases/download/latest" not in app_build, "mutable Geo latest URL is present")

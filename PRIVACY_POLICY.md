@@ -16,7 +16,7 @@ Subscription URLs, provider URLs, and configuration-defined endpoints are contac
 
 ## System backup and device transfer
 
-Android backup is limited to non-sensitive app preferences. The app explicitly excludes the profile database, imported and pending profile files, and Clash configuration/override files from cloud backup and device-to-device transfer. These exclusions cover subscription sources and `ageSecretKey` values stored in the profile database.
+Android backup and device-to-device transfer are limited to non-sensitive app preferences (`sharedpref` only). The profile database, imported and pending profile files, and Clash configuration/override files are not included, so subscription sources and `ageSecretKey` values are not transferred by system backup.
 
 Older versions of the app used broader backup rules. Updating the app cannot delete copies that an Android backup provider may already hold; users should manage or remove existing device backups through their Android or cloud-account settings when needed.
 

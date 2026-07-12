@@ -254,9 +254,13 @@ subprojects {
             lintConfig = rootProject.file("lint.xml")
             // RoomOpenHelper.Delegate is restricted; generated Room *_Impl classes trigger this en masse.
             disable("RestrictedApi")
-            // Partial locale packs; do not block builds on incomplete translations.
+            // Locale packs may lag default strings; completeness is enforced by i18n commits, not lint.
             disable("MissingTranslation")
             disable("ExtraTranslation")
+            // Dependency version nags are handled by Renovate, not CI lint.
+            disable("GradleDependency")
+            disable("AndroidGradlePluginVersion")
+            disable("UseTomlInstead")
             // Launcher/icon density noise and unused resources from multi-flavor packaging.
             disable("IconLauncherShape")
             disable("IconDipSize")
@@ -266,6 +270,7 @@ subprojects {
             disable("IconMissingDensityFolder")
             disable("UnusedResources")
             disable("VectorPath")
+            disable("VectorRaster")
         }
     }
 }

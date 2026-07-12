@@ -10,19 +10,19 @@
         <ignore regexp=".*_Impl\.java" />
     </issue>
 
-    <!-- Partial/community locale packs are maintained separately from CI. -->
-    <issue id="MissingTranslation" severity="ignore" />
-    <issue id="ExtraTranslation" severity="ignore" />
+    <!-- Dependency version nags are tracked via Renovate, not CI lint failures. -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="UseTomlInstead" severity="ignore" />
 
-    <!-- Vector adaptive icons / launcher metadata commonly trip these on library consumers. -->
+    <!-- Launcher/icon density noise and unused resources from multi-flavor packaging. -->
     <issue id="IconLauncherShape" severity="ignore" />
     <issue id="IconDipSize" severity="ignore" />
     <issue id="IconDuplicatesConfig" severity="ignore" />
     <issue id="IconLocation" severity="ignore" />
     <issue id="IconDensities" severity="ignore" />
     <issue id="IconMissingDensityFolder" severity="ignore" />
-
-    <!-- Older multi-ABI packaging + Go/native artifacts produce many packaging notices. -->
     <issue id="UnusedResources" severity="ignore" />
     <issue id="VectorPath" severity="ignore" />
+    <issue id="VectorRaster" severity="ignore" />
 </lint>

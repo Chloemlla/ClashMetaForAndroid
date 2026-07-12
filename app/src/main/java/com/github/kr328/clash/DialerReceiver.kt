@@ -6,8 +6,16 @@ import android.content.Intent
 
 class DialerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val intent = Intent(context, MainActivity::class.java)
+        if (intent.action != ACTION_SECRET_CODE) {
+            return
+        }
+
+        val launch = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        context.startActivity(launch)
+    }
+
+    companion object {
+        private const val ACTION_SECRET_CODE = "android.provider.Telephony.SECRET_CODE"
     }
 }
