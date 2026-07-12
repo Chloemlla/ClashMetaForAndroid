@@ -345,5 +345,8 @@
     <string name="setup_profile_tips">匯入訂閱後即可開始使用</string>
     <string name="logs_empty_title">尚無日誌記錄</string>
     <string name="logs_empty_tips">啟動 Clash 日誌以擷取執行時資訊。已儲存的工作階段會顯示在這裡。</string>
-</resources>
 
+    <string name="migrate_data_permission_label">遷移 Clash 資料</string>
+    <string name="migrate_data_permission_description">允許同簽名的 Clash 版本匯出設定檔與設定以便遷移。</string>
+    <string name="alpha_migration_success">已從 Alpha 匯入 %1$d 個設定檔</string>
+</resources>

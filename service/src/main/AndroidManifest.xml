@@ -62,6 +62,13 @@
             android:authorities="${applicationId}.status"
             android:exported="false"
             android:process=":background" />
+
+        <provider
+            android:name=".migration.MigrationProvider"
+            android:authorities="${applicationId}.migration"
+            android:exported="true"
+            android:grantUriPermissions="false"
+            android:permission="com.github.metacubex.clash.permission.MIGRATE_DATA" />
         <provider
             android:name=".PreferenceProvider"
             android:authorities="${applicationId}.settings"

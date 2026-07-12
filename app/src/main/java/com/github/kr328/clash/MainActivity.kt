@@ -18,6 +18,7 @@ import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
@@ -57,6 +58,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         setContentDesign(design)
 
         design.fetch()
+        maybeShowAlphaMigrationToast(design)
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
@@ -71,7 +73,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                         }
                         Event.ActivityStart,
                         Event.ServiceRecreated,
-                        Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
+                        Event.ProfileLoaded, Event.ProfileChanged -> {
+                            design.fetch()
+                            maybeShowAlphaMigrationToast(design)
+                        }
                         else -> Unit
                     }
                 }
@@ -118,6 +123,22 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
+
+    private suspend fun maybeShowAlphaMigrationToast(design: MainDesign) {
+        val store = AppStore(this)
+        if (!store.alphaMigrationToastPending) return
+
+        val count = store.alphaMigrationImportedCount
+        store.alphaMigrationToastPending = false
+        store.alphaMigrationImportedCount = 0
+
+        if (count > 0) {
+            design.showToast(
+                getString(DesignR.string.alpha_migration_success, count),
+                ToastDuration.Long,
+            )
+        }
+    }
     private suspend fun MainDesign.fetch() {
         setClashRunning(clashRunning)
 

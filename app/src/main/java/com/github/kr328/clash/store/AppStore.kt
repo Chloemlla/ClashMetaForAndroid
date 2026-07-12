@@ -16,6 +16,16 @@ class AppStore(context: Context) {
         defaultValue = -1,
     )
 
+    var alphaMigrationToastPending: Boolean by store.boolean(
+        key = "alpha_migration_toast_pending",
+        defaultValue = false,
+    )
+
+    var alphaMigrationImportedCount: Int by store.int(
+        key = "alpha_migration_imported_count",
+        defaultValue = 0,
+    )
+
     companion object {
         private const val FILE_NAME = "app"
     }

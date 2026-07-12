@@ -346,5 +346,8 @@
     <string name="setup_profile_tips">导入订阅后即可开始使用</string>
     <string name="logs_empty_title">暂无日志记录</string>
     <string name="logs_empty_tips">启动 Clash 日志捕获运行时信息。历史会话会显示在这里。</string>
-</resources>
 
+    <string name="migrate_data_permission_label">迁移 Clash 数据</string>
+    <string name="migrate_data_permission_description">允许同签名的 Clash 版本导出配置与设置以便迁移。</string>
+    <string name="alpha_migration_success">已从 Alpha 导入 %1$d 个配置</string>
+</resources>

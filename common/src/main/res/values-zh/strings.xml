@@ -2,4 +2,6 @@
 <resources>
     <string name="receive_clash_broadcasts">接收 Clash 广播</string>
     <string name="receive_broadcasts_of_clash">接收来自 Clash 内部的广播</string>
+    <string name="migrate_data_permission_label">迁移 Clash 数据</string>
+    <string name="migrate_data_permission_description">允许同签名的 Clash 版本导出配置与设置以便迁移。</string>
 </resources>

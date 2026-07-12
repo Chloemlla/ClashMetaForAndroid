@@ -345,5 +345,8 @@
     <string name="setup_profile_tips">サブスクリプションを追加して使い始めましょう</string>
     <string name="logs_empty_title">ログ履歴がありません</string>
     <string name="logs_empty_tips">Clash logcat を開始すると実行ログを取得できます。保存されたセッションはここに表示されます。</string>
-</resources>
 
+    <string name="migrate_data_permission_label">Clash データを移行</string>
+    <string name="migrate_data_permission_description">同一署名の Clash ビルドが移行用にプロファイルと設定を書き出せるようにします。</string>
+    <string name="alpha_migration_success">Alpha から %1$d 件のプロファイルをインポートしました</string>
+</resources>

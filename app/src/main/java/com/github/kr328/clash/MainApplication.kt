@@ -6,12 +6,16 @@ import android.content.pm.PackageManager
 import android.os.Build
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.currentProcessName
+import com.github.kr328.clash.common.constants.Migration
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
+import com.github.kr328.clash.service.migration.AlphaDataMigrator
 import com.github.kr328.clash.service.util.sendServiceRecreated
+import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.clashDir
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.Dispatchers
 
 @Suppress("unused")
 class MainApplication : Application() {
@@ -31,6 +35,7 @@ class MainApplication : Application() {
         Log.d("Process $processName started")
 
         if (processName == packageName) {
+            maybeMigrateFromAlpha()
             Remote.launch()
         } else {
             sendServiceRecreated()
@@ -86,6 +91,20 @@ class MainApplication : Application() {
         if (!bundleMRSFile.exists()) {
             FileOutputStream(bundleMRSFile).use {
                 assets.open("BundleMRS.7z").copyTo(it)
+            }
+        }
+    }
+
+    private fun maybeMigrateFromAlpha() {
+        if (!Migration.isMetaPackage(packageName)) return
+
+        Global.launch(Dispatchers.IO) {
+            val result = AlphaDataMigrator.maybeImportFromAlpha(this@MainApplication)
+            if (result.status == AlphaDataMigrator.Status.Imported && result.totalProfiles > 0) {
+                AppStore(this@MainApplication).apply {
+                    alphaMigrationToastPending = true
+                    alphaMigrationImportedCount = result.totalProfiles
+                }
             }
         }
     }

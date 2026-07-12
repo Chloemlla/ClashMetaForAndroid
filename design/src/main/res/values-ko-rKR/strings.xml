@@ -345,5 +345,8 @@
     <string name="setup_profile_tips">구독을 가져와 Clash를 시작하세요</string>
     <string name="logs_empty_title">로그 기록 없음</string>
     <string name="logs_empty_tips">Clash logcat을 시작하면 런타임 로그를 수집합니다. 저장된 세션이 여기에 표시됩니다.</string>
-</resources>
 
+    <string name="migrate_data_permission_label">Clash 데이터 마이그레이션</string>
+    <string name="migrate_data_permission_description">동일 서명의 Clash 빌드가 마이그레이션을 위해 프로필과 설정을 내보낼 수 있도록 허용합니다.</string>
+    <string name="alpha_migration_success">Alpha에서 프로필 %1$d개를 가져왔습니다</string>
+</resources>

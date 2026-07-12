@@ -2,4 +2,6 @@
 <resources>
     <string name="receive_clash_broadcasts">Получать оповещения от Clash</string>
     <string name="receive_broadcasts_of_clash">Получать оповещения от сервисов Clash</string>
+    <string name="migrate_data_permission_label">Миграция данных Clash</string>
+    <string name="migrate_data_permission_description">Разрешает сборкам Clash с той же подписью экспортировать профили и настройки для миграции.</string>
 </resources>

@@ -6,4 +6,12 @@
         android:label="@string/receive_clash_broadcasts"
         android:protectionLevel="privileged|signature" />
     <uses-permission android:name="${applicationId}.permission.RECEIVE_BROADCASTS" />
+
+    <!-- Same-signing apps (alpha <-> meta) may exchange migration payloads. -->
+    <permission
+        android:name="com.github.metacubex.clash.permission.MIGRATE_DATA"
+        android:description="@string/migrate_data_permission_description"
+        android:label="@string/migrate_data_permission_label"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.github.metacubex.clash.permission.MIGRATE_DATA" />
 </manifest>

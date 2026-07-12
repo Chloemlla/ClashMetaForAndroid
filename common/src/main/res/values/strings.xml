@@ -2,4 +2,6 @@
 <resources>
     <string name="receive_clash_broadcasts">Receive Clash Broadcasts</string>
     <string name="receive_broadcasts_of_clash">Receive broadcasts of clash services</string>
+    <string name="migrate_data_permission_label">Migrate Clash data</string>
+    <string name="migrate_data_permission_description">Allow same-signature Clash builds to export profiles and settings for migration.</string>
 </resources>

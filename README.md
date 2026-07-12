@@ -179,6 +179,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 相关提交包括：`c76ede2`、`d4fff9c`、`83fe497`、`01aedc7`、`1135e04`、`884bc8a`、`c3ba6ae` 等。
 
 - **main 推送正式包**：`build-pre-release.yaml` 对 Chloemlla fork 使用 `app:assembleMetaRelease` + `prerelease: false` + `make_latest: true`，不再产出 Alpha / Pre-release。
+- **Alpha → Meta 数据迁移**：正式 Meta 包首次启动且本地无配置时，通过同签名 `MigrationProvider` 自动从已安装的 Alpha 导入配置文件、节点选择与 service/ui 设置（需两包使用同一签名）。
 - **统一签名密钥契约**：main 推送正式包 / 手动 Release 均通过 Secrets（`KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`）注入；在 `$RUNNER_TEMP` 解码 keystore 并生成临时 `signing.properties`，`always()` 清理。
 - **产物完整性**：发布 APK 生成 `SHA256SUMS`；移除对缺失的 `SIGNING_CERT_SHA256` 校验依赖，避免因未配置 secret 阻断流水线。
 - **版本元数据**：工作流正确写入 release metadata 与 version 变量；正式发布顺序与审计 F-16 对齐。

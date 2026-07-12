@@ -404,5 +404,8 @@
     <string name="setup_profile_tips">Import a subscription to start using Clash</string>
     <string name="logs_empty_title">No log history</string>
     <string name="logs_empty_tips">Start Clash logcat to capture runtime logs. Saved sessions will appear here.</string>
-</resources>
 
+    <string name="migrate_data_permission_label">Migrate Clash data</string>
+    <string name="migrate_data_permission_description">Allow same-signature Clash builds to export profiles and settings for migration.</string>
+    <string name="alpha_migration_success">Imported %1$d profile(s) from Alpha</string>
+</resources>
