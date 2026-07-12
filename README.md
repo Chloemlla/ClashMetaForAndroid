@@ -81,7 +81,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 - When `MetaCubeX/Clash.Meta` kernel is updated to a new version, the `Update Dependencies` actions in this repo will be triggered automatically.
   - It will pull the new version of the meta kernel, update all the golang dependencies, and create a PR without manual intervention.
   - If there is any compile error in PR, you need to fix it before merging. Alternatively, you may merge the PR directly.
-- Pushing to `main` on the Chloemlla fork triggers **Build Release on Push**: signed **Meta** APKs, GitHub **full release** (`prerelease: false`), and **`make_latest: true`** (tag `v{version}-{shortsha}`). Manual `Build Release` remains for version-bumped `vX.Y.Z` tags.
+- Pushing to `main` on the Chloemlla fork triggers **Build Release on Push**: after shared verify, it **parallel-builds** signed **Meta** (`app:assembleMetaRelease`) and **Alpha** (`app:assembleAlphaRelease`). Meta is published as a **full latest** release (`prerelease: false`, `make_latest: true`, tag `v{version}-{shortsha}`); Alpha is published as a separate **pre-release** (`prerelease: true`, `make_latest: false`, tag `v{version}-{shortsha}-alpha`). Manual `Build Release` remains for version-bumped `vX.Y.Z` tags.
 - Manually triggering `Build Release` actions will compile, tag and publish a `Release` version.
   - You must fill the blank `Release Tag` with the tag you want to release in the format of `v1.2.3`.
   - `versionName` and `versionCode` in `build.gradle.kts` will be automatically bumped to the tag you filled above.
@@ -178,7 +178,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 相关提交包括：`c76ede2`、`d4fff9c`、`83fe497`、`01aedc7`、`1135e04`、`884bc8a`、`c3ba6ae` 等。
 
-- **main 推送正式包**：`build-pre-release.yaml` 对 Chloemlla fork 使用 `app:assembleMetaRelease` + `prerelease: false` + `make_latest: true`，不再产出 Alpha / Pre-release。
+- **main 推送并行发布**：`build-pre-release.yaml` 对 Chloemlla fork 先跑共享校验，再并行 `assembleMetaRelease`（正式 latest）与 `assembleAlphaRelease`（Pre-release，不抢 latest）。
 - **Alpha → Meta 数据迁移**：正式 Meta 包首次启动且本地无配置时，通过同签名 `MigrationProvider` 自动从已安装的 Alpha 导入配置文件、节点选择与 service/ui 设置（需两包使用同一签名）。
 - **统一签名密钥契约**：main 推送正式包 / 手动 Release 均通过 Secrets（`KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`）注入；在 `$RUNNER_TEMP` 解码 keystore 并生成临时 `signing.properties`，`always()` 清理。
 - **产物完整性**：发布 APK 生成 `SHA256SUMS`；移除对缺失的 `SIGNING_CERT_SHA256` 校验依赖，避免因未配置 secret 阻断流水线。
@@ -242,7 +242,7 @@ i18n        多语言缺失串补全 · 合理 MissingTranslation 策略
 
 ### 10. 验证说明
 
-- **不要**把本机 Gradle/Flutter 跑通当作发布门禁；本 fork 约定真实验证在 **GitHub Actions**（debug / main 推送 Meta 正式包 / 手动 versioned release 工作流）。
+- **不要**把本机 Gradle/Flutter 跑通当作发布门禁；本 fork 约定真实验证在 **GitHub Actions**（debug / main 推送 Meta latest + Alpha pre-release / 手动 versioned release 工作流）。
 - 推送后请在 Actions 中查看：assemble、unit test、lint 报告产物、签名与 `SHA256SUMS`。
 - 若需对照审计条目与代码落点，优先阅读审计报告 §4 与 `docs/plans/2026-07-10-full-audit-remediation-execution-plan.md`。
 

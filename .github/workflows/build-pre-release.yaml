@@ -10,23 +10,30 @@ permissions:
   contents: write
 
 jobs:
-  BuildReleaseOnPush:
-    # Only auto-publish full Meta releases from the Chloemlla fork.
+  # Shared quality gates before packaging either flavor.
+  Verify:
     if: github.repository_owner == 'Chloemlla' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.meta.outputs.version_name }}
+      short_hash: ${{ steps.meta.outputs.short_hash }}
+      meta_tag: ${{ steps.meta.outputs.meta_tag }}
+      alpha_tag: ${{ steps.meta.outputs.alpha_tag }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
       - name: Set release metadata
+        id: meta
         shell: bash
         run: |
           VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' build.gradle.kts | head -n 1)
           SHORT_HASH=$(git rev-parse --short=7 HEAD)
           test -n "$VERSION_NAME"
-          echo "CMFA_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
-          echo "CMFA_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
-          echo "CMFA_RELEASE_TAG=v${VERSION_NAME}-${SHORT_HASH}" >> "$GITHUB_ENV"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "short_hash=$SHORT_HASH" >> "$GITHUB_OUTPUT"
+          echo "meta_tag=v${VERSION_NAME}-${SHORT_HASH}" >> "$GITHUB_OUTPUT"
+          echo "alpha_tag=v${VERSION_NAME}-${SHORT_HASH}-alpha" >> "$GITHUB_OUTPUT"
 
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
@@ -81,8 +88,8 @@ jobs:
           path: '**/build/reports/tests/**'
           if-no-files-found: warn
 
-      - name: Android Lint
-        run: ./gradlew --no-daemon lintMetaRelease
+      - name: Android Lint (Meta + Alpha)
+        run: ./gradlew --no-daemon lintMetaRelease lintAlphaRelease
 
       - name: Print full Android Lint reports
         if: always()
@@ -98,6 +105,53 @@ jobs:
             **/build/intermediates/lint_intermediate_text_report/**/lint-results-*.txt
             **/build/reports/lint-results-*.html
           if-no-files-found: warn
+
+  MetaRelease:
+    needs: Verify
+    if: github.repository_owner == 'Chloemlla' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive --force
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
+          go-version: '1.26'
+
+      - name: Apply Patches
+        run: |
+          cd "$(go env GOROOT)"
+          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Update CA
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates
+          sudo update-ca-certificates
+          cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
       - name: Prepare signing credentials
         env:
@@ -128,16 +182,16 @@ jobs:
           cd app/build/outputs/apk/meta/release
           sha256sum ./*.apk > SHA256SUMS
 
-      - name: Automatic release
+      - name: Publish Meta full release (latest)
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           make_latest: true
           generate_release_notes: true
-          tag_name: ${{ env.CMFA_RELEASE_TAG }}
+          tag_name: ${{ needs.Verify.outputs.meta_tag }}
           prerelease: false
-          name: ClashMetaForAndroid ${{ env.CMFA_VERSION_NAME }} (${{ env.CMFA_SHORT_HASH }})
+          name: ClashMetaForAndroid ${{ needs.Verify.outputs.version_name }} (${{ needs.Verify.outputs.short_hash }})
           files: |
             app/build/outputs/apk/meta/release/*.apk
             app/build/outputs/apk/meta/release/SHA256SUMS
@@ -145,3 +199,97 @@ jobs:
       - name: Remove signing credentials
         if: always()
         run: rm -f signing.properties "$RUNNER_TEMP/cmfa-release.keystore"
+
+  AlphaPreRelease:
+    needs: Verify
+    if: github.repository_owner == 'Chloemlla' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive --force
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
+          go-version: '1.26'
+
+      - name: Apply Patches
+        run: |
+          cd "$(go env GOROOT)"
+          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Update CA
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates
+          sudo update-ca-certificates
+          cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
+
+      - name: Prepare signing credentials
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          : "${KEYSTORE_BASE64:?KEYSTORE_BASE64 is required}"
+          : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
+          : "${KEY_ALIAS:?KEY_ALIAS is required}"
+          : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
+          KEYSTORE_FILE="$RUNNER_TEMP/cmfa-alpha-release.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+          chmod 600 "$KEYSTORE_FILE"
+          printf '%s\n' \
+            "keystore.file=$KEYSTORE_FILE" \
+            "keystore.password=$KEYSTORE_PASSWORD" \
+            "key.alias=$KEY_ALIAS" \
+            "key.password=$KEY_PASSWORD" \
+            > signing.properties
+
+      - name: Build signed Alpha release APKs
+        run: ./gradlew --no-daemon app:assembleAlphaRelease
+
+      - name: Generate APK checksums
+        run: |
+          cd app/build/outputs/apk/alpha/release
+          sha256sum ./*.apk > SHA256SUMS
+
+      - name: Publish Alpha pre-release
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: false
+          generate_release_notes: true
+          tag_name: ${{ needs.Verify.outputs.alpha_tag }}
+          prerelease: true
+          name: ClashMetaForAndroid Alpha ${{ needs.Verify.outputs.version_name }}-${{ needs.Verify.outputs.short_hash }}
+          files: |
+            app/build/outputs/apk/alpha/release/*.apk
+            app/build/outputs/apk/alpha/release/SHA256SUMS
+
+      - name: Remove signing credentials
+        if: always()
+        run: rm -f signing.properties "$RUNNER_TEMP/cmfa-alpha-release.keystore"
