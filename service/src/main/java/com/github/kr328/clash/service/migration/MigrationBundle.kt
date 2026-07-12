@@ -326,8 +326,9 @@ object MigrationBundle {
         ZipInputStream(BufferedInputStream(FileInputStream(input))).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
-                val target = outputDir.resolve(entry.name).normalize()
-                if (!target.toPath().startsWith(outputDir.toPath())) {
+                val root = outputDir.canonicalFile
+                val target = outputDir.resolve(entry.name).canonicalFile
+                if (target != root && !target.path.startsWith(root.path + File.separator)) {
                     throw IllegalStateException("zip path traversal: ${entry.name}")
                 }
                 if (entry.isDirectory) {
