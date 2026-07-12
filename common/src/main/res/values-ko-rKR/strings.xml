@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receive_clash_broadcasts">Clash 브로드캐스트 수신</string>
+    <string name="receive_broadcasts_of_clash">Clash 서비스의 브로드캐스트를 수신합니다</string>
+    <string name="migrate_data_permission_label">Clash 데이터 마이그레이션</string>
+    <string name="migrate_data_permission_description">동일 서명의 Clash 빌드가 마이그레이션을 위해 프로필과 설정을 내보낼 수 있도록 허용합니다.</string>
+</resources>

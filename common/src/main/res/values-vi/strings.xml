@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receive_clash_broadcasts">Nhận broadcast của Clash</string>
+    <string name="receive_broadcasts_of_clash">Nhận broadcast từ các dịch vụ Clash</string>
+    <string name="migrate_data_permission_label">Di chuyển dữ liệu Clash</string>
+    <string name="migrate_data_permission_description">Cho phép các bản Clash cùng chữ ký xuất hồ sơ và cài đặt để di chuyển.</string>
+</resources>
