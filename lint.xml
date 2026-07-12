@@ -9,4 +9,11 @@
         <ignore path="**/build/generated/**" />
         <ignore regexp=".*_Impl\.java" />
     </issue>
+
+    <!--
+      Locale packs are intentionally incomplete (partial community translations).
+      MissingTranslation would otherwise fail CI with ~100 errors for every new default string.
+    -->
+    <issue id="MissingTranslation" severity="ignore" />
+    <issue id="ExtraTranslation" severity="ignore" />
 </lint>

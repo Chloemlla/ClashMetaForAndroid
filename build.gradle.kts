@@ -254,6 +254,9 @@ subprojects {
             lintConfig = rootProject.file("lint.xml")
             // RoomOpenHelper.Delegate is restricted; generated Room *_Impl classes trigger this en masse.
             disable("RestrictedApi")
+            // Partial locale packs; do not block builds on incomplete translations.
+            disable("MissingTranslation")
+            disable("ExtraTranslation")
         }
     }
 }
