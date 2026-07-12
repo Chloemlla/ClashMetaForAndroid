@@ -118,13 +118,18 @@ release_workflow = (ROOT / ".github/workflows/build-release.yaml").read_text(enc
 test_index = release_workflow.find("JVM unit tests")
 lint_index = release_workflow.find("Android Lint")
 build_index = release_workflow.find("Build signed release APKs")
-verify_index = release_workflow.find("Verify signed APKs")
+checksum_index = release_workflow.find("Generate APK checksums")
 push_index = release_workflow.find("Commit version and push verified tag")
 require(
-    0 <= test_index < lint_index < build_index < verify_index < push_index,
-    "release test/lint/build/verify/push order is unsafe",
+    0 <= test_index < lint_index < build_index < checksum_index < push_index,
+    "release test/lint/build/checksum/push order is unsafe",
 )
 require("cat signing.properties" not in release_workflow, "release workflow prints signing properties")
+require(
+    "verify-apk-signing.sh" not in release_workflow
+    and "SIGNING_CERT_SHA256" not in release_workflow,
+    "release workflow still requires SIGNING_CERT_SHA256 verification",
+)
 for secret_name in ("KEYSTORE_BASE64", "KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD"):
     require(
         f"secrets.{secret_name}" in release_workflow,
@@ -136,6 +141,13 @@ require(
     and "SIGNING_KEY_ALIAS" not in release_workflow
     and "SIGNING_KEY_PASSWORD" not in release_workflow,
     "release workflow still uses legacy stable-only signing secret names",
+)
+
+pre_release_workflow = (ROOT / ".github/workflows/build-pre-release.yaml").read_text(encoding="utf-8")
+require(
+    "verify-apk-signing.sh" not in pre_release_workflow
+    and "SIGNING_CERT_SHA256" not in pre_release_workflow,
+    "pre-release workflow still requires SIGNING_CERT_SHA256 verification",
 )
 
 

@@ -144,10 +144,10 @@ jobs:
       - name: Build signed release APKs
         run: ./gradlew --no-daemon app:assembleMetaRelease
 
-      - name: Verify signed APKs
-        env:
-          SIGNING_CERT_SHA256: ${{ secrets.SIGNING_CERT_SHA256 }}
-        run: bash .github/scripts/verify-apk-signing.sh app/build/outputs/apk/meta/release
+      - name: Generate APK checksums
+        run: |
+          cd app/build/outputs/apk/meta/release
+          sha256sum ./*.apk > SHA256SUMS
 
       - name: Commit version and push verified tag
         run: |

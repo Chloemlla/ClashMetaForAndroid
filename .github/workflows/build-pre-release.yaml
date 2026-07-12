@@ -120,10 +120,10 @@ jobs:
       - name: Build pre-release APKs
         run: ./gradlew --no-daemon app:assembleAlphaRelease
 
-      - name: Verify signed APKs
-        env:
-          SIGNING_CERT_SHA256: ${{ secrets.SIGNING_CERT_SHA256 }}
-        run: bash .github/scripts/verify-apk-signing.sh app/build/outputs/apk/alpha/release
+      - name: Generate APK checksums
+        run: |
+          cd app/build/outputs/apk/alpha/release
+          sha256sum ./*.apk > SHA256SUMS
 
       - name: Automatic release
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d

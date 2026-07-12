@@ -17,8 +17,8 @@ key.alias=...
 key.password=...
 ```
 
-Release builds fail when the file or any required property is missing. The workflow verifies every APK with `apksigner` and compares its certificate SHA-256 digest with the protected `SIGNING_CERT_SHA256` secret before any version commit or tag is pushed. Temporary signing files are removed in an `always()` cleanup step.
+Release builds fail when the file or any required property is missing. Temporary signing files are removed in an `always()` cleanup step. Release artifacts also get a `SHA256SUMS` file generated after the APKs are built.
 
-Stable and alpha workflows both use `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Both workflows also require `SIGNING_CERT_SHA256`.
+Stable and alpha workflows both use `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`.
 
 Never print signing properties, passwords, Base64 keystore values, or private-key material to workflow logs. Key rotation and distribution-console changes remain explicit maintainer operations outside this repository.
