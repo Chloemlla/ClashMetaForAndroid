@@ -21,6 +21,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
         val states = List(names.size) { ProxyState("?") }
         val unorderedStates = names.indices.map { names[it] to states[it] }.toMap()
         val reloadLock = Semaphore(10)
+        val scrolledToSelected = BooleanArray(names.size)
 
         val design = ProxyDesign(
             this,
@@ -44,6 +45,7 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
             }
             val state = states[index]
             val selectionChanged = state.now != group.now
+            val shouldScroll = !scrolledToSelected[index] && group.now.isNotEmpty()
 
             state.now = group.now
 
@@ -57,7 +59,12 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                 completeUrlTest,
                 preserveOrder,
                 selectionChanged,
+                shouldScroll,
             )
+
+            if (shouldScroll) {
+                scrolledToSelected[index] = true
+            }
         }
 
         design.requests.send(ProxyDesign.Request.ReloadAll)
@@ -157,3 +164,4 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
         const val URL_TEST_REFRESH_INTERVAL_MILLIS = 400L
     }
 }
+

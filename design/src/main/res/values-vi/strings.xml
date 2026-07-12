@@ -331,4 +331,9 @@
     <string name="notification_permission_rationale">Khi dịch vụ VPN đang chạy, Clash hiển thị thông báo để bạn xem trạng thái và quay lại ứng dụng.</string>
     <string name="notification_permission_denied">Thông báo đã tắt. Clash vẫn chạy được, nhưng thông báo trạng thái dịch vụ sẽ bị ẩn.</string>
     <string name="continue_">Tiếp tục</string>
+    <string name="search_proxy_hint">Tìm theo tên, loại hoặc phụ đề</string>
+    <string name="profiles_empty_title">Chưa có hồ sơ</string>
+    <string name="profiles_empty_tips">Nhập URL đăng ký, tệp cục bộ hoặc mã QR để bắt đầu.</string>
+    <string name="proxy_search_no_result">Không có proxy phù hợp</string>
 </resources>
+

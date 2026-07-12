@@ -220,7 +220,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 安全        外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧
 稳定        日志增量通知修复 · 有界日志解析 · 写盘轮转 · Access Control 退出超时
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
-体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍
+体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点
 架构        design/service 边界收紧 · 展示层模型与适配器
 供应链      Geo 固定校验 · 构建后打 tag · SHA256SUMS · 统一 CI 签名 secrets
 质量        单元测试 · Lint 全量报告 · 失败日志透明 · 仓库策略脚本

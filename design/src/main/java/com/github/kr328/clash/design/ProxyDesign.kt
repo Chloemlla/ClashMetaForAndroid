@@ -3,7 +3,11 @@ package com.github.kr328.clash.design
 import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.core.content.getSystemService
+import androidx.core.widget.addTextChangedListener
 import androidx.viewpager2.widget.ViewPager2
 import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.core.model.TunnelState
@@ -16,10 +20,16 @@ import com.github.kr328.clash.design.model.ProxyState
 import com.github.kr328.clash.design.store.UiStore
 import com.github.kr328.clash.design.util.applyFrom
 import com.github.kr328.clash.design.util.layoutInflater
+import com.github.kr328.clash.design.util.requestTextInput
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ProxyDesign(
@@ -61,6 +71,10 @@ class ProxyDesign(
             adapter.states[binding.pagesView.currentItem].urlTesting = value
         }
 
+    private var searchFilterJob: Job? = null
+    private val searchFilter = Channel<Unit>(Channel.CONFLATED)
+    private var syncingKeyword = false
+
     override val root: View = binding.root
 
     suspend fun updateGroup(
@@ -73,6 +87,7 @@ class ProxyDesign(
         completeUrlTest: Boolean = true,
         preserveOrder: Boolean = false,
         selectionChanged: Boolean = false,
+        scrollToSelected: Boolean = false,
     ) {
         adapter.updateAdapter(
             position,
@@ -82,6 +97,7 @@ class ProxyDesign(
             links,
             animateDelay,
             preserveOrder,
+            scrollToSelected,
         )
 
         if (selectionChanged) {
@@ -120,6 +136,8 @@ class ProxyDesign(
             binding.emptyView.visibility = View.VISIBLE
 
             binding.urlTestView.visibility = View.GONE
+            binding.searchView.visibility = View.GONE
+            binding.searchBar.visibility = View.GONE
             binding.tabLayoutView.visibility = View.GONE
             binding.elevationView.visibility = View.GONE
             binding.pagesView.visibility = View.GONE
@@ -128,6 +146,46 @@ class ProxyDesign(
             binding.urlTestFloatView.supportImageTintList = ColorStateList.valueOf(
                 context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimary)
             )
+
+            binding.searchView.setOnClickListener {
+                toggleSearchBar(show = binding.searchBar.visibility != View.VISIBLE)
+            }
+
+            binding.clearSearchView.setOnClickListener {
+                if (binding.keywordView.text.isNullOrEmpty()) {
+                    toggleSearchBar(show = false)
+                } else {
+                    binding.keywordView.setText("")
+                }
+            }
+
+            binding.keywordView.addTextChangedListener {
+                if (!syncingKeyword) {
+                    searchFilter.trySend(Unit)
+                }
+            }
+            binding.keywordView.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    hideKeyboard()
+                    true
+                } else {
+                    false
+                }
+            }
+
+            searchFilterJob = launch {
+                while (isActive) {
+                    searchFilter.receive()
+                    delay(150)
+
+                    if (groupNamesEmpty()) continue
+
+                    val page = binding.pagesView.currentItem
+                    val keyword = binding.keywordView.text?.toString().orEmpty()
+                    adapter.setKeyword(page, keyword)
+                    updateSearchButtonStatus()
+                }
+            }
 
             binding.pagesView.apply {
                 adapter = ProxyPageAdapter(
@@ -152,6 +210,9 @@ class ProxyDesign(
 
                     override fun onPageSelected(position: Int) {
                         uiStore.proxyLastGroup = groupNames[position]
+                        syncKeywordField()
+                        updateSearchButtonStatus()
+                        updateUrlTestButtonStatus()
                     }
                 })
             }
@@ -165,11 +226,15 @@ class ProxyDesign(
             binding.pagesView.post {
                 if (initialPosition > 0)
                     binding.pagesView.setCurrentItem(initialPosition, false)
+                syncKeywordField()
+                updateSearchButtonStatus()
             }
         }
     }
 
     fun requestUrlTesting() {
+        if (groupNamesEmpty() || urlTesting) return
+
         urlTesting = true
 
         requests.trySend(Request.UrlTest(binding.pagesView.currentItem))
@@ -177,7 +242,46 @@ class ProxyDesign(
         updateUrlTestButtonStatus()
     }
 
+    private fun toggleSearchBar(show: Boolean) {
+        if (groupNamesEmpty()) return
+
+        binding.searchBar.visibility = if (show) View.VISIBLE else View.GONE
+        updateListTopInset()
+
+        if (show) {
+            binding.keywordView.requestTextInput()
+        } else {
+            hideKeyboard()
+            if (!binding.keywordView.text.isNullOrEmpty()) {
+                binding.keywordView.setText("")
+            } else {
+                updateSearchButtonStatus()
+            }
+        }
+    }
+
+    private fun syncKeywordField() {
+        if (groupNamesEmpty()) return
+
+        val keyword = adapter.keyword(binding.pagesView.currentItem)
+        syncingKeyword = true
+        try {
+            if (binding.keywordView.text?.toString() != keyword) {
+                binding.keywordView.setText(keyword)
+                binding.keywordView.setSelection(keyword.length)
+            }
+            if (keyword.isNotEmpty()) {
+                binding.searchBar.visibility = View.VISIBLE
+            }
+            updateListTopInset()
+        } finally {
+            syncingKeyword = false
+        }
+    }
+
     private fun updateUrlTestButtonStatus() {
+        if (groupNamesEmpty()) return
+
         if (verticalBottomScrolled || horizontalScrolling || urlTesting) {
             binding.urlTestFloatView.hide()
         } else {
@@ -187,9 +291,43 @@ class ProxyDesign(
         if (urlTesting) {
             binding.urlTestView.visibility = View.GONE
             binding.urlTestProgressView.visibility = View.VISIBLE
+            binding.urlTestView.isEnabled = false
+            binding.urlTestFloatView.isEnabled = false
         } else {
             binding.urlTestView.visibility = View.VISIBLE
             binding.urlTestProgressView.visibility = View.GONE
+            binding.urlTestView.isEnabled = true
+            binding.urlTestFloatView.isEnabled = true
         }
     }
+
+    private fun updateSearchButtonStatus() {
+        if (groupNamesEmpty()) return
+
+        val hasKeyword = adapter.keyword(binding.pagesView.currentItem).isNotEmpty()
+        binding.searchView.alpha = if (hasKeyword || binding.searchBar.visibility == View.VISIBLE) 1f else 0.85f
+        binding.searchView.isSelected = hasKeyword
+    }
+
+    private fun groupNamesEmpty(): Boolean {
+        return binding.pagesView.adapter == null
+    }
+
+    
+    private fun updateListTopInset() {
+        if (groupNamesEmpty()) return
+        val extra = if (binding.searchBar.visibility == View.VISIBLE) {
+            context.resources.getDimensionPixelSize(R.dimen.proxy_search_bar_height)
+        } else {
+            0
+        }
+        adapter.setExtraTopInset(extra)
+    }
+    private fun hideKeyboard() {
+        val imm = context.getSystemService<InputMethodManager>() ?: return
+        imm.hideSoftInputFromWindow(binding.keywordView.windowToken, 0)
+        binding.keywordView.clearFocus()
+    }
 }
+
+

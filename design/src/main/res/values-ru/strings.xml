@@ -386,4 +386,9 @@
     <string name="notification_permission_rationale">Пока работает VPN-служба, Clash показывает уведомление, чтобы вы могли видеть статус и вернуться в приложение.</string>
     <string name="notification_permission_denied">Уведомления отключены. Clash может работать, но уведомления о состоянии службы скрыты.</string>
     <string name="continue_">Продолжить</string>
+    <string name="search_proxy_hint">Поиск по имени, типу или подзаголовку</string>
+    <string name="profiles_empty_title">Профилей пока нет</string>
+    <string name="profiles_empty_tips">Импортируйте URL, файл или QR-код, чтобы начать.</string>
+    <string name="proxy_search_no_result">Нет подходящих прокси</string>
 </resources>
+

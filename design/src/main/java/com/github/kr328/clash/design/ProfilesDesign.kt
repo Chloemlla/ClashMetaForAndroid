@@ -51,6 +51,8 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
 
         withContext(Dispatchers.Main) {
             binding.updateView.visibility = if (updatable) View.VISIBLE else View.GONE
+            binding.emptyView.visibility = if (profiles.isEmpty()) View.VISIBLE else View.GONE
+            binding.mainList.recyclerList.visibility = if (profiles.isEmpty()) View.GONE else View.VISIBLE
         }
     }
 
@@ -160,3 +162,4 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         }
     }
 }
+

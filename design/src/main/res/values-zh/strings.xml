@@ -332,4 +332,9 @@
     
     
     
+    <string name="search_proxy_hint">按名称、类型或副标题搜索</string>
+    <string name="profiles_empty_title">还没有配置</string>
+    <string name="profiles_empty_tips">导入订阅链接、本地文件或二维码即可开始使用。</string>
+    <string name="proxy_search_no_result">没有匹配的代理</string>
 </resources>
+

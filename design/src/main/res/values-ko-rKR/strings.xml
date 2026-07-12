@@ -331,4 +331,9 @@
     <string name="notification_permission_rationale">VPN 서비스가 실행 중일 때 Clash는 상태 확인과 앱 복귀를 위해 알림을 표시합니다.</string>
     <string name="notification_permission_denied">알림이 꺼져 있습니다. Clash는 실행될 수 있지만 서비스 상태 알림은 숨겨집니다.</string>
     <string name="continue_">계속</string>
+    <string name="search_proxy_hint">이름, 유형 또는 부제로 검색</string>
+    <string name="profiles_empty_title">프로필이 없습니다</string>
+    <string name="profiles_empty_tips">구독 URL, 파일 또는 QR 코드로 추가하세요.</string>
+    <string name="proxy_search_no_result">일치하는 프록시 없음</string>
 </resources>
+

@@ -331,4 +331,9 @@
     <string name="notification_permission_rationale">VPN サービス実行中、Clash は状態の確認とアプリへの復帰のために通知を表示します。</string>
     <string name="notification_permission_denied">通知は無効です。Clash は動作しますが、サービス状態の通知は表示されません。</string>
     <string name="continue_">続行</string>
+    <string name="search_proxy_hint">名前・種類・サブタイトルで検索</string>
+    <string name="profiles_empty_title">プロファイルがありません</string>
+    <string name="profiles_empty_tips">サブスク URL、ファイル、QR コードから追加してください。</string>
+    <string name="proxy_search_no_result">一致するプロキシがありません</string>
 </resources>
+

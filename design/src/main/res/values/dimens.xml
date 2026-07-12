@@ -69,6 +69,7 @@
     <dimen name="main_top_banner_height">90dp</dimen>
 
     <!--  Proxy Design -->
+    <dimen name="proxy_search_bar_height">48dp</dimen>
     <dimen name="proxy_layout_padding">3dp</dimen>
     <dimen name="proxy_content_padding">15dp</dimen>
     <dimen name="proxy_content_padding_grid3">12dp</dimen>
@@ -90,3 +91,4 @@
     <dimen name="logcat_padding_vertical">12dp</dimen>
     <dimen name="logcat_padding_horizontal">12dp</dimen>
 </resources>
+

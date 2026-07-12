@@ -390,4 +390,9 @@
     <string name="notification_permission_rationale">Clash uses a notification while the VPN service is running so you can see its status and return to the app.</string>
     <string name="notification_permission_denied">Notifications are disabled. Clash can run, but service status notifications will be hidden.</string>
     <string name="continue_">Continue</string>
+    <string name="search_proxy_hint">Search by name, type, or subtitle</string>
+    <string name="profiles_empty_title">No profiles yet</string>
+    <string name="profiles_empty_tips">Import a subscription URL, local file, or QR code to get started.</string>
+    <string name="proxy_search_no_result">No matching proxies</string>
 </resources>
+

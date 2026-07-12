@@ -58,7 +58,7 @@
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
                         android:layout_marginStart="@dimen/item_tailing_margin"
-                        android:layout_toStartOf="@id/menu_view">
+                        android:layout_toStartOf="@id/search_view">
 
                         <ImageView
                             android:id="@+id/url_test_view"
@@ -79,6 +79,20 @@
                             android:layout_height="@dimen/item_tailing_component_size"
                             android:visibility="gone" />
                     </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/search_view"
+                        android:layout_width="@dimen/toolbar_image_action_size"
+                        android:layout_height="@dimen/toolbar_image_action_size"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="@dimen/item_tailing_margin"
+                        android:layout_toStartOf="@id/menu_view"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:contentDescription="@string/search"
+                        android:focusable="true"
+                        android:padding="@dimen/toolbar_image_action_padding"
+                        android:src="@drawable/ic_baseline_search" />
 
                     <ImageView
                         android:id="@+id/menu_view"
@@ -106,6 +120,42 @@
                 app:tabBackground="@android:color/transparent"
                 app:tabMode="scrollable" />
 
+            <LinearLayout
+                android:id="@+id/search_bar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:alpha="0.96"
+                android:background="?android:windowBackground"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/item_header_margin"
+                android:paddingEnd="@dimen/item_tailing_margin"
+                android:paddingBottom="@dimen/item_text_margin"
+                android:visibility="gone">
+
+                <androidx.appcompat.widget.AppCompatEditText
+                    android:id="@+id/keyword_view"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/search_proxy_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:singleLine="true" />
+
+                <ImageView
+                    android:id="@+id/clear_search_view"
+                    android:layout_width="@dimen/toolbar_image_action_size"
+                    android:layout_height="@dimen/toolbar_image_action_size"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/close"
+                    android:focusable="true"
+                    android:padding="@dimen/toolbar_image_action_padding"
+                    android:src="@drawable/ic_baseline_close" />
+            </LinearLayout>
+
             <View
                 android:id="@+id/elevation_view"
                 android:layout_width="match_parent"
@@ -132,3 +182,5 @@
         </FrameLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
+
+

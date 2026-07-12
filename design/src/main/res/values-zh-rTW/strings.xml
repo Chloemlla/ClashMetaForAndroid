@@ -331,4 +331,9 @@
     <string name="shortcut_start_long">啟動 Clash 服務</string>
     <string name="shortcut_stop_short">停止 Clash</string>
     <string name="shortcut_stop_long">停止 Clash 服務</string>
+    <string name="search_proxy_hint">依名稱、類型或副標題搜尋</string>
+    <string name="profiles_empty_title">尚無設定檔</string>
+    <string name="profiles_empty_tips">匯入訂閱網址、本機檔案或 QR 碼即可開始使用。</string>
+    <string name="proxy_search_no_result">沒有符合的代理</string>
 </resources>
+
