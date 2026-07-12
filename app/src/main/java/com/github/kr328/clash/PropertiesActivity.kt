@@ -70,15 +70,16 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         }
     }
 
-    override fun onBackPressed() {
-        design?.apply {
-            launch {
-                if (!progressing) {
-                    if (original == profile || requestExitWithoutSaving())
-                        finish()
+    override fun onBackPressedCompat(): Boolean {
+        val current = design ?: return false
+        current.launch {
+            if (!current.progressing) {
+                if (original == current.profile || current.requestExitWithoutSaving()) {
+                    finish()
                 }
             }
-        } ?: return super.onBackPressed()
+        }
+        return true
     }
 
     private suspend fun PropertiesDesign.verifyAndCommit() {

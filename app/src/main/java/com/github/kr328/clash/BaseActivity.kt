@@ -5,9 +5,11 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
+import androidx.core.view.WindowCompat
 import com.github.kr328.clash.common.compat.isAllowForceDarkCompat
 import com.github.kr328.clash.common.compat.isLightNavigationBarCompat
 import com.github.kr328.clash.common.compat.isLightStatusBarsCompat
@@ -35,7 +37,7 @@ import com.github.kr328.clash.design.R
 abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     CoroutineScope by MainScope(),
     Broadcasts.Observer {
-    
+
     protected val uiStore by lazy { UiStore(this) }
     protected val events = Channel<Event>(Channel.UNLIMITED)
     protected var activityStarted: Boolean = false
@@ -56,7 +58,23 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     private val nextRequestKey = AtomicInteger(0)
     private var dayNight: DayNight = DayNight.Day
 
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (!onBackPressedCompat()) {
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        }
+    }
+
     protected abstract suspend fun main()
+
+    /**
+     * Handle the system/back navigation affordance.
+     * Return true if the event was fully handled; false to fall back to the default finish behavior.
+     */
+    protected open fun onBackPressedCompat(): Boolean = false
 
     fun defer(operation: suspend () -> Unit) {
         this.defer = operation
@@ -89,6 +107,8 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyDayNight()
+
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
 
         // Apply excludeFromRecents setting to all app tasks.
         checkNotNull(getSystemService<ActivityManager>()).appTasks.forEach { task ->
@@ -150,7 +170,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        this.onBackPressed()
+        onBackPressedDispatcher.onBackPressed()
         return true
     }
 
@@ -205,9 +225,13 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
 
         window.isAllowForceDarkCompat = false
         window.isSystemBarsTranslucentCompat = true
-        
+
+        @Suppress("DEPRECATION")
         window.statusBarColor = resolveThemedColor(android.R.attr.statusBarColor)
+        @Suppress("DEPRECATION")
         window.navigationBarColor = resolveThemedColor(android.R.attr.navigationBarColor)
+
+        WindowCompat.setDecorFitsSystemWindows(window, true)
 
         if (Build.VERSION.SDK_INT >= 23) {
             window.isLightStatusBarsCompat = resolveThemedBoolean(android.R.attr.windowLightStatusBar)

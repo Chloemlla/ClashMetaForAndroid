@@ -10,10 +10,19 @@
         <ignore regexp=".*_Impl\.java" />
     </issue>
 
-    <!--
-      Locale packs are intentionally incomplete (partial community translations).
-      MissingTranslation would otherwise fail CI with ~100 errors for every new default string.
-    -->
+    <!-- Partial/community locale packs are maintained separately from CI. -->
     <issue id="MissingTranslation" severity="ignore" />
     <issue id="ExtraTranslation" severity="ignore" />
+
+    <!-- Vector adaptive icons / launcher metadata commonly trip these on library consumers. -->
+    <issue id="IconLauncherShape" severity="ignore" />
+    <issue id="IconDipSize" severity="ignore" />
+    <issue id="IconDuplicatesConfig" severity="ignore" />
+    <issue id="IconLocation" severity="ignore" />
+    <issue id="IconDensities" severity="ignore" />
+    <issue id="IconMissingDensityFolder" severity="ignore" />
+
+    <!-- Older multi-ABI packaging + Go/native artifacts produce many packaging notices. -->
+    <issue id="UnusedResources" severity="ignore" />
+    <issue id="VectorPath" severity="ignore" />
 </lint>

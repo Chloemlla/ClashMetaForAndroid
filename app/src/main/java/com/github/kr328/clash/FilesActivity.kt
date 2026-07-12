@@ -122,8 +122,9 @@ class FilesActivity : BaseActivity<FilesDesign>() {
         }
     }
 
-    override fun onBackPressed() {
+    override fun onBackPressedCompat(): Boolean {
         design?.requests?.trySend(FilesDesign.Request.PopStack)
+        return true
     }
 
     private suspend fun FilesDesign.fetch(client: FilesClient, stack: Stack<String>, root: String) {

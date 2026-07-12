@@ -2,6 +2,8 @@ package com.github.kr328.clash
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.currentProcessName
 import com.github.kr328.clash.common.log.Log
@@ -38,7 +40,15 @@ class MainApplication : Application() {
     private fun extractGeoFiles() {
         clashDir.mkdirs()
 
-        val updateDate = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+        val updateDate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(0),
+            ).lastUpdateTime
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+        }
         val geoipFile = File(clashDir, "geoip.metadb")
         if (geoipFile.exists() && geoipFile.lastModified() < updateDate) {
             geoipFile.delete()

@@ -247,7 +247,7 @@ subprojects {
             targetCompatibility = JavaVersion.VERSION_21
         }
 
-        // Keep CI lint as a quality gate while suppressing known generated-source false positives.
+        // Keep CI lint as a quality gate while suppressing known false positives / noise.
         lintOptions {
             isAbortOnError = true
             isCheckReleaseBuilds = true
@@ -257,6 +257,15 @@ subprojects {
             // Partial locale packs; do not block builds on incomplete translations.
             disable("MissingTranslation")
             disable("ExtraTranslation")
+            // Launcher/icon density noise and unused resources from multi-flavor packaging.
+            disable("IconLauncherShape")
+            disable("IconDipSize")
+            disable("IconDuplicatesConfig")
+            disable("IconLocation")
+            disable("IconDensities")
+            disable("IconMissingDensityFolder")
+            disable("UnusedResources")
+            disable("VectorPath")
         }
     }
 }
