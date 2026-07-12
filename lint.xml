@@ -15,6 +15,10 @@
     <issue id="AndroidGradlePluginVersion" severity="ignore" />
     <issue id="UseTomlInstead" severity="ignore" />
 
+    <!-- Locale packs may lag or diverge slightly from default strings. -->
+    <issue id="MissingTranslation" severity="ignore" />
+    <issue id="ExtraTranslation" severity="ignore" />
+
     <!-- Launcher/icon density noise and unused resources from multi-flavor packaging. -->
     <issue id="IconLauncherShape" severity="ignore" />
     <issue id="IconDipSize" severity="ignore" />
@@ -25,4 +29,12 @@
     <issue id="UnusedResources" severity="ignore" />
     <issue id="VectorPath" severity="ignore" />
     <issue id="VectorRaster" severity="ignore" />
+
+    <!--
+      Same-signing migration permission is intentionally shared across alpha/meta packages.
+      Lint UniquePermission / ProtectedPermissions noise is not actionable here.
+    -->
+    <issue id="UniquePermission">
+        <ignore regexp=".*MIGRATE_DATA.*" />
+    </issue>
 </lint>

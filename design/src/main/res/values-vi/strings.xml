@@ -346,7 +346,5 @@
     <string name="logs_empty_title">Chưa có nhật ký</string>
     <string name="logs_empty_tips">Bắt đầu Clash logcat để ghi log. Phiên đã lưu sẽ hiện tại đây.</string>
 
-    <string name="migrate_data_permission_label">Di chuyển dữ liệu Clash</string>
-    <string name="migrate_data_permission_description">Cho phép các bản Clash cùng chữ ký xuất hồ sơ và cài đặt để di chuyển.</string>
     <string name="alpha_migration_success">Đã nhập %1$d hồ sơ từ Alpha</string>
 </resources>

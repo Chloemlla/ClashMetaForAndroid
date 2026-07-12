@@ -68,7 +68,9 @@
             android:authorities="${applicationId}.migration"
             android:exported="true"
             android:grantUriPermissions="false"
-            android:permission="com.github.metacubex.clash.permission.MIGRATE_DATA" />
+            android:readPermission="com.github.metacubex.clash.permission.MIGRATE_DATA"
+            android:writePermission="com.github.metacubex.clash.permission.MIGRATE_DATA"
+            tools:ignore="ExportedContentProvider" />
         <provider
             android:name=".PreferenceProvider"
             android:authorities="${applicationId}.settings"

@@ -248,29 +248,28 @@ subprojects {
         }
 
         // Keep CI lint as a quality gate while suppressing known false positives / noise.
-        lintOptions {
-            isAbortOnError = true
-            isCheckReleaseBuilds = true
+        // AGP 8+ prefers the lint {} DSL over deprecated lintOptions {}.
+        lint {
+            abortOnError = true
+            checkReleaseBuilds = true
             lintConfig = rootProject.file("lint.xml")
-            // RoomOpenHelper.Delegate is restricted; generated Room *_Impl classes trigger this en masse.
-            disable("RestrictedApi")
-            // Locale packs may lag default strings; completeness is enforced by i18n commits, not lint.
-            disable("MissingTranslation")
-            disable("ExtraTranslation")
-            // Dependency version nags are handled by Renovate, not CI lint.
-            disable("GradleDependency")
-            disable("AndroidGradlePluginVersion")
-            disable("UseTomlInstead")
-            // Launcher/icon density noise and unused resources from multi-flavor packaging.
-            disable("IconLauncherShape")
-            disable("IconDipSize")
-            disable("IconDuplicatesConfig")
-            disable("IconLocation")
-            disable("IconDensities")
-            disable("IconMissingDensityFolder")
-            disable("UnusedResources")
-            disable("VectorPath")
-            disable("VectorRaster")
+            // Keep suppressions in lint.xml as the source of truth; also disable here so
+            // variant lint tasks honor them even when config merge differs.
+            disable += "RestrictedApi"
+            disable += "MissingTranslation"
+            disable += "ExtraTranslation"
+            disable += "GradleDependency"
+            disable += "AndroidGradlePluginVersion"
+            disable += "UseTomlInstead"
+            disable += "IconLauncherShape"
+            disable += "IconDipSize"
+            disable += "IconDuplicatesConfig"
+            disable += "IconLocation"
+            disable += "IconDensities"
+            disable += "IconMissingDensityFolder"
+            disable += "UnusedResources"
+            disable += "VectorPath"
+            disable += "VectorRaster"
         }
     }
 }

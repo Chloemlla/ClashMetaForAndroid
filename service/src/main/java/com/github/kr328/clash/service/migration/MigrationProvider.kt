@@ -43,8 +43,8 @@ class MigrationProvider : ContentProvider() {
             return null
         }
 
-        return MatrixCursor(arrayOf("path", "size", "package")).apply {
-            addRow(arrayOf(file.absolutePath, file.length(), ctx.packageName))
+        return MatrixCursor(arrayOf("size", "package")).apply {
+            addRow(arrayOf(file.length(), ctx.packageName))
         }
     }
 

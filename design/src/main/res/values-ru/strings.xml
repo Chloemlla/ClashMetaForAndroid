@@ -401,7 +401,5 @@
     <string name="logs_empty_title">Нет истории логов</string>
     <string name="logs_empty_tips">Запустите Clash logcat, чтобы записывать логи. Сохранённые сессии появятся здесь.</string>
 
-    <string name="migrate_data_permission_label">Миграция данных Clash</string>
-    <string name="migrate_data_permission_description">Разрешает сборкам Clash с той же подписью экспортировать профили и настройки для миграции.</string>
     <string name="alpha_migration_success">Импортировано профилей из Alpha: %1$d</string>
 </resources>
