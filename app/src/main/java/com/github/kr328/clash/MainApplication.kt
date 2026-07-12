@@ -16,6 +16,7 @@ import com.github.kr328.clash.util.clashDir
 import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Suppress("unused")
 class MainApplication : Application() {
