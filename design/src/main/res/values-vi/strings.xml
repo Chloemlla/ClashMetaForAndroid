@@ -335,5 +335,15 @@
     <string name="profiles_empty_title">Chưa có hồ sơ</string>
     <string name="profiles_empty_tips">Nhập URL đăng ký, tệp cục bộ hoặc mã QR để bắt đầu.</string>
     <string name="proxy_search_no_result">Không có proxy phù hợp</string>
+
+    <string name="clipboard">Bộ nhớ tạm</string>
+    <string name="import_from_clipboard_url">Dán URL đăng ký từ bộ nhớ tạm</string>
+    <string name="clipboard_no_url">Không tìm thấy URL đăng ký http(s) trong bộ nhớ tạm</string>
+    <string name="starting">Đang khởi động…</string>
+    <string name="starting_service">Đang khởi động dịch vụ Clash</string>
+    <string name="setup_profile_title">Thêm hồ sơ</string>
+    <string name="setup_profile_tips">Nhập subscription để bắt đầu dùng Clash</string>
+    <string name="logs_empty_title">Chưa có nhật ký</string>
+    <string name="logs_empty_tips">Bắt đầu Clash logcat để ghi log. Phiên đã lưu sẽ hiện tại đây.</string>
 </resources>
 

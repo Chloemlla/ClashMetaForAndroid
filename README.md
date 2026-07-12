@@ -155,6 +155,16 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 - 关闭默认 change 动画冲突，控制 move 时长，减少列表抖动。
 - 需求与计划文档：`docs/requirements/2026-07-10-proxy-delay-progressive-results.md`、`docs/plans/2026-07-10-proxy-delay-progressive-results-execution-plan.md`。
 
+
+### 2.1 日常使用体验增强
+
+提交：`feat(ux): home setup CTA, clipboard import, start feedback, logs empty state`。
+
+- **首页首启引导**：无激活配置时展示「添加配置」卡片，直达新建配置页。
+- **启动中反馈**：点击启动后主卡显示 Starting…，避免重复点按；服务状态广播后恢复。
+- **剪贴板导入订阅**：新建配置支持从剪贴板识别 `http(s)` 与 `clash(meta)://install-config?url=` 链接。
+- **日志空状态**：无历史日志时展示说明与启动 logcat 的 CTA。
+- **未选配置引导**：启动失败 Toast 的操作改为直接创建配置。
 ### 3. Android 构建告警清理
 
 提交：`7762df4`、`72eb015` 等。
@@ -220,7 +230,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 安全        外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧
 稳定        日志增量通知修复 · 有界日志解析 · 写盘轮转 · Access Control 退出超时
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
-体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点
+体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态
 架构        design/service 边界收紧 · 展示层模型与适配器
 供应链      Geo 固定校验 · 构建后打 tag · SHA256SUMS · 统一 CI 签名 secrets
 质量        单元测试 · Lint 全量报告 · 失败日志透明 · 仓库策略脚本
@@ -239,3 +249,4 @@ i18n        多语言缺失串补全 · 合理 MissingTranslation 策略
 ### License / Upstream
 
 This project remains a GUI client for Clash.Meta on Android. Kernel and protocol features follow MetaCubeX Clash.Meta; Android-side hardening and UX changes above are maintained on this fork’s `main` branch.
+

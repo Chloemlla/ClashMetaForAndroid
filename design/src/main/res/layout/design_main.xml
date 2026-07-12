@@ -9,6 +9,12 @@
             name="clashRunning"
             type="boolean" />
         <variable
+            name="clashStarting"
+            type="boolean" />
+        <variable
+            name="hasProfile"
+            type="boolean" />
+        <variable
             name="forwarded"
             type="String" />
         <variable
@@ -81,12 +87,23 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
+                    android:clickable="@{!clashStarting}"
                     android:onClick="@{() -> self.request(Request.ToggleStatus)}"
                     android:theme="@style/AppThemeDark"
                     app:cardBackgroundColor="@{clashRunning ? colorClashStarted : colorClashStopped}"
                     app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
-                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
-                    app:text="@{clashRunning ? @string/running : @string/stopped}" />
+                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : (clashStarting ? @string/starting_service : @string/tap_to_start)}"
+                    app:text="@{clashRunning ? @string/running : (clashStarting ? @string/starting : @string/stopped)}" />
+
+                <com.github.kr328.clash.design.view.LargeActionCard
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
+                    android:onClick="@{() -> self.request(Request.CreateProfile)}"
+                    android:visibility="@{!hasProfile &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}"
+                    app:icon="@drawable/ic_baseline_add"
+                    app:subtext="@string/setup_profile_tips"
+                    app:text="@string/setup_profile_title" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"

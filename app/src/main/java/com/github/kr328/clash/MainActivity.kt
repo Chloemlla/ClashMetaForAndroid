@@ -34,6 +34,7 @@ import kotlin.coroutines.resume
 import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
+    private var clashStarting = false
     private val notificationPermissionLauncher =
         registerForActivityResult(RequestPermission()) { granted ->
             if (!granted) {
@@ -63,9 +64,13 @@ class MainActivity : BaseActivity<MainDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
+                        Event.ClashStart, Event.ClashStop -> {
+                            clashStarting = false
+                            design.setClashStarting(false)
+                            design.fetch()
+                        }
                         Event.ActivityStart,
                         Event.ServiceRecreated,
-                        Event.ClashStop, Event.ClashStart,
                         Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
                         else -> Unit
                     }
@@ -73,15 +78,20 @@ class MainActivity : BaseActivity<MainDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         MainDesign.Request.ToggleStatus -> {
-                            if (clashRunning)
+                            if (clashRunning) {
+                                clashStarting = false
+                                design.setClashStarting(false)
                                 stopClashService()
-                            else
+                            } else if (!clashStarting) {
                                 design.startClash()
+                            }
                         }
                         MainDesign.Request.OpenProxy ->
                             startActivity(ProxyActivity::class.intent)
                         MainDesign.Request.OpenProfiles ->
                             startActivity(ProfilesActivity::class.intent)
+                        MainDesign.Request.CreateProfile ->
+                            startActivity(NewProfileActivity::class.intent)
                         MainDesign.Request.OpenProviders ->
                             startActivity(ProvidersActivity::class.intent)
                         MainDesign.Request.OpenLogs -> {
@@ -137,29 +147,42 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         if (active == null || !active.imported) {
             showToast(DesignR.string.no_profile_selected, ToastDuration.Long) {
-                setAction(DesignR.string.profiles) {
-                    startActivity(ProfilesActivity::class.intent)
+                setAction(DesignR.string.create_profile) {
+                    startActivity(NewProfileActivity::class.intent)
                 }
             }
 
             return
         }
 
-        if (!requestNotificationPermissionIfNeeded()) return
+        if (!requestNotificationPermissionIfNeeded()) {
+            this@MainActivity.clashStarting = false
+            setClashStarting(false)
+            return
+        }
 
-        val vpnRequest = startClashService()
+        this@MainActivity.clashStarting = true
+        setClashStarting(true)
 
         try {
+            val vpnRequest = startClashService()
+
             if (vpnRequest != null) {
                 val result = startActivityForResult(
                     ActivityResultContracts.StartActivityForResult(),
                     vpnRequest
                 )
 
-                if (result.resultCode == RESULT_OK)
+                if (result.resultCode == RESULT_OK) {
                     startClashService()
+                } else {
+                    this@MainActivity.clashStarting = false
+                    setClashStarting(false)
+                }
             }
         } catch (e: Exception) {
+            this@MainActivity.clashStarting = false
+            setClashStarting(false)
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
         }
     }
@@ -266,3 +289,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
     }
 }
+
+
+
+

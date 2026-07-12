@@ -23,6 +23,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenSettings,
         OpenHelp,
         OpenAbout,
+        CreateProfile,
     }
 
     private val binding = DesignMainBinding
@@ -34,12 +35,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
             binding.profileName = name
+            binding.hasProfile = !name.isNullOrBlank()
         }
     }
 
     suspend fun setClashRunning(running: Boolean) {
         withContext(Dispatchers.Main) {
             binding.clashRunning = running
+            if (running) {
+                binding.clashStarting = false
+            }
+        }
+    }
+
+    suspend fun setClashStarting(starting: Boolean) {
+        withContext(Dispatchers.Main) {
+            binding.clashStarting = starting
         }
     }
 
@@ -80,6 +91,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     init {
         binding.self = this
+        binding.hasProfile = false
+        binding.clashStarting = false
 
         binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)

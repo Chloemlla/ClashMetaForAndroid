@@ -1,6 +1,8 @@
 package com.github.kr328.clash
 
 import android.app.Activity
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
@@ -13,7 +15,9 @@ import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.NewProfileDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
+import com.github.kr328.clash.design.util.ClipboardUrl
 import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
 import io.github.g00fy2.quickie.QRResult
@@ -60,6 +64,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                                     is ProfileProvider.Url ->
                                         create(Profile.Type.Url, name)
 
+                                    is ProfileProvider.Clipboard,
                                     is ProfileProvider.QR -> {
                                         null
                                     }
@@ -92,6 +97,10 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
                         is NewProfileDesign.Request.LaunchScanner -> {
                             scanLauncher.launch(null)
+                        }
+
+                        NewProfileDesign.Request.ImportClipboard -> {
+                            importFromClipboard()
                         }
                     }
                 }
@@ -163,6 +172,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             listOf(
                 ProfileProvider.File(self),
                 ProfileProvider.Url(self),
+                ProfileProvider.Clipboard(self),
                 ProfileProvider.QR(self)
             ) + providers
         }
@@ -185,16 +195,44 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
+    private suspend fun importFromClipboard() {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val raw = clipboard?.primaryClip
+            ?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)
+            ?.coerceToText(this)
+            ?.toString()
+
+        val url = ClipboardUrl.extract(raw)
+        if (url == null) {
+            design?.showToast(R.string.clipboard_no_url, ToastDuration.Long)
+            return
+        }
+
+        withProfile {
+            launchProperties(
+                create(
+                    type = Profile.Type.Url,
+                    name = getString(R.string.new_profile),
+                    source = url,
+                )
+            )
+        }
+    }
+
     private suspend fun createProfileByQrCode(url: String) {
         withProfile {
             launchProperties(
                 create(
                     type = Profile.Type.Url,
                     name = getString(R.string.new_profile),
-                    url,
+                    source = url,
                 )
             )
         }
     }
 
 }
+
+
+

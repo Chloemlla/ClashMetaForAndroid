@@ -335,5 +335,15 @@
     <string name="profiles_empty_title">未有設定檔</string>
     <string name="profiles_empty_tips">匯入訂閱連結、本機檔案或 QR 碼即可開始使用。</string>
     <string name="proxy_search_no_result">沒有相符代理</string>
+
+    <string name="clipboard">剪貼簿</string>
+    <string name="import_from_clipboard_url">從剪貼簿貼上訂閱網址</string>
+    <string name="clipboard_no_url">剪貼簿中找不到 http(s) 訂閱網址</string>
+    <string name="starting">啟動中…</string>
+    <string name="starting_service">正在啟動 Clash 服務</string>
+    <string name="setup_profile_title">新增設定檔</string>
+    <string name="setup_profile_tips">匯入訂閱後即可開始使用</string>
+    <string name="logs_empty_title">尚無日誌記錄</string>
+    <string name="logs_empty_tips">啟動 Clash 日誌以擷取執行時資訊。已儲存的工作階段會顯示在這裡。</string>
 </resources>
 

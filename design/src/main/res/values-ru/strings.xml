@@ -390,5 +390,15 @@
     <string name="profiles_empty_title">Профилей пока нет</string>
     <string name="profiles_empty_tips">Импортируйте URL, файл или QR-код, чтобы начать.</string>
     <string name="proxy_search_no_result">Нет подходящих прокси</string>
+
+    <string name="clipboard">Буфер обмена</string>
+    <string name="import_from_clipboard_url">Вставить URL подписки из буфера</string>
+    <string name="clipboard_no_url">В буфере обмена нет http(s) URL подписки</string>
+    <string name="starting">Запуск…</string>
+    <string name="starting_service">Запуск службы Clash</string>
+    <string name="setup_profile_title">Добавить профиль</string>
+    <string name="setup_profile_tips">Импортируйте подписку, чтобы начать работу</string>
+    <string name="logs_empty_title">Нет истории логов</string>
+    <string name="logs_empty_tips">Запустите Clash logcat, чтобы записывать логи. Сохранённые сессии появятся здесь.</string>
 </resources>
 

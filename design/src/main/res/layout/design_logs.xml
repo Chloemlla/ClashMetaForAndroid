@@ -70,6 +70,7 @@
                 android:background="?attr/colorControlHighlight" />
 
             <TextView
+                android:id="@+id/history_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingVertical="@dimen/item_padding_vertical"
@@ -78,12 +79,51 @@
                 android:text="@string/history"
                 android:textColor="?attr/colorControlActivated" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_list"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingBottom="@{self.surface.insets.bottom}" />
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recycler_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingBottom="@{self.surface.insets.bottom}" />
+
+                <LinearLayout
+                    android:id="@+id/empty_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/main_padding_horizontal"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/logs_empty_title"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/item_text_margin"
+                        android:gravity="center"
+                        android:text="@string/logs_empty_tips"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/item_midden_margin"
+                        android:onClick="@{() -> self.requests.offer(Request.StartLogcat.INSTANCE)}"
+                        android:text="@string/clash_logcat" />
+                </LinearLayout>
+            </FrameLayout>
         </LinearLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>

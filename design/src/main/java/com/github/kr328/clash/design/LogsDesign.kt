@@ -31,6 +31,16 @@ class LogsDesign(context: Context) : Design<LogsDesign.Request>(context) {
 
     suspend fun patchLogs(logs: List<LogFile>) {
         adapter.patchDataSet(adapter::logs, logs, false, LogFile::fileName)
+
+        withContext(Dispatchers.Main) {
+            val empty = logs.isEmpty()
+            binding.emptyView.visibility = if (empty) View.VISIBLE else View.GONE
+            binding.historyTitle.visibility = if (empty) View.GONE else View.VISIBLE
+            binding.recyclerList.visibility = if (empty) View.GONE else View.VISIBLE
+            binding.deleteView.isEnabled = !empty
+            binding.deleteView.isClickable = !empty
+            binding.deleteView.alpha = if (empty) 0.4f else 1f
+        }
     }
 
     suspend fun requestDeleteAll(): Boolean {

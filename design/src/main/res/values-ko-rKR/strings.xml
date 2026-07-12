@@ -335,5 +335,15 @@
     <string name="profiles_empty_title">프로필이 없습니다</string>
     <string name="profiles_empty_tips">구독 URL, 파일 또는 QR 코드로 추가하세요.</string>
     <string name="proxy_search_no_result">일치하는 프록시 없음</string>
+
+    <string name="clipboard">클립보드</string>
+    <string name="import_from_clipboard_url">클립보드에서 구독 URL 붙여넣기</string>
+    <string name="clipboard_no_url">클립보드에 http(s) 구독 URL이 없습니다</string>
+    <string name="starting">시작 중…</string>
+    <string name="starting_service">Clash 서비스를 시작하는 중</string>
+    <string name="setup_profile_title">프로필 추가</string>
+    <string name="setup_profile_tips">구독을 가져와 Clash를 시작하세요</string>
+    <string name="logs_empty_title">로그 기록 없음</string>
+    <string name="logs_empty_tips">Clash logcat을 시작하면 런타임 로그를 수집합니다. 저장된 세션이 여기에 표시됩니다.</string>
 </resources>
 

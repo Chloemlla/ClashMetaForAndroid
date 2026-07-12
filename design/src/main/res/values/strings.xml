@@ -394,5 +394,15 @@
     <string name="profiles_empty_title">No profiles yet</string>
     <string name="profiles_empty_tips">Import a subscription URL, local file, or QR code to get started.</string>
     <string name="proxy_search_no_result">No matching proxies</string>
+
+    <string name="clipboard">Clipboard</string>
+    <string name="import_from_clipboard_url">Paste a subscription URL from clipboard</string>
+    <string name="clipboard_no_url">No http(s) subscription URL found in clipboard</string>
+    <string name="starting">Starting…</string>
+    <string name="starting_service">Starting Clash service</string>
+    <string name="setup_profile_title">Add a profile</string>
+    <string name="setup_profile_tips">Import a subscription to start using Clash</string>
+    <string name="logs_empty_title">No log history</string>
+    <string name="logs_empty_tips">Start Clash logcat to capture runtime logs. Saved sessions will appear here.</string>
 </resources>
 

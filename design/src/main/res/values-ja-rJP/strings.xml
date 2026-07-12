@@ -335,5 +335,15 @@
     <string name="profiles_empty_title">プロファイルがありません</string>
     <string name="profiles_empty_tips">サブスク URL、ファイル、QR コードから追加してください。</string>
     <string name="proxy_search_no_result">一致するプロキシがありません</string>
+
+    <string name="clipboard">クリップボード</string>
+    <string name="import_from_clipboard_url">クリップボードから購読 URL を貼り付け</string>
+    <string name="clipboard_no_url">クリップボードに http(s) の購読 URL がありません</string>
+    <string name="starting">起動中…</string>
+    <string name="starting_service">Clash サービスを起動しています</string>
+    <string name="setup_profile_title">プロファイルを追加</string>
+    <string name="setup_profile_tips">サブスクリプションを追加して使い始めましょう</string>
+    <string name="logs_empty_title">ログ履歴がありません</string>
+    <string name="logs_empty_tips">Clash logcat を開始すると実行ログを取得できます。保存されたセッションはここに表示されます。</string>
 </resources>
 
