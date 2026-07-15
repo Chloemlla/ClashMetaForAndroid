@@ -57,3 +57,32 @@
     boolean getDEBUG() return false;
     boolean getRECOVER_STACK_TRACES() return false;
 }
+
+############################################################
+# Lumen Crash SDK minify exemption
+# Artifact: com.chloemlla.lumen:lumen-crash
+# Host enables isMinifyEnabled for the app; keep the SDK surface.
+# See: Project-Lumen/lumen-crash/README.md#proguard--r8
+############################################################
+
+# Required: author attribution + integrity checks
+-keep class com.chloemlla.lumen.crash.CrashAuthorAttribution {
+    public static final java.lang.String *;
+}
+-keep class com.chloemlla.lumen.crash.AuthorIntegrity {
+    public static *** verifyOrThrow();
+    public static *** fingerprintHex();
+}
+
+# Required backup: keep public SDK API used by host integration
+-keep class com.chloemlla.lumen.crash.LumenCrash { *; }
+-keep class com.chloemlla.lumen.crash.LumenCrashConfig { *; }
+-keep class com.chloemlla.lumen.crash.CrashReport { *; }
+-keep class com.chloemlla.lumen.crash.CrashAppInfo { *; }
+-keep class com.chloemlla.lumen.crash.CrashReportStore { *; }
+-keep class com.chloemlla.lumen.crash.CrashBreadcrumbs { *; }
+-keep class com.chloemlla.lumen.crash.ui.LumenCrashReportScreenKt { *; }
+
+# Package-level exemption (safe default for third-party hosts)
+-keep class com.chloemlla.lumen.crash.** { *; }
+-dontwarn com.chloemlla.lumen.crash.**
