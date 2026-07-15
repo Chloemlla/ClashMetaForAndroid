@@ -204,6 +204,11 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 |--------|---------|
 | *(this)* | `feat(notification): request Live Update for Clash status` — `POST_PROMOTED_NOTIFICATIONS`、`setRequestPromotedOngoing`、`setShortCriticalText`、androidx.core 1.17 |
 
+#### Track I2 · Live 通知 UX 优化
+| Commit | Summary |
+|--------|---------|
+| *(this)* | `feat(notification): polish Live Update status UX` — 连接中占位、紧凑速率 chip、空闲态、无变化跳过刷新、信息层级 title/speed/total |
+
 #### Track J · 首页 UX 密度优化
 | Commit | Summary |
 |--------|---------|

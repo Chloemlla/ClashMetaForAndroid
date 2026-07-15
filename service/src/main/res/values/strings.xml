@@ -2,6 +2,17 @@
     <!-- from https://github.com/shadowsocks/shadowsocks-android/blob/master/core/src/main/res/values/strings.xml -->
     <string name="clash_notification_content" translatable="false">"%1$s↑\t%2$s↓"</string>
 
+    <!-- Live Update / promoted ongoing status notification copy -->
+    <string name="profile_not_selected">No profile selected</string>
+    <string name="clash_live_connecting">Connecting…</string>
+    <string name="clash_live_connected">Connected</string>
+    <string name="clash_live_speed_content">↑%1$s  ↓%2$s</string>
+    <string name="clash_live_total_content">Total ↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_idle">Idle</string>
+    <string name="clash_live_chip_loading">Load</string>
+    <string name="clash_live_chip_running">On</string>
+    <string name="clash_live_chip_speed">%1$s/s</string>
+
     <string name="clash_service_status_channel">Clash Status</string>
     <string name="profile_service_status">Profile Service Status</string>
     <string name="profile_process_status">Profile Processing Status</string>

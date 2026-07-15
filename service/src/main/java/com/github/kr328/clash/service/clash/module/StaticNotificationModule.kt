@@ -18,10 +18,7 @@ import kotlinx.coroutines.channels.Channel
 class StaticNotificationModule(service: Service) : Module<Unit>(service) {
     private val builder = NotificationCompat.Builder(service, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_logo_service)
-        .setOngoing(true)
         .setColor(service.getColorCompat(R.color.color_clash))
-        .setOnlyAlertOnce(true)
-        .setShowWhen(false)
         .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         .applyClashLiveUpdate()
         .setContentIntent(
@@ -42,13 +39,13 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
         while (true) {
             loaded.receive()
 
-            val profileName = StatusProvider.currentProfile ?: "Not selected"
-
+            val title = service.liveProfileTitle(StatusProvider.currentProfile)
             val notification = builder
-                .setContentTitle(profileName)
-                .setContentText(service.getText(R.string.running))
+                .setContentTitle(title)
+                .setContentText(service.getString(R.string.clash_live_connected))
+                .setSubText(service.getString(R.string.running))
                 .applyClashLiveUpdate(
-                    shortCriticalText = service.getString(R.string.running),
+                    shortCriticalText = service.liveStaticChipText(loading = false),
                 )
                 .build()
 
@@ -60,11 +57,16 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
         const val CHANNEL_ID = "clash_status_channel"
 
         fun createNotificationChannel(service: Service) {
+            // LOW is still promotable; MIN would make Live Updates ineligible.
             NotificationManagerCompat.from(service).createNotificationChannel(
                 NotificationChannelCompat.Builder(
                     CHANNEL_ID,
                     NotificationManagerCompat.IMPORTANCE_LOW
-                ).setName(service.getText(R.string.clash_service_status_channel)).build()
+                ).setName(service.getText(R.string.clash_service_status_channel))
+                    .setShowBadge(false)
+                    .setVibrationEnabled(false)
+                    .setSound(null, null)
+                    .build()
             )
         }
 
@@ -72,13 +74,13 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
             val notification =
                 NotificationCompat.Builder(service, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_logo_service)
-                    .setOngoing(true)
                     .setColor(service.getColorCompat(R.color.color_clash))
-                    .setOnlyAlertOnce(true)
-                    .setShowWhen(false)
-                    .setContentTitle(service.getText(R.string.loading))
+                    .setContentTitle(service.getString(R.string.clash_meta_for_android))
+                    .setContentText(service.getString(R.string.clash_live_connecting))
+                    .setSubText(service.getString(R.string.loading))
+                    .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                     .applyClashLiveUpdate(
-                        shortCriticalText = service.getString(R.string.loading),
+                        shortCriticalText = service.liveStaticChipText(loading = true),
                     )
                     .build()
 

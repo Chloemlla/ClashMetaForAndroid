@@ -16,4 +16,13 @@
     <string name="provider_files">外部リソースファイル</string>
     <string name="profile_updater">プロファイルの更新</string>
     <string name="profile_updating">プロファイルを更新中</string>
+    <string name="clash_live_connecting">接続中…</string>
+    <string name="clash_live_connected">接続済み</string>
+    <string name="clash_live_total_content">合計 ↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_loading">読込</string>
+    <string name="profile_not_selected">プロファイル未選択</string>
+    <string name="clash_live_chip_idle">待機</string>
+    <string name="clash_live_chip_running">実行</string>
+    <string name="clash_live_speed_content">↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_speed">%1$s/s</string>
 </resources>

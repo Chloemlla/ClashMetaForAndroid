@@ -16,4 +16,13 @@
     <string name="profile_updating">設定檔更新中</string>
     <string name="profile_service_status">設定檔服務狀態</string>
     <string name="profile_process_result">設定檔處理結果</string>
+    <string name="clash_live_connecting">連線中…</string>
+    <string name="clash_live_connected">已連線</string>
+    <string name="clash_live_total_content">累計 ↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_loading">載入</string>
+    <string name="profile_not_selected">未選擇設定檔</string>
+    <string name="clash_live_chip_idle">閒置</string>
+    <string name="clash_live_chip_running">執行</string>
+    <string name="clash_live_speed_content">↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_speed">%1$s/s</string>
 </resources>

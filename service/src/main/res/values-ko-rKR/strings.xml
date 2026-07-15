@@ -16,4 +16,13 @@
     <string name="provider_files">외부 리소스 파일</string>
     <string name="profile_updater">구성 파일 업데이트</string>
     <string name="profile_updating">구성 파일 업데이트 중</string>
+    <string name="clash_live_connecting">연결 중…</string>
+    <string name="clash_live_connected">연결됨</string>
+    <string name="clash_live_total_content">합계 ↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_loading">로딩</string>
+    <string name="profile_not_selected">프로필 미선택</string>
+    <string name="clash_live_chip_idle">유휴</string>
+    <string name="clash_live_chip_running">실행</string>
+    <string name="clash_live_speed_content">↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_speed">%1$s/s</string>
 </resources>

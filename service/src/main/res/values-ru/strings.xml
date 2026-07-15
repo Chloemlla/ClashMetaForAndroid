@@ -18,4 +18,13 @@
     <string name="provider_files">Файлы провайдера</string>
     <string name="profile_updater">Обновление профиля</string>
     <string name="profile_updating">Профиль обновляется</string>
+    <string name="clash_live_connecting">Подключение…</string>
+    <string name="clash_live_connected">Подключено</string>
+    <string name="clash_live_total_content">Всего ↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_loading">Загр.</string>
+    <string name="profile_not_selected">Профиль не выбран</string>
+    <string name="clash_live_chip_idle">Пауза</string>
+    <string name="clash_live_chip_running">Вкл</string>
+    <string name="clash_live_speed_content">↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_speed">%1$s/s</string>
 </resources>

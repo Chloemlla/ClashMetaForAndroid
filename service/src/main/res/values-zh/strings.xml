@@ -2,6 +2,15 @@
 <resources>
     <string name="clash_service_status_channel">Clash 状态</string>
     <string name="running">正在运行</string>
+    <string name="profile_not_selected">未选择配置</string>
+    <string name="clash_live_connecting">连接中…</string>
+    <string name="clash_live_connected">已连接</string>
+    <string name="clash_live_speed_content">↑%1$s  ↓%2$s</string>
+    <string name="clash_live_total_content">累计 ↑%1$s  ↓%2$s</string>
+    <string name="clash_live_chip_idle">空闲</string>
+    <string name="clash_live_chip_loading">加载</string>
+    <string name="clash_live_chip_running">运行</string>
+    <string name="clash_live_chip_speed">%1$s/s</string>
     <string name="format_update_complete">更新 %s 成功</string>
     <string name="format_update_failure">"更新 %1$s: %2$s "</string>
     <string name="clash_meta_for_android">Clash Meta for Android</string>
