@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   # Shared quality gates before packaging either flavor.
@@ -81,6 +82,9 @@ jobs:
         run: python3 .github/scripts/verify-repository-policy.py
 
       - name: JVM unit tests
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/run-jvm-tests.py
 
       - name: Upload JVM test reports
@@ -92,6 +96,9 @@ jobs:
           if-no-files-found: warn
 
       - name: Android Lint (Meta + Alpha)
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/run-android-lint.py lintMetaRelease lintAlphaRelease
 
       - name: Print full Android Lint reports
@@ -178,6 +185,9 @@ jobs:
             > signing.properties
 
       - name: Build signed Meta release APKs
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon app:assembleMetaRelease
 
       - name: Generate APK checksums
@@ -272,6 +282,9 @@ jobs:
             > signing.properties
 
       - name: Build signed Alpha release APKs
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon app:assembleAlphaRelease
 
       - name: Generate APK checksums

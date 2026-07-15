@@ -18,6 +18,7 @@ buildscript {
         classpath(libs.build.kotlin.serialization)
         classpath(libs.build.ksp)
         classpath(libs.build.golang)
+        classpath("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.1.0")
     }
 }
 
@@ -26,6 +27,22 @@ subprojects {
         mavenCentral()
         google()
         maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
+        maven {
+            name = "GitHubPackagesProjectLumen"
+            url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
+            credentials {
+                username = (
+                    findProperty("gpr.user") as String?
+                        ?: System.getenv("GITHUB_ACTOR")
+                        ?: ""
+                    )
+                password = (
+                    findProperty("gpr.key") as String?
+                        ?: System.getenv("GITHUB_TOKEN")
+                        ?: ""
+                    )
+            }
+        }
     }
 
     val isApp = name == "app"

@@ -108,6 +108,13 @@
             android:label="@string/application_crashed"
             android:launchMode="singleTask" />
         <activity
+            android:name=".LumenCrashReportActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/crash_report_title"
+            android:launchMode="singleTask"
+            android:theme="@style/BootstrapTheme" />
+        <activity
             android:name=".ProfilesActivity"
             android:configChanges="uiMode"
             android:exported="false"
@@ -220,5 +227,15 @@
                 <data android:scheme="android_secret_code" android:host="252746382" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

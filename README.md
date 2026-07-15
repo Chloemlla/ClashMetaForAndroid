@@ -23,8 +23,8 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 ### Requirement
 
-- Android 5.0+ (minimum)
-- Android 7.0+ (recommend)
+- Android 8.0+ (minimum; aligned with Lumen Crash SDK)
+- Android 8.0+ (recommend)
 - `armeabi-v7a` , `arm64-v8a`, `x86` or `x86_64` Architecture
 
 ### Build
@@ -134,6 +134,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | **质量** | JVM 单测 · Lint 全量报告 · 失败堆栈透明 · 仓库策略脚本 |
 | **i18n** | zh / zh-TW / zh-HK / ja / ko / ru / vi 等社区语言补全 |
 | **SDK** | `:sdk` Runtime 嵌入（Profile + VPN + 代理组）；同 App 边界；见 docs/sdk |
+| **Crash** | GitHub Packages `lumen-crash` 崩溃捕获 + Compose 报告页 + FileProvider 分享 |
 
 当前版本基线约为 **2.11.32**。下列改进均已落在源码/工作流中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
 
@@ -190,6 +191,11 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | Commit | Summary |
 |--------|---------|
 | `fcae428` | `feat(sdk): add Runtime/Service embed facade` — 模块 `:sdk`、`ClashRuntime`、可配置 `Components`、需求/计划/嵌入指南 |
+
+#### Track H · Lumen Crash SDK 集成
+| Commit | Summary |
+|--------|---------|
+| *(this)* | `feat(crash): integrate Lumen Crash SDK via GitHub Packages` — `MainApplication` 安装、`LumenCrashReportActivity` 门闸、FileProvider、CI packages 读凭证 |
 
 > [!TIP]
 > 详细机制见 **[§11 Runtime / Service SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**；逐步嵌入见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。
@@ -478,4 +484,3 @@ SDK 嵌入能力仅服务白标 / OEM / 自有壳，不提供跨应用遥控。
 ### License / Upstream
 
 This project remains a GUI client for Clash.Meta on Android. Kernel and protocol features follow MetaCubeX Clash.Meta; **Android-side hardening, UX, Alpha→Meta migration, CI/CD, i18n, and the Runtime / Service SDK above are maintained on the Chloemlla fork’s `main` branch** — see Feature Tracks and §11 for the embed surface.
-

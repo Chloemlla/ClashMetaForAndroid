@@ -51,6 +51,9 @@
     <string name="application_broken">Application Broken</string>
     <string name="application_crashed">Application Crashed</string>
     <string name="application_broken_tips">App lacks the necessary runtime components, which is usually caused by downloading an incomplete apk.</string>
+    <string name="crash_report_title">Crash report saved</string>
+    <string name="crash_report_message">The app recovered from a crash. Review, copy, or share this report before continuing.</string>
+    <string name="crash_report_share_subject">Clash Meta crash report</string>
     <string name="reinstall">Reinstall</string>
     <string name="github_releases">Github Releases</string>
 

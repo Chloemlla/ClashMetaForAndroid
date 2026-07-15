@@ -10,10 +10,12 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import androidx.core.view.WindowCompat
+import com.chloemlla.lumen.crash.LumenCrash
 import com.github.kr328.clash.common.compat.isAllowForceDarkCompat
 import com.github.kr328.clash.common.compat.isLightNavigationBarCompat
 import com.github.kr328.clash.common.compat.isLightStatusBarsCompat
 import com.github.kr328.clash.common.compat.isSystemBarsTranslucentCompat
+import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.core.bridge.ClashException
 import com.github.kr328.clash.design.Design
 import com.github.kr328.clash.design.model.DarkMode
@@ -115,9 +117,25 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
             task.setExcludeFromRecents(uiStore.hideFromRecents)
         }
 
+        if (maybePresentPendingCrashReport()) {
+            return
+        }
+
         launch {
             main()
         }
+    }
+
+    /**
+     * Gate normal design content when a persisted Lumen crash report is pending.
+     * Returns true when the crash UI owns the process and [main] must not start.
+     */
+    private fun maybePresentPendingCrashReport(): Boolean {
+        if (!LumenCrash.isInstalled()) return false
+        runCatching { LumenCrash.loadPendingReport() }.getOrNull() ?: return false
+        startActivity(LumenCrashReportActivity::class.intent)
+        finish()
+        return true
     }
 
     override fun onStart() {

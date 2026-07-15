@@ -220,6 +220,9 @@
     <string name="invalid_log_file">无效的日志文件</string>
     <string name="application_crashed">应用崩溃</string>
     <string name="application_broken_tips">应用缺少必要的运行组件，这通常由于下载不完整的 apk 导致。</string>
+    <string name="crash_report_title">已保存崩溃报告</string>
+    <string name="crash_report_message">应用已从异常退出中恢复。继续使用前，可以先查看、复制或分享这份报告。</string>
+    <string name="crash_report_share_subject">Clash Meta 崩溃报告</string>
     <string name="reinstall">重新安装</string>
     <string name="github_releases">Github Releases</string>
     <string name="unable_to_start_vpn">无法启动 VPN 组件</string>

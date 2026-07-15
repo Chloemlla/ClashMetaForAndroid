@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import com.chloemlla.lumen.crash.LumenCrash
+import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.currentProcessName
 import com.github.kr328.clash.common.constants.Migration
@@ -17,6 +19,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.github.kr328.clash.design.R as DesignR
 
 @Suppress("unused")
 class MainApplication : Application() {
@@ -25,6 +28,7 @@ class MainApplication : Application() {
         super.attachBaseContext(base)
 
         Global.init(this)
+        installLumenCrashSdk()
     }
 
     override fun onCreate() {
@@ -44,6 +48,34 @@ class MainApplication : Application() {
         } else {
             sendServiceRecreated()
         }
+    }
+
+    private fun installLumenCrashSdk() {
+        if (LumenCrash.isInstalled()) return
+
+        val appName = runCatching {
+            getString(DesignR.string.application_name)
+        }.getOrDefault("Clash Meta for Android")
+
+        LumenCrash.install(
+            this,
+            LumenCrashConfig(
+                appDisplayName = appName,
+                versionName = BuildConfig.VERSION_NAME,
+                versionCode = BuildConfig.VERSION_CODE,
+                commitHash = "unknown",
+                fileProviderAuthority = "$packageName.fileprovider",
+                shareSubject = runCatching {
+                    getString(DesignR.string.crash_report_share_subject)
+                }.getOrNull(),
+                reportTitle = runCatching {
+                    getString(DesignR.string.crash_report_title)
+                }.getOrNull(),
+                reportMessage = runCatching {
+                    getString(DesignR.string.crash_report_message)
+                }.getOrNull(),
+            ),
+        )
     }
 
     private fun extractGeoFiles() {

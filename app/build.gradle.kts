@@ -9,6 +9,7 @@ plugins {
     kotlin("android")
     kotlin("kapt")
     id("com.android.application")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 dependencies {
@@ -18,6 +19,8 @@ dependencies {
     implementation(project(":service"))
     implementation(project(":design"))
     implementation(project(":common"))
+
+    implementation("com.chloemlla.lumen:lumen-crash:0.1.0")
 
     implementation(libs.kotlin.coroutine)
     implementation(libs.androidx.core)
@@ -29,8 +32,27 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
+    implementation("androidx.activity:activity-compose:1.9.0")
+
+    // Keep java.time usable on API < 26 for the crash SDK report timestamps.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     testImplementation(libs.test.junit)
+}
+
+android {
+    defaultConfig {
+        // lumen-crash publishes minSdk 26; keep the host aligned with the SDK.
+        minSdk = 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+    }
 }
 
 tasks.getByName("clean", type = Delete::class) {

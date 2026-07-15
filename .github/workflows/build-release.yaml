@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   BuildRelease:
@@ -95,6 +96,9 @@ jobs:
         run: python3 .github/scripts/verify-repository-policy.py
 
       - name: JVM unit tests
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/run-jvm-tests.py
 
       - name: Upload JVM test reports
@@ -106,6 +110,9 @@ jobs:
           if-no-files-found: warn
 
       - name: Android Lint
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/run-android-lint.py lintMetaRelease
 
       - name: Print full Android Lint reports
@@ -145,6 +152,9 @@ jobs:
             > signing.properties
 
       - name: Build signed release APKs
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon app:assembleMetaRelease
 
       - name: Generate APK checksums
