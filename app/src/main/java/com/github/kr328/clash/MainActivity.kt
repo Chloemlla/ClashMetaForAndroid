@@ -12,6 +12,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.chloemlla.lumen.crash.CrashBreadcrumbs
+import com.chloemlla.lumen.crash.LumenCrash
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
@@ -87,6 +89,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             if (clashRunning) {
                                 clashStarting = false
                                 design.setClashStarting(false)
+                                recordBreadcrumbSafe("Clash stop requested")
                                 stopClashService()
                             } else if (!clashStarting) {
                                 design.startClash()
@@ -190,6 +193,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         val active = withProfile { queryActive() }
 
         if (active == null || !active.imported) {
+            recordBreadcrumbSafe("Clash start blocked: no profile selected")
             showToast(DesignR.string.no_profile_selected, ToastDuration.Long) {
                 setAction(DesignR.string.create_profile) {
                     startActivity(NewProfileActivity::class.intent)
@@ -202,11 +206,13 @@ class MainActivity : BaseActivity<MainDesign>() {
         if (!requestNotificationPermissionIfNeeded()) {
             this@MainActivity.clashStarting = false
             setClashStarting(false)
+            recordBreadcrumbSafe("Clash start blocked: notification permission")
             return
         }
 
         this@MainActivity.clashStarting = true
         setClashStarting(true)
+        recordBreadcrumbSafe("Clash start requested profile=${active.name}")
 
         try {
             val vpnRequest = startClashService()
@@ -218,15 +224,19 @@ class MainActivity : BaseActivity<MainDesign>() {
                 )
 
                 if (result.resultCode == RESULT_OK) {
+                    recordBreadcrumbSafe("VPN permission granted; restarting clash service")
                     startClashService()
                 } else {
                     this@MainActivity.clashStarting = false
                     setClashStarting(false)
+                    recordBreadcrumbSafe("Clash start cancelled: VPN permission denied")
                 }
             }
         } catch (e: Exception) {
             this@MainActivity.clashStarting = false
             setClashStarting(false)
+            recordBreadcrumbSafe("Clash start failed: ${e::class.java.simpleName}")
+            runCatching { LumenCrash.record(e) }
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
         }
     }
@@ -239,7 +249,13 @@ class MainActivity : BaseActivity<MainDesign>() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        recordBreadcrumbSafe("MainActivity.onCreate")
         setupShortcuts()
+    }
+
+    private fun recordBreadcrumbSafe(event: String) {
+        if (!LumenCrash.isInstalled()) return
+        runCatching { CrashBreadcrumbs.record(event) }
     }
 
     private suspend fun requestNotificationPermissionIfNeeded(): Boolean {

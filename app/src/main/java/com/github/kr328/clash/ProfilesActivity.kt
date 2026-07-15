@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import com.chloemlla.lumen.crash.CrashBreadcrumbs
+import com.chloemlla.lumen.crash.LumenCrash
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.ticker
@@ -45,6 +47,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                             startActivity(NewProfileActivity::class.intent)
                         ProfilesDesign.Request.UpdateAll -> {
                             try {
+                                recordBreadcrumbSafe("Profiles update-all requested")
                                 withProfile {
                                     queryAll().forEach { p ->
                                         if (p.imported && p.type != ServiceProfile.Type.File)
@@ -58,7 +61,10 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                             }
                         }
                         is ProfilesDesign.Request.Update ->
-                            withProfile { update(it.profile.uuid) }
+                            withProfile {
+                                recordBreadcrumbSafe("Profile update requested name=${it.profile.name}")
+                                update(it.profile.uuid)
+                            }
                         is ProfilesDesign.Request.Delete ->
                             withProfile { delete(it.profile.uuid) }
                         is ProfilesDesign.Request.Edit ->
@@ -103,6 +109,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             withProfile {
                 name = queryByUUID(uuid)?.name
             }
+            recordBreadcrumbSafe("Profile update completed name=$name")
             design?.showToast(
                 getString(R.string.toast_profile_updated_complete, name),
                 ToastDuration.Long
@@ -117,6 +124,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             withProfile {
                 name = queryByUUID(uuid)?.name
             }
+            recordBreadcrumbSafe("Profile update failed name=$name reason=${reason ?: "unknown"}")
             design?.showToast(
                 getString(R.string.toast_profile_updated_failed, name, reason),
                 ToastDuration.Long
@@ -126,5 +134,10 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                 }
             }
         }
+    }
+
+    private fun recordBreadcrumbSafe(event: String) {
+        if (!LumenCrash.isInstalled()) return
+        runCatching { CrashBreadcrumbs.record(event) }
     }
 }

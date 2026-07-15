@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import com.chloemlla.lumen.crash.CrashBreadcrumbs
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.github.kr328.clash.common.Global
@@ -29,6 +30,7 @@ class MainApplication : Application() {
 
         Global.init(this)
         installLumenCrashSdk()
+        recordBreadcrumbSafe("Application.attachBaseContext")
     }
 
     override fun onCreate() {
@@ -37,6 +39,7 @@ class MainApplication : Application() {
         val processName = currentProcessName
 
         Log.d("Process $processName started")
+        recordBreadcrumbSafe("Application.onCreate process=$processName")
 
         if (processName == packageName) {
             // Geo assets are consumed by the core, which only runs in the main process.
@@ -76,6 +79,11 @@ class MainApplication : Application() {
                 }.getOrNull(),
             ),
         )
+    }
+
+    private fun recordBreadcrumbSafe(event: String) {
+        if (!LumenCrash.isInstalled()) return
+        runCatching { CrashBreadcrumbs.record(event) }
     }
 
     private fun extractGeoFiles() {
