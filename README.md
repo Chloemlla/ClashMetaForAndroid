@@ -2,7 +2,10 @@
 
 A Graphical user interface of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta) for Android
 
-> **Fork note:** This repository (`Chloemlla/ClashMetaForAndroid`) tracks community CMFA and applies additional hardening, UX, CI, and localization work on `main`. See **[Branch Improvements](#branch-improvements-本分支改进)** below for a full inventory.
+> **Chloemlla fork (`Chloemlla/ClashMetaForAndroid`)**  
+> Tracks community CMFA, then lands **hardening · UX · Alpha→Meta migration · CI/CD · i18n** on this fork’s `main`.  
+> **This is not a thin mirror** — the bulk of production-facing Android work is maintained here.  
+> Full inventory: **[Branch Improvements / 本分支改进](#branch-improvements-本分支改进)** · recent work as **[Feature Tracks](#feature-tracks-近期功能分支)**.
 
 ### Feature
 
@@ -101,7 +104,71 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 ## Branch Improvements (本分支改进)
 
-本仓库 `main` 在上游 CMFA 能力之上，围绕 **2026-07-10 全量审计**、**发布供应链**、**CI 质量门禁**、**构建告警清理** 与 **多语言补全** 做了系统性改造。当前版本基线约为 **2.11.32**。下列改进均已落在源码/工作流中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**。
+### Why Chloemlla?
+
+上游 CMFA 提供 Clash.Meta Android 图形壳；**Chloemlla 分支在此之上系统改造生产可用性**，而不是仅同步内核：
+
+| 维度 | Chloemlla 强化 |
+|------|----------------|
+| **安全** | 外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧为 sharedpref |
+| **稳定** | 全量审计 F-01~F-18 · 全局协程异常隔离 · 日志有界/轮转 · Access Control 退出超时 |
+| **体验** | 渐进测速动画 · 代理搜索 · 首页首启引导 · 剪贴板导入 · 空状态 CTA · 当前节点定位 |
+| **迁移** | **Alpha → Meta 同签名自动导入**配置/节点/设置（Meta 正式包首次启动） |
+| **发布** | main 推送并行 **Meta latest + Alpha pre-release** · SHA256SUMS · 构建成功后再打 tag |
+| **质量** | JVM 单测 · Lint 全量报告 · 失败堆栈透明 · 仓库策略脚本 |
+| **i18n** | zh / zh-TW / zh-HK / ja / ko / ru / vi 等社区语言补全 |
+
+当前版本基线约为 **2.11.32**。下列改进均已落在源码/工作流中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
+
+### Feature Tracks（近期功能分支）
+
+以下把 **2026-07 近期提交** 按功能线归组（便于对照 PR / cherry-pick / 回归范围）。短哈希可在仓库 History 中定位。
+
+#### Track A · 全量审计修复
+| Commit | Summary |
+|--------|---------|
+| `bc9a35a` | `fix: remediate full audit findings`（F-01~F-18 主修复） |
+| `1059807` | `fix: close residual audit F-06 and F-13 gaps` |
+| `d198d58` | 审计报告 `audit-report-ClashMetaForAndroid-2026-07-10.md` |
+
+#### Track B · 代理测速 / 日常 UX
+| Commit | Summary |
+|--------|---------|
+| `f301f6f` | 渐进式代理延迟刷新 + 动画 |
+| `bc058e5` | `feat(ux): proxy search, empty profiles CTA, and selected-node focus` |
+| `9323962` | `feat(ux): home setup CTA, clipboard import, start feedback, logs empty` |
+
+#### Track C · Alpha → Meta 数据迁移
+| Commit | Summary |
+|--------|---------|
+| `a25fad8` | `feat: auto-migrate profiles from Alpha to Meta release` |
+| `ea32a28` | `i18n: localize common migration permission strings` |
+| `fa677ef` / `0e209c3` / `fbd0a24` | Lint / AGP 8 / migration provider 诊断加固 |
+| `970132d` | 补齐 Alpha migration 的 coroutines `launch` import |
+| `49d3131` | 迁移 zip 解压避免 API 26 `Path` API |
+
+#### Track D · CI / CD 与发布
+| Commit | Summary |
+|--------|---------|
+| `22a420b` | main 推送发布 Meta full latest |
+| `81e769b` | 并行 Meta latest + Alpha pre-release |
+| `83fe497` / `d4fff9c` | 统一 / 更新 release 签名 secrets |
+| `c3ba6ae` | 去掉对缺失 `SIGNING_CERT_SHA256` 的依赖 |
+| `1135e04` / `01aedc7` / `884bc8a` | 单测失败全量暴露 · Gradle 隐藏失败注解 · Lint 报告上传 |
+
+#### Track E · Lint / 构建卫生 / i18n
+| Commit | Summary |
+|--------|---------|
+| `923b25c` / `daf03af` / `32181ac` / `7760c4f` / `0b03a13` / `0022b12` | sideload 残留清理 · Room RestrictedApi · Geo 任务依赖 · MissingTranslation · 返回键现代化 · 清 lint |
+| `98e1e11` | `i18n: complete missing community translations` |
+| `7762df4` / `72eb015` | Android 构建告警 / kaidl Serializable 修补 |
+
+#### Track F · 运行时韧性（本 PR 含）
+| Commit | Summary |
+|--------|---------|
+| `cb64fce` | **Global 协程异常隔离**：应用级 CoroutineExceptionHandler、关键网络配置收紧、迁移/Profile/配置模块异常边界、2026-07-14 审计报告与仓库策略补强 |
+
+> 详细机制仍见下文分节；本表只做 **功能分支式导航**。
 
 ### 1. 全量审计修复（F-01 ~ F-18）
 
@@ -165,6 +232,22 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 - **剪贴板导入订阅**：新建配置支持从剪贴板识别 `http(s)` 与 `clash(meta)://install-config?url=` 链接。
 - **日志空状态**：无历史日志时展示说明与启动 logcat 的 CTA。
 - **未选配置引导**：启动失败 Toast 的操作改为直接创建配置。
+### 2.2 全局协程异常隔离与运行时韧性
+
+提交：`cb64fce`（`Global 协程异常隔离`）；续审计见 `audit-report-ClashMetaForAndroid-2026-07-14.md`。
+
+- **Global / MainApplication**：统一 CoroutineExceptionHandler，避免未捕获协程异常直接拖垮进程。
+- **Profile / Configuration / Migration**：关键异步路径增加隔离与失败可观测，降低迁移与配置加载的雪崩面。
+- **网络安全配置**：收紧 `network_security_config` 默认策略。
+- **仓库策略**：`.github/scripts/verify-repository-policy.py` 与 workflow 钩子继续防止危险文件回流入库。
+
+### 2.3 Alpha → Meta 自动迁移（功能线）
+
+主提交：`a25fad8`；加固：`ea32a28`、`fa677ef`、`0e209c3`、`fbd0a24`、`970132d`、`49d3131`。
+
+- Meta 正式包 **首次启动且本地无配置** 时，经同签名 `MigrationProvider` 从已安装 Alpha 导入配置、节点选择与 service/ui 设置。
+- 权限文案多语言；zip 解压兼容低 API（避免 `java.nio.file.Path` on API&lt;26）；Lint/CI 诊断与 `BaseExtension.lintOptions` 恢复，保证门禁可开。
+
 ### 3. Android 构建告警清理
 
 提交：`7762df4`、`72eb015` 等。
@@ -229,12 +312,13 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 ### 9. 改进一览（按主题）
 
 ```text
-安全        外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧
-稳定        日志增量通知修复 · 有界日志解析 · 写盘轮转 · Access Control 退出超时
+安全        外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧 · 网络安全配置
+稳定        日志增量通知修复 · 有界日志解析 · 写盘轮转 · Access Control 退出超时 · 全局协程异常隔离
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
 体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态
+迁移        Alpha → Meta 同签名自动导入配置/节点/设置 · 低 API zip 解压 · 迁移权限 i18n
 架构        design/service 边界收紧 · 展示层模型与适配器
-供应链      Geo 固定校验 · 构建后打 tag · SHA256SUMS · 统一 CI 签名 secrets
+供应链      Geo 固定校验 · 构建后打 tag · SHA256SUMS · 统一 CI 签名 secrets · Meta latest + Alpha pre-release 并行
 质量        单元测试 · Lint 全量报告 · 失败日志透明 · 仓库策略脚本
 i18n        多语言缺失串补全 · 合理 MissingTranslation 策略
 工程        JDK 21 · kaidl/弃用 API 清理 · 返回键现代化 · Gradle 8 任务依赖
@@ -250,5 +334,5 @@ i18n        多语言缺失串补全 · 合理 MissingTranslation 策略
 
 ### License / Upstream
 
-This project remains a GUI client for Clash.Meta on Android. Kernel and protocol features follow MetaCubeX Clash.Meta; Android-side hardening and UX changes above are maintained on this fork’s `main` branch.
+This project remains a GUI client for Clash.Meta on Android. Kernel and protocol features follow MetaCubeX Clash.Meta; **Android-side hardening, UX, Alpha→Meta migration, CI/CD, and i18n above are maintained on the Chloemlla fork’s `main` branch** — see Feature Tracks for the recent commit map.
 
