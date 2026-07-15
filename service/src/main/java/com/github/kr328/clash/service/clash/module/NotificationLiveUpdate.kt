@@ -13,13 +13,11 @@ import kotlin.math.max
  * Android Live Update helpers for the Clash status notification.
  *
  * Live Updates require an ongoing, non-custom, titled notification that requests
- * promotion via [NotificationCompat.Builder.setRequestPromotedOngoing], plus the
- * non-runtime [android.Manifest.permission.POST_PROMOTED_NOTIFICATIONS] permission.
+ * promotion via the promoted-ongoing extras, plus the non-runtime
+ * [android.Manifest.permission.POST_PROMOTED_NOTIFICATIONS] permission.
  *
- * UX goals for the status chip / promoted card:
- * - brief, glanceable speed or state text
- * - no empty chip while loading/idle
- * - avoid colorized / custom RemoteViews (ineligible for promotion)
+ * Host keeps androidx.core on the AGP 8.8 / compileSdk 35 line (1.16.x), so
+ * request/promoted APIs are written through extras instead of newer Builder helpers.
  *
  * @see <a href="https://developer.android.google.cn/develop/ui/views/notifications/live-update">Create live update notifications</a>
  */
@@ -27,15 +25,18 @@ internal fun NotificationCompat.Builder.applyClashLiveUpdate(
     shortCriticalText: String? = null,
 ): NotificationCompat.Builder {
     setOngoing(true)
-    setRequestPromotedOngoing(true)
     setOnlyAlertOnce(true)
     setShowWhen(false)
     setCategory(NotificationCompat.CATEGORY_SERVICE)
     // Live Update eligibility forbids setColorized(true); keep tint via setColor only.
     setColorized(false)
     setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+    extras.putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true)
     if (!shortCriticalText.isNullOrBlank()) {
-        setShortCriticalText(shortCriticalText.compactStatusChipText())
+        extras.putString(
+            EXTRA_SHORT_CRITICAL_TEXT,
+            shortCriticalText.compactStatusChipText(),
+        )
     }
     return this
 }
@@ -138,4 +139,7 @@ private fun scaleTrafficBytes(value: Long): Long {
     }
 }
 
+// Platform extras used by Android 16 Live Updates / status chips.
+private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
+private const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
 private const val STATUS_CHIP_TEXT_LIMIT = 7
