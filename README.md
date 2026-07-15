@@ -129,6 +129,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | **安全** | 外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧为 sharedpref |
 | **稳定** | 全量审计 F-01~F-18 · 全局协程异常隔离 · 日志有界/轮转 · Access Control 退出超时 |
 | **体验** | 渐进测速动画 · 代理搜索 · 首页首启引导 · 剪贴板导入 · 空状态 CTA · 当前节点定位 |
+| **体验+** | 首页实时上下行速率 · 代理卡显示模式+当前节点 · 状态卡无障碍文案 |
 | **迁移** | **Alpha → Meta 同签名自动导入**配置/节点/设置（Meta 正式包首次启动） |
 | **发布** | main 推送并行 **Meta latest + Alpha pre-release** · SHA256SUMS · 构建成功后再打 tag |
 | **质量** | JVM 单测 · Lint 全量报告 · 失败堆栈透明 · 仓库策略脚本 |
@@ -202,6 +203,11 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | Commit | Summary |
 |--------|---------|
 | *(this)* | `feat(notification): request Live Update for Clash status` — `POST_PROMOTED_NOTIFICATIONS`、`setRequestPromotedOngoing`、`setShortCriticalText`、androidx.core 1.17 |
+
+#### Track J · 首页 UX 密度优化
+| Commit | Summary |
+|--------|---------|
+| *(this)* | `feat(ux): home live speed and selected proxy summary` — 状态卡实时速率、代理卡当前节点、a11y 描述 |
 
 > [!TIP]
 > 详细机制见 **[§11 Runtime / Service SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**；逐步嵌入见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。

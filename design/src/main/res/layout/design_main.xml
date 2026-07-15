@@ -15,13 +15,16 @@
             name="hasProfile"
             type="boolean" />
         <variable
-            name="forwarded"
+            name="statusSubtext"
             type="String" />
         <variable
             name="mode"
             type="String" />
         <variable
             name="profileName"
+            type="String" />
+        <variable
+            name="proxySummary"
             type="String" />
         <variable
             name="colorClashStarted"
@@ -84,6 +87,7 @@
                 </LinearLayout>
 
                 <com.github.kr328.clash.design.view.LargeActionCard
+                    android:id="@+id/status_card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
@@ -92,7 +96,7 @@
                     android:theme="@style/AppThemeDark"
                     app:cardBackgroundColor="@{clashRunning ? colorClashStarted : colorClashStopped}"
                     app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
-                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : (clashStarting ? @string/starting_service : @string/tap_to_start)}"
+                    app:subtext="@{clashRunning ? statusSubtext : (clashStarting ? @string/starting_service : @string/tap_to_start)}"
                     app:text="@{clashRunning ? @string/running : (clashStarting ? @string/starting : @string/stopped)}" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
@@ -112,7 +116,7 @@
                     android:onClick="@{() -> self.request(Request.OpenProxy)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_apps"
-                    app:subtext="@{mode}"
+                    app:subtext="@{proxySummary != null &amp;&amp; !proxySummary.empty ? proxySummary : mode}"
                     app:text="@string/proxy" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard

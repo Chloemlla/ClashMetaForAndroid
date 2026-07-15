@@ -4,7 +4,9 @@ import android.content.Context
 import android.view.View
 import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.core.model.TunnelState
+import com.github.kr328.clash.core.util.trafficDownload
 import com.github.kr328.clash.core.util.trafficTotal
+import com.github.kr328.clash.core.util.trafficUpload
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.util.layoutInflater
@@ -44,29 +46,54 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             binding.clashRunning = running
             if (running) {
                 binding.clashStarting = false
+            } else {
+                binding.statusSubtext = context.getString(R.string.tap_to_start)
+                binding.proxySummary = ""
             }
+            refreshStatusAccessibility()
         }
     }
 
     suspend fun setClashStarting(starting: Boolean) {
         withContext(Dispatchers.Main) {
             binding.clashStarting = starting
+            if (starting) {
+                binding.statusSubtext = context.getString(R.string.starting_service)
+            }
+            refreshStatusAccessibility()
         }
     }
 
-    suspend fun setForwarded(value: Long) {
+    suspend fun setTrafficSummary(total: Long, now: Long = 0L) {
         withContext(Dispatchers.Main) {
-            binding.forwarded = value.trafficTotal()
+            binding.statusSubtext = context.getString(
+                R.string.format_traffic_forwarded_with_speed,
+                total.trafficTotal(),
+                now.trafficUpload(),
+                now.trafficDownload(),
+            )
+            refreshStatusAccessibility()
         }
     }
 
     suspend fun setMode(mode: TunnelState.Mode) {
         withContext(Dispatchers.Main) {
-            binding.mode = when (mode) {
-                TunnelState.Mode.Direct -> context.getString(R.string.direct_mode)
-                TunnelState.Mode.Global -> context.getString(R.string.global_mode)
-                TunnelState.Mode.Rule -> context.getString(R.string.rule_mode)
-                else -> context.getString(R.string.rule_mode)
+            val modeText = modeLabel(mode)
+            binding.mode = modeText
+            if (binding.proxySummary.isNullOrBlank()) {
+                binding.proxySummary = modeText
+            }
+        }
+    }
+
+    suspend fun setProxySummary(mode: TunnelState.Mode, selectedNode: String?) {
+        withContext(Dispatchers.Main) {
+            val modeText = modeLabel(mode)
+            binding.mode = modeText
+            binding.proxySummary = if (selectedNode.isNullOrBlank()) {
+                modeText
+            } else {
+                context.getString(R.string.format_proxy_summary, modeText, selectedNode)
             }
         }
     }
@@ -93,12 +120,36 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.self = this
         binding.hasProfile = false
         binding.clashStarting = false
+        binding.statusSubtext = context.getString(R.string.tap_to_start)
+        binding.proxySummary = ""
 
         binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)
+        refreshStatusAccessibility()
     }
 
     fun request(request: Request) {
         requests.trySend(request)
+    }
+
+    private fun modeLabel(mode: TunnelState.Mode): String {
+        return when (mode) {
+            TunnelState.Mode.Direct -> context.getString(R.string.direct_mode)
+            TunnelState.Mode.Global -> context.getString(R.string.global_mode)
+            TunnelState.Mode.Rule -> context.getString(R.string.rule_mode)
+            else -> context.getString(R.string.rule_mode)
+        }
+    }
+
+    private fun refreshStatusAccessibility() {
+        val description = when {
+            binding.clashStarting == true -> context.getString(R.string.a11y_status_starting)
+            binding.clashRunning == true -> context.getString(
+                R.string.a11y_status_running,
+                binding.statusSubtext.orEmpty(),
+            )
+            else -> context.getString(R.string.a11y_status_stopped)
+        }
+        binding.statusCard.contentDescription = description
     }
 }

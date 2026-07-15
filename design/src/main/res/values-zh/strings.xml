@@ -36,6 +36,11 @@
     <string name="format_minutes">%d 分钟</string>
     <string name="format_profile_activated">%s 已激活</string>
     <string name="format_traffic_forwarded">%s 已转发</string>
+    <string name="format_traffic_forwarded_with_speed">%1$s · ↑%2$s/s ↓%3$s/s</string>
+    <string name="format_proxy_summary">%1$s · %2$s</string>
+    <string name="a11y_status_stopped">Clash 已停止。点按两次启动。</string>
+    <string name="a11y_status_starting">Clash 正在启动。</string>
+    <string name="a11y_status_running">Clash 运行中。%1$s 点按两次停止。</string>
     <string name="global_mode">全局模式</string>
     <string name="hide_app_icon_title">隐藏应用图标</string>
     <string name="hide_app_icon_desc">可以在拨号盘输入 *#*#252746382#*#* 打开应用</string>

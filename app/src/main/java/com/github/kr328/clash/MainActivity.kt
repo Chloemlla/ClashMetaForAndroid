@@ -16,6 +16,7 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.bridge.*
+import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.store.AppStore
@@ -149,17 +150,39 @@ class MainActivity : BaseActivity<MainDesign>() {
             queryProviders()
         }
 
-        setMode(state.mode)
+        val selectedNode = if (clashRunning) {
+            withClash {
+                val groups = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
+                val preferred = uiStore.proxyLastGroup
+                val groupName = when {
+                    preferred.isNotBlank() && preferred in groups -> preferred
+                    groups.isNotEmpty() -> groups.first()
+                    else -> null
+                }
+                groupName?.let { queryProxyGroup(it, ProxySort.Default).now }?.takeIf { it.isNotBlank() }
+            }
+        } else {
+            null
+        }
+
+        setProxySummary(state.mode, selectedNode)
         setHasProviders(providers.isNotEmpty())
 
         withProfile {
             setProfileName(queryActive()?.name)
         }
+
+        if (clashRunning) {
+            fetchTraffic()
+        }
     }
 
     private suspend fun MainDesign.fetchTraffic() {
         withClash {
-            setForwarded(queryTrafficTotal())
+            setTrafficSummary(
+                total = queryTrafficTotal(),
+                now = queryTrafficNow(),
+            )
         }
     }
 

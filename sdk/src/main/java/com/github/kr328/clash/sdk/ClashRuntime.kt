@@ -231,6 +231,10 @@ object ClashRuntime {
         queryTrafficTotal()
     }
 
+    suspend fun queryTrafficNow(): Long = withClash {
+        queryTrafficNow()
+    }
+
     suspend fun queryProxyGroupNames(
         excludeNotSelectable: Boolean = true,
     ): List<String> = withClash {
