@@ -3,13 +3,18 @@
 A Graphical user interface of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta) for Android
 
 > **Chloemlla fork (`Chloemlla/ClashMetaForAndroid`)**  
-> Tracks community CMFA, then lands **hardening · UX · Alpha→Meta migration · CI/CD · i18n** on this fork’s `main`.  
+> Tracks community CMFA, then lands **hardening · UX · Alpha→Meta migration · CI/CD · i18n · Runtime SDK** on this fork’s `main`.  
 > **This is not a thin mirror** — the bulk of production-facing Android work is maintained here.  
-> Full inventory: **[Branch Improvements / 本分支改进](#branch-improvements-本分支改进)** · recent work as **[Feature Tracks](#feature-tracks-近期功能分支)**.
+> Full inventory: **[Branch Improvements / 本分支改进](#branch-improvements-本分支改进)** · **[Feature Tracks](#feature-tracks-近期功能分支)** · **[Runtime SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**.
 
 ### Feature
 
 Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
+
+**Chloemlla additions (high level):**
+
+- Hardened Android client (audit remediation, CI/CD, i18n, Alpha→Meta migration) — see [Branch Improvements](#branch-improvements-本分支改进)
+- **Runtime / Service SDK** (`:sdk` / `ClashRuntime`) for in-app embedding without the stock UI — see [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) and [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)
 
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
@@ -174,9 +179,9 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 #### Track G · Runtime / Service SDK（方向 B）
 | Commit | Summary |
 |--------|---------|
-| `feat/runtime-service-sdk` | 新增 `:sdk` 嵌入门面 `ClashRuntime`；`Components` 可配置宿主回跳；需求/计划/`docs/sdk/runtime-embed.md` |
+| `fcae428` | `feat(sdk): add Runtime/Service embed facade` — 模块 `:sdk`、`ClashRuntime`、可配置 `Components`、需求/计划/嵌入指南 |
 
-> 详细机制仍见下文分节；本表只做 **功能分支式导航**。完整嵌入步骤见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。
+> 详细机制见 **[§11 Runtime / Service SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**；逐步嵌入见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。
 
 ### 1. 全量审计修复（F-01 ~ F-18）
 
@@ -339,9 +344,93 @@ i18n        多语言缺失串补全 · 合理 MissingTranslation 策略
 - 推送后请在 Actions 中查看：assemble、unit test、lint 报告产物、签名与 `SHA256SUMS`。
 - 若需对照审计条目与代码落点，优先阅读审计报告 §4 与 `docs/plans/2026-07-10-full-audit-remediation-execution-plan.md`。
 
+### 11. Runtime / Service SDK（方向 B · 嵌入式 CMFA）
+
+提交：`fcae428`（`feat(sdk): add Runtime/Service embed facade`）。  
+完整嵌入指南：[`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md) · 需求：[`docs/requirements/2026-07-15-runtime-service-sdk.md`](docs/requirements/2026-07-15-runtime-service-sdk.md)。
+
+Chloemlla 在 stock GUI 之外提供 **可嵌入运行时**：宿主 App 可在 **同 applicationId / 同进程模型** 下复用 Profile 管理、Clash 控制与 VPN，而无需依赖完整 `app` UI。
+
+#### 11.1 模块与依赖
+
+```text
+宿主 App
+   └─ implementation project(":sdk")   // 或后续发布的 AAR
+         ├─ api :service   // RemoteService / TunService / Profile DB
+         ├─ api :core      // Clash JNI + libclash.so (mihomo)
+         └─ api :common    // Global / Intents / Components
+```
+
+| 工件 | 作用 |
+|------|------|
+| `:sdk` | 对外门面 `ClashRuntime`、配置与事件模型 |
+| `Components.configure` | 通知点击 / VPN 配置页回跳到宿主 Activity |
+| stock `app` | 仍是完整客户端；未调用 configure 时行为与原先一致 |
+
+#### 11.2 宿主最小流程
+
+```kotlin
+// Application（仅主进程）
+ClashRuntime.install(
+    this,
+    ClashRuntimeConfig(
+        mainActivity = ComponentName(this, HostMainActivity::class.java),
+        enableVpnByDefault = true,
+    ),
+)
+// 自行将 geoip.metadb / geosite.dat / ASN.mmdb / BundleMRS.7z 解压到 filesDir/clash/
+
+// UI 可见时
+ClashRuntime.bind()
+
+val uuid = ClashRuntime.importUrlProfile("MySub", "https://example.com/sub.yaml")
+ClashRuntime.setActive(uuid)
+
+val prepare = ClashRuntime.start(activity) // 非 null 时先走 VpnService 授权再 start
+// ...
+ClashRuntime.queryProxyGroupNames()
+ClashRuntime.selectProxy(group, name)
+ClashRuntime.stop(activity)
+ClashRuntime.unbind()
+```
+
+#### 11.3 API 能力一览
+
+| 能力 | API |
+|------|-----|
+| 初始化 / 绑定 | `install` · `bind` · `unbind` · `configureHostUi` |
+| VPN / 非 VPN 启停 | `setVpnEnabled` · `start`（可返回 prepare Intent）· `stop` |
+| 配置 | `importUrlProfile` · `createProfile` · `commitProfile` · `setActive` · `queryProfiles` · `deleteProfile` · `updateProfile` |
+| 代理 | `queryProxyGroupNames` · `queryProxyGroup` · `selectProxy` · `healthCheck` |
+| 状态 | `queryTunnelState` · `queryTrafficTotal` · `isRunning` · `events: SharedFlow` |
+| 进阶 | `withClash { }` · `withProfile { }`（Binder 重试） |
+
+#### 11.4 安全边界（与审计 F-12 对齐）
+
+| 允许 | 默认禁止 |
+|------|----------|
+| 同 App 内嵌 SDK 控制本应用 VPN | 任意第三方 App 启停本应用 VPN |
+| 用户明确授权的 `VpnService.prepare` | 静默绕过 VPN 授权 |
+| 宿主自研 UI + 同签名数据区 | 把 stock exported 遥控重新打开 |
+
+SDK **不**恢复跨应用 `START_CLASH` / 外部控制入口；嵌入能力仅服务白标 / OEM / 自有壳。
+
+#### 11.5 进程与资产注意
+
+- **主进程**：`install` / `bind` / UI / Binder 客户端。  
+- **`:background`**：`RemoteService`、Profile 库等（由 `:service` 清单定义）— 勿在 background 再装一套 UI bind。  
+- **Geo 资产**：内核读 `filesDir/clash/`；stock `app` 会从 assets 解压，**SDK 宿主必须自行打包并解压**同等文件。  
+- **验证**：模块编译与 app 回归以 **GitHub Actions** 为准（本机不跑 Gradle 作为门禁）。
+
+#### 11.6 后续（非本阶段必做）
+
+- Sample host App 模块  
+- 将 stock `app` 的 `Remote` / `withClash` 委托到 `:sdk` 去重  
+- GitHub Packages / Maven 坐标发布  
+
 ---
 
 ### License / Upstream
 
-This project remains a GUI client for Clash.Meta on Android. Kernel and protocol features follow MetaCubeX Clash.Meta; **Android-side hardening, UX, Alpha→Meta migration, CI/CD, and i18n above are maintained on the Chloemlla fork’s `main` branch** — see Feature Tracks for the recent commit map.
+This project remains a GUI client for Clash.Meta on Android. Kernel and protocol features follow MetaCubeX Clash.Meta; **Android-side hardening, UX, Alpha→Meta migration, CI/CD, i18n, and the Runtime / Service SDK above are maintained on the Chloemlla fork’s `main` branch** — see Feature Tracks and §11 for the embed surface.
 
