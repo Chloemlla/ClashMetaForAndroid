@@ -37,6 +37,18 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation("androidx.activity:activity-compose:1.9.0")
 
+    // lumen-crash publishes Compose Material3 as api deps without resolved versions in its POM.
+    // Supply a BOM (and pin the api surface) so consumer resolution does not get empty versions.
+    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material3:material3-window-size-class")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.animation:animation")
+
     // Keep java.time usable on API < 26 for the crash SDK report timestamps.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
