@@ -6,6 +6,7 @@ include(":service")
 include(":design")
 include(":common")
 include(":hideapi")
+include(":sdk")
 
 includeBuild("kaidl-compiler-patch")
 

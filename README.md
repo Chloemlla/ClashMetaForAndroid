@@ -99,6 +99,8 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | [`audit-report-ClashMetaForAndroid-2026-07-10.md`](audit-report-ClashMetaForAndroid-2026-07-10.md) | Full engineering audit (F-01 … F-18) |
 | [`docs/requirements/`](docs/requirements/) | Frozen requirements for progressive delay UI, warning cleanup, audit remediation |
 | [`docs/plans/`](docs/plans/) | Execution plans for the same workstreams |
+| [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md) | **Runtime / Service SDK** embed guide (Direction B) |
+| [`docs/requirements/2026-07-15-runtime-service-sdk.md`](docs/requirements/2026-07-15-runtime-service-sdk.md) | Runtime SDK frozen requirements |
 
 ---
 
@@ -117,6 +119,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | **发布** | main 推送并行 **Meta latest + Alpha pre-release** · SHA256SUMS · 构建成功后再打 tag |
 | **质量** | JVM 单测 · Lint 全量报告 · 失败堆栈透明 · 仓库策略脚本 |
 | **i18n** | zh / zh-TW / zh-HK / ja / ko / ru / vi 等社区语言补全 |
+| **SDK** | `:sdk` Runtime 嵌入（Profile + VPN + 代理组）；同 App 边界；见 docs/sdk |
 
 当前版本基线约为 **2.11.32**。下列改进均已落在源码/工作流中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
 
@@ -163,12 +166,17 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | `98e1e11` | `i18n: complete missing community translations` |
 | `7762df4` / `72eb015` | Android 构建告警 / kaidl Serializable 修补 |
 
-#### Track F · 运行时韧性（本 PR 含）
+#### Track F · 运行时韧性
 | Commit | Summary |
 |--------|---------|
 | `cb64fce` | **Global 协程异常隔离**：应用级 CoroutineExceptionHandler、关键网络配置收紧、迁移/Profile/配置模块异常边界、2026-07-14 审计报告与仓库策略补强 |
 
-> 详细机制仍见下文分节；本表只做 **功能分支式导航**。
+#### Track G · Runtime / Service SDK（方向 B）
+| Commit | Summary |
+|--------|---------|
+| `feat/runtime-service-sdk` | 新增 `:sdk` 嵌入门面 `ClashRuntime`；`Components` 可配置宿主回跳；需求/计划/`docs/sdk/runtime-embed.md` |
+
+> 详细机制仍见下文分节；本表只做 **功能分支式导航**。完整嵌入步骤见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。
 
 ### 1. 全量审计修复（F-01 ~ F-18）
 
@@ -317,6 +325,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
 体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态
 迁移        Alpha → Meta 同签名自动导入配置/节点/设置 · 低 API zip 解压 · 迁移权限 i18n
+SDK         :sdk ClashRuntime 嵌入门面 · Components 可配置 · 同 App 内嵌（非跨 App 遥控）
 架构        design/service 边界收紧 · 展示层模型与适配器
 供应链      Geo 固定校验 · 构建后打 tag · SHA256SUMS · 统一 CI 签名 secrets · Meta latest + Alpha pre-release 并行
 质量        单元测试 · Lint 全量报告 · 失败日志透明 · 仓库策略脚本

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Runtime SDK is a pure library facade. Service / provider components are merged from
+  the :service AAR. Hosts must declare RECEIVE_SELF_BROADCASTS (already in :service)
+  and supply VPN / FOREGROUND_SERVICE permissions as required by the platform.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
