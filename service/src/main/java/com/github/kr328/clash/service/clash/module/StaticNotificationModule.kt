@@ -23,6 +23,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
         .setOnlyAlertOnce(true)
         .setShowWhen(false)
         .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        .applyClashLiveUpdate()
         .setContentIntent(
             PendingIntent.getActivity(
                 service,
@@ -46,6 +47,9 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
             val notification = builder
                 .setContentTitle(profileName)
                 .setContentText(service.getText(R.string.running))
+                .applyClashLiveUpdate(
+                    shortCriticalText = service.getString(R.string.running),
+                )
                 .build()
 
             service.startForegroundCompat(R.id.nf_clash_status, notification)
@@ -73,6 +77,9 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
                     .setOnlyAlertOnce(true)
                     .setShowWhen(false)
                     .setContentTitle(service.getText(R.string.loading))
+                    .applyClashLiveUpdate(
+                        shortCriticalText = service.getString(R.string.loading),
+                    )
                     .build()
 
             service.startForegroundCompat(R.id.nf_clash_status, notification)

@@ -16,6 +16,8 @@
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Live Update / promoted ongoing notifications (Android 16+). Non-runtime. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <!-- Workaround for Android 17+ cross profile loopback networking restrictions.
          This permission allows CMFA to connect to loopback addresses and ports bound

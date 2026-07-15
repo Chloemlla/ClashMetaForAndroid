@@ -135,6 +135,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | **i18n** | zh / zh-TW / zh-HK / ja / ko / ru / vi 等社区语言补全 |
 | **SDK** | `:sdk` Runtime 嵌入（Profile + VPN + 代理组）；同 App 边界；见 docs/sdk |
 | **Crash** | GitHub Packages `lumen-crash` 崩溃捕获 + Compose 报告页 + FileProvider 分享 |
+| **Live Update** | VPN 状态通知请求 promoted ongoing（Android 16+ Live Update / 状态栏 chip） |
 
 当前版本基线约为 **2.11.32**。下列改进均已落在源码/工作流中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
 
@@ -196,6 +197,11 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | Commit | Summary |
 |--------|---------|
 | *(this)* | `feat(crash): integrate Lumen Crash SDK via GitHub Packages` — `MainApplication` 安装、`LumenCrashReportActivity` 门闸、FileProvider、CI packages 读凭证 |
+
+#### Track I · Android Live Update 通知
+| Commit | Summary |
+|--------|---------|
+| *(this)* | `feat(notification): request Live Update for Clash status` — `POST_PROMOTED_NOTIFICATIONS`、`setRequestPromotedOngoing`、`setShortCriticalText`、androidx.core 1.17 |
 
 > [!TIP]
 > 详细机制见 **[§11 Runtime / Service SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**；逐步嵌入见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。

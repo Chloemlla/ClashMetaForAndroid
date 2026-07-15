@@ -31,6 +31,7 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
         .setShowWhen(false)
         .setContentTitle("Not Selected")
         .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        .applyClashLiveUpdate()
         .setContentIntent(
             PendingIntent.getActivity(
                 service,
@@ -64,6 +65,10 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
                     R.string.clash_notification_content,
                     uploaded, downloaded
                 )
+            )
+            .applyClashLiveUpdate(
+                // Status chip budget is tight (~7 chars). Prefer speed summary.
+                shortCriticalText = "$uploading/s",
             )
             .build()
 
