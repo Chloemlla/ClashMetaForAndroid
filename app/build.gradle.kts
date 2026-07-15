@@ -20,7 +20,10 @@ dependencies {
     implementation(project(":design"))
     implementation(project(":common"))
 
-    implementation("com.chloemlla.lumen:lumen-crash:0.1.0")
+    // Pin lumen-crash away from activity/core 1.13+/1.18+ AAR metadata that needs AGP 8.9.1 + compileSdk 36.
+    implementation("com.chloemlla.lumen:lumen-crash:0.1.0") {
+        exclude(group = "androidx.navigationevent")
+    }
 
     implementation(libs.kotlin.coroutine)
     implementation(libs.androidx.core)
@@ -38,6 +41,20 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     testImplementation(libs.test.junit)
+}
+
+// Keep AndroidX activity/core on the AGP 8.8 / compileSdk 35-compatible line even when
+// lumen-crash transitively asks for newer AARs (activity 1.13 / core 1.18 / navigationevent).
+configurations.configureEach {
+    resolutionStrategy {
+        force(
+            "androidx.activity:activity:1.9.0",
+            "androidx.activity:activity-ktx:1.9.0",
+            "androidx.activity:activity-compose:1.9.0",
+            "androidx.core:core:1.17.0",
+            "androidx.core:core-ktx:1.17.0",
+        )
+    }
 }
 
 android {
