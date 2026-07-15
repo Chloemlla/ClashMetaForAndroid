@@ -16,7 +16,9 @@ class ServiceStore(context: Context) {
 
     var activeProfile: UUID? by store.typedString(
         key = "active_profile",
-        from = { if (it.isBlank()) null else UUID.fromString(it) },
+        // Parse defensively: a corrupt or migration-merged non-UUID value degrades to
+        // "no active profile" instead of throwing on every read of activeProfile.
+        from = { if (it.isBlank()) null else runCatching { UUID.fromString(it) }.getOrNull() },
         to = { it?.toString() ?: "" }
     )
 

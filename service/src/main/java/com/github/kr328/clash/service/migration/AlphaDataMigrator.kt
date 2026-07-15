@@ -22,6 +22,8 @@ object AlphaDataMigrator {
     private const val KEY_COMPLETED = "alpha_import_completed"
     private const val KEY_SOURCE = "alpha_import_source"
     private const val KEY_IMPORTED = "alpha_import_count"
+    private const val KEY_RETRIES = "alpha_import_retries"
+    private const val MAX_RETRIES = 5
 
     private val lock = Mutex()
 
@@ -119,8 +121,22 @@ object AlphaDataMigrator {
                     pendingProfiles = imported.pendingProfiles,
                 )
             } catch (e: Exception) {
+                // Do not mark migration permanently complete on an unexpected/transient
+                // failure (low storage, DB init, IO). Reset KEY_ATTEMPTED so the next
+                // launch retries, bounded by KEY_RETRIES to avoid an infinite retry loop.
                 Log.w("Alpha migration failed: $e", e)
-                prefs.edit().putBoolean(KEY_COMPLETED, true).apply()
+                val retries = prefs.getInt(KEY_RETRIES, 0) + 1
+                if (retries >= MAX_RETRIES) {
+                    prefs.edit()
+                        .putBoolean(KEY_COMPLETED, true)
+                        .putInt(KEY_RETRIES, retries)
+                        .apply()
+                } else {
+                    prefs.edit()
+                        .putBoolean(KEY_ATTEMPTED, false)
+                        .putInt(KEY_RETRIES, retries)
+                        .apply()
+                }
                 Result(Status.Failed, sourcePackage = sourcePackage, message = e.message)
             } finally {
                 temp.delete()

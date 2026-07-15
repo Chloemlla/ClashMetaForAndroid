@@ -31,11 +31,14 @@ class MainApplication : Application() {
         super.onCreate()
 
         val processName = currentProcessName
-        extractGeoFiles()
 
         Log.d("Process $processName started")
 
         if (processName == packageName) {
+            // Geo assets are consumed by the core, which only runs in the main process.
+            // Extracting them here (instead of unconditionally for every process) avoids
+            // duplicate main-thread I/O in the :background process on every launch.
+            extractGeoFiles()
             maybeMigrateFromAlpha()
             Remote.launch()
         } else {
@@ -55,44 +58,37 @@ class MainApplication : Application() {
             @Suppress("DEPRECATION")
             packageManager.getPackageInfo(packageName, 0).lastUpdateTime
         }
-        val geoipFile = File(clashDir, "geoip.metadb")
-        if (geoipFile.exists() && geoipFile.lastModified() < updateDate) {
-            geoipFile.delete()
-        }
-        if (!geoipFile.exists()) {
-            FileOutputStream(geoipFile).use {
-                assets.open("geoip.metadb").copyTo(it)
-            }
-        }
 
-        val geositeFile = File(clashDir, "geosite.dat")
-        if (geositeFile.exists() && geositeFile.lastModified() < updateDate) {
-            geositeFile.delete()
-        }
-        if (!geositeFile.exists()) {
-            FileOutputStream(geositeFile).use {
-                assets.open("geosite.dat").copyTo(it)
-            }
-        }
+        GEO_ASSETS.forEach { asset -> extractAsset(asset, updateDate) }
+    }
 
-        val asnFile = File(clashDir, "ASN.mmdb")
-        if (asnFile.exists() && asnFile.lastModified() < updateDate) {
-            asnFile.delete()
+    /**
+     * Extract a bundled asset into [clashDir] atomically.
+     *
+     * A stale copy (older than the last package update) is refreshed. The copy goes to a
+     * temporary file first and is renamed into place only after it fully completes, so an
+     * interrupted write (process death, low storage) never leaves a truncated file that the
+     * `exists()` guard would otherwise treat as valid and never repair.
+     */
+    private fun extractAsset(name: String, updateDate: Long) {
+        val target = File(clashDir, name)
+        if (target.exists() && target.lastModified() < updateDate) {
+            target.delete()
         }
-        if (!asnFile.exists()) {
-            FileOutputStream(asnFile).use {
-                assets.open("ASN.mmdb").copyTo(it)
-            }
-        }
+        if (target.exists()) return
 
-        val bundleMRSFile = File(clashDir, "BundleMRS.7z")
-        if (bundleMRSFile.exists() && bundleMRSFile.lastModified() < updateDate) {
-            bundleMRSFile.delete()
-        }
-        if (!bundleMRSFile.exists()) {
-            FileOutputStream(bundleMRSFile).use {
-                assets.open("BundleMRS.7z").copyTo(it)
+        val temp = File(clashDir, "$name.tmp")
+        try {
+            FileOutputStream(temp).use { output ->
+                assets.open(name).use { it.copyTo(output) }
             }
+            if (!temp.renameTo(target)) {
+                temp.copyTo(target, overwrite = true)
+            }
+        } catch (e: Exception) {
+            Log.w("Failed to extract geo asset $name: $e", e)
+        } finally {
+            temp.delete()
         }
     }
 
@@ -110,7 +106,13 @@ class MainApplication : Application() {
         }
     }
 
-    fun finalize() {
-        Global.destroy()
+    companion object {
+        // Bundled geo assets consumed by the core, extracted on first launch after an update.
+        private val GEO_ASSETS = listOf(
+            "geoip.metadb",
+            "geosite.dat",
+            "ASN.mmdb",
+            "BundleMRS.7z",
+        )
     }
 }

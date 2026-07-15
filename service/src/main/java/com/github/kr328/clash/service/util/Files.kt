@@ -16,3 +16,38 @@ val File.directoryLastModified: Long?
     get() {
         return walk().map { it.lastModified() }.maxOrNull()
     }
+
+/**
+ * Atomically replace [target] with the contents of [source].
+ *
+ * Copies [source] into a sibling temporary directory first, then swaps it into
+ * place with [File.renameTo]. A crash between steps never leaves [target] as a
+ * half-written directory: the caller either sees the previous complete contents
+ * or the new complete contents. Falls back to a delete-then-copy only if the
+ * rename is unsupported, which is the pre-existing (non-atomic) behavior.
+ */
+fun replaceDirectoryAtomically(source: File, target: File) {
+    val staging = File(target.parentFile, "${target.name}.tmp-${System.currentTimeMillis()}")
+    staging.deleteRecursively()
+    try {
+        source.copyRecursively(staging, overwrite = true)
+
+        // Move the current target out of the way, then swap staging in.
+        val backup = File(target.parentFile, "${target.name}.old-${System.currentTimeMillis()}")
+        val hadTarget = target.exists()
+        if (hadTarget && !target.renameTo(backup)) {
+            // Rename unsupported (rare); fall back to non-atomic replace.
+            target.deleteRecursively()
+            staging.copyRecursively(target, overwrite = true)
+            return
+        }
+        if (!staging.renameTo(target)) {
+            // Roll back to the previous contents if the swap failed.
+            if (hadTarget) backup.renameTo(target)
+            staging.copyRecursively(target, overwrite = true)
+        }
+        backup.deleteRecursively()
+    } finally {
+        staging.deleteRecursively()
+    }
+}

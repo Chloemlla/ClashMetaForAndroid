@@ -193,6 +193,31 @@ require(
     "release.keystore is still reachable from Git history",
 )
 
+# Development agent-session artifacts must not be tracked in a repo preparing for
+# public release (audit F-14).
+require(
+    not any(path.startswith("outputs/runtime/vibe-sessions/") for path in tracked),
+    "development agent-session artifacts under outputs/runtime/vibe-sessions/ are tracked by Git",
+)
+
+# The Gradle wrapper distribution must be integrity-checked (audit F-07).
+wrapper_properties = (ROOT / "gradle/wrapper/gradle-wrapper.properties").read_text(
+    encoding="utf-8"
+)
+require(
+    re.search(r"(?m)^distributionSha256Sum=[0-9a-f]{64}\s*$", wrapper_properties) is not None,
+    "gradle-wrapper.properties does not pin distributionSha256Sum",
+)
+
+# Release/pre-release builds must check out the recorded submodule commit, never a
+# floating branch tip via --remote, so a tagged build is reproducible (audit F-08).
+for workflow_name in ("build-release.yaml", "build-pre-release.yaml"):
+    workflow_text = (ROOT / ".github/workflows" / workflow_name).read_text(encoding="utf-8")
+    require(
+        "submodule update --init --recursive --remote" not in workflow_text,
+        f"{workflow_name} updates submodules from a floating branch (--remote) in a release build",
+    )
+
 if errors:
     for error in errors:
         print(f"policy error: {error}", file=sys.stderr)

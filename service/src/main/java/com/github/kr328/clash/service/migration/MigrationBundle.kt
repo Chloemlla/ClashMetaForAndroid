@@ -34,6 +34,14 @@ object MigrationBundle {
     private val exportLock = Mutex()
     private val importLock = Mutex()
 
+    // Bounds for extracting a migration bundle. The bundle comes from a same-signature
+    // sibling app (enforced by MigrationProvider.enforceCaller), but a corrupt cache or
+    // buggy sibling could still supply a crafted zip. Cap per-entry and total extracted
+    // bytes plus entry count to prevent a zip bomb from exhausting cache storage.
+    private const val MAX_ENTRY_BYTES = 64L * 1024 * 1024
+    private const val MAX_TOTAL_BYTES = 256L * 1024 * 1024
+    private const val MAX_ENTRIES = 10_000
+
     data class ImportResult(
         val importedProfiles: Int,
         val pendingProfiles: Int,
@@ -138,53 +146,68 @@ object MigrationBundle {
                 var importedCount = 0
                 var pendingCount = 0
 
+                // Import each record independently: a single malformed record (unknown
+                // Profile.Type from a newer alpha build, bad UUID, corrupt JSON) is skipped
+                // and logged rather than aborting the whole batch and leaving partial state.
                 for (i in 0 until importedArray.length()) {
-                    val obj = importedArray.getJSONObject(i)
-                    val uuid = UUID.fromString(obj.getString("uuid"))
-                    if (ImportedDao().exists(uuid) || PendingDao().exists(uuid)) continue
+                    runCatching {
+                        val obj = importedArray.getJSONObject(i)
+                        val uuid = UUID.fromString(obj.getString("uuid"))
+                        if (ImportedDao().exists(uuid) || PendingDao().exists(uuid)) return@runCatching false
 
-                    val sourceDir = extractRoot.resolve(Migration.IMPORTED_DIR).resolve(uuid.toString())
-                    if (!sourceDir.isDirectory) continue
+                        val sourceDir = extractRoot.resolve(Migration.IMPORTED_DIR).resolve(uuid.toString())
+                        if (!sourceDir.isDirectory) return@runCatching false
 
-                    val targetDir = context.importedDir.resolve(uuid.toString())
-                    targetDir.deleteRecursively()
-                    sourceDir.copyRecursively(targetDir, overwrite = true)
+                        val targetDir = context.importedDir.resolve(uuid.toString())
+                        targetDir.deleteRecursively()
+                        sourceDir.copyRecursively(targetDir, overwrite = true)
 
-                    ImportedDao().insert(obj.toImported())
-                    importedCount++
+                        ImportedDao().insert(obj.toImported())
+                        true
+                    }.onFailure {
+                        Log.w("Migration: skipping imported record $i: $it", it)
+                    }.getOrDefault(false).let { if (it) importedCount++ }
                 }
 
                 for (i in 0 until pendingArray.length()) {
-                    val obj = pendingArray.getJSONObject(i)
-                    val uuid = UUID.fromString(obj.getString("uuid"))
-                    if (ImportedDao().exists(uuid) || PendingDao().exists(uuid)) continue
+                    runCatching {
+                        val obj = pendingArray.getJSONObject(i)
+                        val uuid = UUID.fromString(obj.getString("uuid"))
+                        if (ImportedDao().exists(uuid) || PendingDao().exists(uuid)) return@runCatching false
 
-                    val sourceDir = extractRoot.resolve(Migration.PENDING_DIR).resolve(uuid.toString())
-                    val targetDir = context.pendingDir.resolve(uuid.toString())
-                    targetDir.deleteRecursively()
-                    if (sourceDir.isDirectory) {
-                        sourceDir.copyRecursively(targetDir, overwrite = true)
-                    } else {
-                        targetDir.mkdirs()
-                        targetDir.resolve("config.yaml").createNewFile()
-                        targetDir.resolve("providers").mkdir()
-                    }
+                        val sourceDir = extractRoot.resolve(Migration.PENDING_DIR).resolve(uuid.toString())
+                        val targetDir = context.pendingDir.resolve(uuid.toString())
+                        targetDir.deleteRecursively()
+                        if (sourceDir.isDirectory) {
+                            sourceDir.copyRecursively(targetDir, overwrite = true)
+                        } else {
+                            targetDir.mkdirs()
+                            targetDir.resolve("config.yaml").createNewFile()
+                            targetDir.resolve("providers").mkdir()
+                        }
 
-                    PendingDao().insert(obj.toPending())
-                    pendingCount++
+                        PendingDao().insert(obj.toPending())
+                        true
+                    }.onFailure {
+                        Log.w("Migration: skipping pending record $i: $it", it)
+                    }.getOrDefault(false).let { if (it) pendingCount++ }
                 }
 
                 for (i in 0 until selectionsArray.length()) {
-                    val obj = selectionsArray.getJSONObject(i)
-                    val uuid = UUID.fromString(obj.getString("uuid"))
-                    if (!ImportedDao().exists(uuid)) continue
-                    SelectionDao().setSelected(
-                        Selection(
-                            uuid = uuid,
-                            proxy = obj.getString("proxy"),
-                            selected = obj.getString("selected"),
+                    runCatching {
+                        val obj = selectionsArray.getJSONObject(i)
+                        val uuid = UUID.fromString(obj.getString("uuid"))
+                        if (!ImportedDao().exists(uuid)) return@runCatching
+                        SelectionDao().setSelected(
+                            Selection(
+                                uuid = uuid,
+                                proxy = obj.getString("proxy"),
+                                selected = obj.getString("selected"),
+                            )
                         )
-                    )
+                    }.onFailure {
+                        Log.w("Migration: skipping selection record $i: $it", it)
+                    }
                 }
 
                 mergeSharedPreferences(
@@ -323,6 +346,8 @@ object MigrationBundle {
     }
 
     private fun unzip(input: File, outputDir: File) {
+        var totalBytes = 0L
+        var entryCount = 0
         ZipInputStream(BufferedInputStream(FileInputStream(input))).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
@@ -334,8 +359,30 @@ object MigrationBundle {
                 if (entry.isDirectory) {
                     target.mkdirs()
                 } else {
+                    entryCount++
+                    if (entryCount > MAX_ENTRIES) {
+                        throw IllegalStateException("migration bundle has too many entries")
+                    }
                     target.parentFile?.mkdirs()
-                    FileOutputStream(target).use { out -> zip.copyTo(out) }
+                    // Copy with running caps so a malformed or hostile bundle (zip bomb)
+                    // cannot exhaust cache storage even though the sender is same-signature.
+                    FileOutputStream(target).use { out ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var entryBytes = 0L
+                        while (true) {
+                            val read = zip.read(buffer)
+                            if (read < 0) break
+                            entryBytes += read
+                            totalBytes += read
+                            if (entryBytes > MAX_ENTRY_BYTES) {
+                                throw IllegalStateException("migration bundle entry exceeds size limit")
+                            }
+                            if (totalBytes > MAX_TOTAL_BYTES) {
+                                throw IllegalStateException("migration bundle exceeds size limit")
+                            }
+                            out.write(buffer, 0, read)
+                        }
+                    }
                 }
                 zip.closeEntry()
             }

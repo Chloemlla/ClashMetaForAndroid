@@ -25,7 +25,14 @@ class SharedPreferenceProvider(private val preferences: SharedPreferences) : Sto
     }
 
     override fun getString(key: String, defaultValue: String): String {
-        return preferences.getString(key, defaultValue)!!
+        // Fall back to the default rather than force-unwrapping: a key persisted under a
+        // mismatched type (e.g. after a migration merge) can make getString return null or
+        // throw ClassCastException, which !! would turn into a crash.
+        return try {
+            preferences.getString(key, defaultValue) ?: defaultValue
+        } catch (_: ClassCastException) {
+            defaultValue
+        }
     }
 
     override fun setString(key: String, value: String) {
@@ -35,7 +42,13 @@ class SharedPreferenceProvider(private val preferences: SharedPreferences) : Sto
     }
 
     override fun getStringSet(key: String, defaultValue: Set<String>): Set<String> {
-        return preferences.getStringSet(key, defaultValue)!!
+        // See getString: avoid !! so a type-mismatched persisted key degrades to the
+        // default instead of crashing the reader.
+        return try {
+            preferences.getStringSet(key, defaultValue) ?: defaultValue
+        } catch (_: ClassCastException) {
+            defaultValue
+        }
     }
 
     override fun setStringSet(key: String, value: Set<String>) {

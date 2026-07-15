@@ -1,9 +1,0 @@
-{
-  "run_id": "20260710-clash-full-remediation",
-  "governance_scope": "root",
-  "runtime": "vibe",
-  "mode": "interactive_governed",
-  "terminal_stage": "phase_cleanup",
-  "single_requirement_surface": true,
-  "single_plan_surface": true
-}
