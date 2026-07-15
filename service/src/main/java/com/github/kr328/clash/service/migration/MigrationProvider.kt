@@ -10,7 +10,9 @@ import android.os.ParcelFileDescriptor
 import com.github.kr328.clash.common.constants.Migration
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.data.Database
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.io.File
 
 class MigrationProvider : ContentProvider() {
@@ -73,7 +75,18 @@ class MigrationProvider : ContentProvider() {
         // Ensure Room is ready before export.
         Database.database
         val file = bundleFile(ctx)
-        val ok = runBlocking { MigrationBundle.exportToZip(ctx, file) }
+        // query/openFile run on a binder thread from the calling process. Bound the
+        // synchronous export so a very large profile set cannot block the binder
+        // thread indefinitely (ANR); the caller sees a failed export instead of a hang.
+        val ok = try {
+            runBlocking {
+                withTimeout(EXPORT_TIMEOUT_MS) { MigrationBundle.exportToZip(ctx, file) }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w("MigrationProvider: export timed out", e)
+            file.delete()
+            false
+        }
         if (!ok || !file.isFile || file.length() <= 0L) {
             Log.w("MigrationProvider: export failed")
             return null
@@ -100,5 +113,8 @@ class MigrationProvider : ContentProvider() {
 
     companion object {
         private const val CODE_BUNDLE = 1
+
+        // Upper bound for the synchronous bundle export on a binder thread.
+        private const val EXPORT_TIMEOUT_MS = 20_000L
     }
 }

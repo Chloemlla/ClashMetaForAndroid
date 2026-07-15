@@ -2,6 +2,7 @@ package com.github.kr328.clash
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
@@ -24,6 +25,13 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
 
         val uri = intent.data ?: return finish()
         val url = uri.getQueryParameter("url") ?: return finish()
+
+        // Only accept http(s) subscription URLs from this exported deep-link entry point.
+        // Without a scheme allowlist, any app/web page could push a profile whose source is
+        // an arbitrary URL (e.g. file://), turning an untrusted caller into a local-file read
+        // vector once the profile is fetched.
+        val scheme = Uri.parse(url).scheme?.lowercase(Locale.getDefault())
+        if (scheme != "http" && scheme != "https") return finish()
 
         launch {
             val uuid = withProfile {

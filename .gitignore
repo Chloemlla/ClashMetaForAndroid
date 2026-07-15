@@ -71,3 +71,6 @@ fuck-my-shit-mountain/
 Install-CodexTrellis.ps1
 keystore_base64.txt
 lint/
+
+# Internal agent tooling session artifacts (not release content)
+outputs/

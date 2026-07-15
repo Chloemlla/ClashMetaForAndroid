@@ -1,6 +1,11 @@
 package com.github.kr328.clash.common.constants
 
 object Migration {
+    // Intentionally a fixed, non-${applicationId} permission name: the alpha and meta
+    // builds have different application IDs but must share ONE permission name so a
+    // same-signature sibling can be granted it. The signature protectionLevel plus the
+    // runtime checkSignatures() guard in MigrationProvider.enforceCaller are the actual
+    // trust controls; a hostile app pre-defining this name cannot pass the signature check.
     const val PERMISSION = "com.github.metacubex.clash.permission.MIGRATE_DATA"
     const val AUTHORITY_SUFFIX = ".migration"
     const val BUNDLE_PATH = "bundle"

@@ -27,7 +27,19 @@ class ProfileWorker : BaseService() {
     private val service: ProfileWorker
         get() = this
 
+    // Guards structural access to [jobs]. onStartCommand runs on the main thread while the
+    // drain loop below runs on a coroutine dispatcher; a plain ArrayList mutated from both
+    // can drop a scheduled update or corrupt its internal state.
+    private val jobsLock = Any()
     private val jobs = mutableListOf<Job>()
+
+    private fun addJob(job: Job) {
+        synchronized(jobsLock) { jobs.add(job) }
+    }
+
+    private fun nextJob(): Job? {
+        return synchronized(jobsLock) { jobs.removeFirstOrNull() }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -40,7 +52,7 @@ class ProfileWorker : BaseService() {
             delay(TimeUnit.SECONDS.toMillis(10))
 
             while (true) {
-                jobs.removeFirstOrNull()?.join() ?: break
+                nextJob()?.join() ?: break
             }
 
             stopSelf()
@@ -63,7 +75,7 @@ class ProfileWorker : BaseService() {
                         run(it)
                     }
 
-                    jobs.add(job)
+                    addJob(job)
                 }
             }
             Intents.ACTION_PROFILE_SCHEDULE_UPDATES -> {
@@ -73,7 +85,7 @@ class ProfileWorker : BaseService() {
                     delay(TimeUnit.SECONDS.toMillis(30))
                 }
 
-                jobs.add(job)
+                addJob(job)
             }
         }
 

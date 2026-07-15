@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<network-security-config xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="AcceptsUserCertificates">
-    <base-config>
+<!--
+  The app's own HTTPS traffic (subscription/provider fetches that may carry proxy
+  credentials) trusts only the system CA store. User-installed CAs are not trusted,
+  so a malicious CA profile cannot MITM the app's own network requests.
+  The bundled proxy core (mihomo) manages its own CA bundle independently and is
+  not governed by this configuration.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
 </network-security-config>

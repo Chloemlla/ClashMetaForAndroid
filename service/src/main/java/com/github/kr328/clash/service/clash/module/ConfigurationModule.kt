@@ -33,8 +33,11 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
         while (true) {
             val changed: UUID? = select {
                 broadcasts.onReceive {
+                    // Parse defensively: a malformed/missing UUID extra must not throw
+                    // here (outside the try below), which would tear down the module
+                    // coroutine and stop the tunnel. A null degrades to a plain reload.
                     if (it.action == Intents.ACTION_PROFILE_CHANGED)
-                        UUID.fromString(it.getStringExtra(Intents.EXTRA_UUID))
+                        runCatching { UUID.fromString(it.getStringExtra(Intents.EXTRA_UUID)) }.getOrNull()
                     else
                         null
                 }
