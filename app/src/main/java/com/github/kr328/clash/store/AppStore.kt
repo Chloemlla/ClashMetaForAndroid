@@ -26,6 +26,11 @@ class AppStore(context: Context) {
         defaultValue = 0,
     )
 
+    var openSourceNoticeAccepted: Boolean by store.boolean(
+        key = "open_source_notice_accepted",
+        defaultValue = false,
+    )
+
     companion object {
         private const val FILE_NAME = "app"
     }

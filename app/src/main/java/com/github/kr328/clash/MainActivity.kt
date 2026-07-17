@@ -56,6 +56,8 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
 
     override suspend fun main() {
+        ensureOpenSourceNoticeAccepted()
+
         val design = MainDesign(this)
 
         setContentDesign(design)
@@ -143,6 +145,21 @@ class MainActivity : BaseActivity<MainDesign>() {
             )
         }
     }
+
+    private suspend fun ensureOpenSourceNoticeAccepted() {
+        val store = AppStore(this)
+        if (store.openSourceNoticeAccepted) return
+
+        startActivityForResult(
+            ActivityResultContracts.StartActivityForResult(),
+            OpenSourceNoticeActivity::class.intent,
+        )
+
+        if (!AppStore(this).openSourceNoticeAccepted) {
+            finishAffinity()
+        }
+    }
+
     private suspend fun MainDesign.fetch() {
         setClashRunning(clashRunning)
 

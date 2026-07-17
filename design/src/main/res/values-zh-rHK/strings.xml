@@ -347,4 +347,35 @@
     <string name="logs_empty_tips">啟動 Clash 日誌以擷取執行時資訊。已儲存的工作階段會顯示在這裡。</string>
 
     <string name="alpha_migration_success">已從 Alpha 匯入 %1$d 個設定檔</string>
+
+    <string name="open_source_notice_title">開源聲明</string>
+    <string name="open_source_notice_intro"><![CDATA[本應用是 <strong>Clash Meta</strong> 的<strong>開源</strong>用戶端。源代碼公開，可在專案協議下檢查、編譯與再分發。]]></string>
+    <string name="open_source_notice_free_forever"><![CDATA[本專案<strong>永久免費</strong>。不存在官方付費解鎖、訂閱牆或商業收費版本。]]></string>
+    <string name="open_source_notice_scam_warning"><![CDATA[<strong>請謹防受騙</strong>：任何售賣本應用、收取「啟動費」，或聲稱提供本免費用戶端獨家付費支援的行為，均未經授權。請優先使用官方 GitHub Releases 或 F-Droid。]]></string>
+    <string name="open_source_project_license">本專案開源協議</string>
+    <string name="open_source_project_license_title">GNU 通用公共許可證 第 3 版</string>
+    <string name="open_source_project_license_summary">本專案採用 GPL-3.0 協議。點按可查看完整協議文本。</string>
+    <string name="open_source_repository">源代碼地址</string>
+    <string name="open_source_repository_fork_title">本分支（Chloemlla）</string>
+    <string name="open_source_repository_upstream_title">上游 CMFA（MetaCubeX）</string>
+    <string name="open_source_third_party">第三方依賴鳴謝</string>
+    <string name="open_source_dependency_author">作者：%1$s</string>
+    <string name="open_source_dependency_license">開源協議：%1$s</string>
+    <string name="open_source_notice_action">繼續</string>
+    <string name="open_source_notice_continue">我已了解</string>
+    <string name="open_source_notice_continue_summary">繼續進入應用。此頁面僅在首次安裝打開時顯示。</string>
+    <string name="open_source_dep_clash_meta_core">提供通道、規則與協議處理的核心代理引擎。</string>
+    <string name="open_source_dep_cmfa_upstream">社群版 Clash Meta Android 介面與服務殼層。</string>
+    <string name="open_source_dep_cfa">原始 Clash for Android 架構與設計基礎。</string>
+    <string name="open_source_dep_androidx">用於介面、Activity 與核心 API 的 AndroidX 平台庫。</string>
+    <string name="open_source_dep_material">應用介面使用的 Material Design 組件。</string>
+    <string name="open_source_dep_kotlin">Kotlin 運行時與協程並行能力。</string>
+    <string name="open_source_dep_serialization">配置與 IPC 模型使用的 JSON 序列化能力。</string>
+    <string name="open_source_dep_room">配置檔及相關服務資料的本機持久化。</string>
+    <string name="open_source_dep_kaidl">用於進程間介面的 AIDL / KSP 代碼生成。</string>
+    <string name="open_source_dep_rikkax">跨進程偏好設定存取輔助庫。</string>
+    <string name="open_source_dep_quickie">匯入配置時使用的二維碼掃描組件。</string>
+    <string name="open_source_dep_gvisor">核心整合的用戶態網絡堆棧選項。</string>
+    <string name="open_source_dep_meta_rules">核心使用的 geoip / geosite / ASN 規則資源。</string>
+    <string name="open_source_dep_lumen_crash">本分支使用的崩潰捕獲與本機崩潰報告介面。</string>
 </resources>
