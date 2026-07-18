@@ -287,10 +287,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: ./gradlew --no-daemon app:assembleAlphaRelease
 
+      - name: Prepare Alpha migration APK aliases
+        run: |
+          source_dir=app/build/outputs/apk/alpha/release
+          migration_dir=app/build/outputs/apk/alpha/migration-release
+          mkdir -p "$migration_dir"
+          for apk in "$source_dir"/*.apk; do
+            name=$(basename "$apk")
+            migration_name=${name/-alpha-/-alpha-migration-}
+            test "$migration_name" != "$name"
+            cp "$apk" "$migration_dir/$migration_name"
+          done
+
       - name: Generate APK checksums
         run: |
           cd app/build/outputs/apk/alpha/release
           sha256sum ./*.apk > SHA256SUMS
+          cd ../migration-release
+          sha256sum ./*.apk > SHA256SUMS-migration
 
       - name: Publish Alpha pre-release
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
@@ -305,6 +319,8 @@ jobs:
           files: |
             app/build/outputs/apk/alpha/release/*.apk
             app/build/outputs/apk/alpha/release/SHA256SUMS
+            app/build/outputs/apk/alpha/migration-release/*.apk
+            app/build/outputs/apk/alpha/migration-release/SHA256SUMS-migration
 
       - name: Remove signing credentials
         if: always()
