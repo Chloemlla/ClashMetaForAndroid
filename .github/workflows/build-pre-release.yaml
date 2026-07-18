@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: read
@@ -188,7 +192,7 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon app:assembleMetaRelease
+        run: ./gradlew app:assembleMetaRelease
 
       - name: Generate APK checksums
         run: |
@@ -285,7 +289,7 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon app:assembleAlphaRelease
+        run: ./gradlew app:assembleAlphaRelease
 
       - name: Prepare Alpha migration APK aliases
         run: |

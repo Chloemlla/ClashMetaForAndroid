@@ -7,7 +7,8 @@ from pathlib import Path
 
 def main(argv: list[str]) -> int:
     tasks = argv[1:] or ["lintAlphaRelease"]
-    command = ["./gradlew", "--no-daemon", "--stacktrace", "--info", *tasks]
+    # Reuse the Gradle daemon within a job (setup-gradle caches it). Avoid --info noise unless debugging.
+    command = ["./gradlew", "--stacktrace", *tasks]
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,

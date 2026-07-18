@@ -62,9 +62,8 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        design.fetch()
-        maybeShowAlphaMigrationToast(design)
-
+        // Initial state is driven by Event.ActivityStart (posted from onStart). An extra
+        // explicit fetch() here races that event and doubles Binder/core queries on cold start.
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
         while (isActive) {
@@ -120,7 +119,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                             design.showAbout(queryAppVersionName())
                     }
                 }
-                if (clashRunning) {
+                // Match Profiles/Providers: do not poll traffic while MainActivity is stopped.
+                if (clashRunning && activityStarted) {
                     ticker.onReceive {
                         design.fetchTraffic()
                     }
