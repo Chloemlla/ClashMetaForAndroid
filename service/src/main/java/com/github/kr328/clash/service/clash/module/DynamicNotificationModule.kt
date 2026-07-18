@@ -5,7 +5,6 @@ import android.app.Service
 import android.content.Intent
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.compat.getColorCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
@@ -15,6 +14,7 @@ import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.R
 import com.github.kr328.clash.service.StatusProvider
+import com.github.kr328.clash.service.util.notifyIfAllowed
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
@@ -39,7 +39,6 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
             )
         )
 
-    private val notificationManager = NotificationManagerCompat.from(service)
     private var lastSnapshot: LiveTrafficSnapshot? = null
     private var lastTitle: String? = null
 
@@ -64,7 +63,7 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
             .applyClashLiveUpdate(shortCriticalText = snapshot.chipText)
             .build()
 
-        notificationManager.notify(R.id.nf_clash_status, notification)
+        service.notifyIfAllowed(R.id.nf_clash_status, notification)
     }
 
     override suspend fun run() = coroutineScope {

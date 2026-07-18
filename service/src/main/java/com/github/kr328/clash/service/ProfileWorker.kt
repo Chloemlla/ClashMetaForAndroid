@@ -17,6 +17,7 @@ import com.github.kr328.clash.common.id.UndefinedIds
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.data.ImportedDao
+import com.github.kr328.clash.service.util.notifyIfAllowed
 import com.github.kr328.clash.service.util.sendProfileUpdateCompleted
 import com.github.kr328.clash.service.util.sendProfileUpdateFailed
 import kotlinx.coroutines.*
@@ -153,8 +154,7 @@ class ProfileWorker : BaseService() {
             .setGroup(STATUS_CHANNEL)
             .build()
 
-        NotificationManagerCompat.from(applicationContext)
-            .notify(id, notification)
+        applicationContext.notifyIfAllowed(id, notification)
         try {
             block()
         } finally {
@@ -190,8 +190,7 @@ class ProfileWorker : BaseService() {
             .setContentText(getString(R.string.format_update_complete, name))
             .build()
 
-        NotificationManagerCompat.from(this)
-            .notify(id, notification)
+        notifyIfAllowed(id, notification)
 
         sendProfileUpdateCompleted(uuid)
     }
@@ -207,8 +206,7 @@ class ProfileWorker : BaseService() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .build()
 
-        NotificationManagerCompat.from(this)
-            .notify(id, notification)
+        notifyIfAllowed(id, notification)
 
         sendProfileUpdateFailed(uuid, reason)
     }
