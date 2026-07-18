@@ -11,8 +11,12 @@ interface IClashManager {
     fun queryTrafficNow(): Long
     fun queryProxyGroupNames(excludeNotSelectable: Boolean): List<String>
     fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup
+    /** Selected proxy name only (no full member list). */
+    fun queryProxyGroupNow(name: String): String
     fun queryConfiguration(): UiConfiguration
     fun queryProviders(): ProviderList
+    /** True when any non-compatible provider is loaded. */
+    fun hasProviders(): Boolean
 
     fun patchSelector(group: String, name: String): Boolean
 

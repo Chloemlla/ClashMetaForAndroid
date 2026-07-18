@@ -96,6 +96,19 @@ func queryProviders() *C.char {
 	return marshalJson(tunnel.QueryProviders())
 }
 
+//export queryGroupNow
+func queryGroupNow(name C.c_string) *C.char {
+	return marshalString(tunnel.QueryProxyGroupNow(C.GoString(name)))
+}
+
+//export hasProviders
+func hasProviders() C.int {
+	if tunnel.HasProviders() {
+		return 1
+	}
+	return 0
+}
+
 //export updateProvider
 func updateProvider(completable unsafe.Pointer, pType C.c_string, name C.c_string) {
 	go func(pType, name string) {

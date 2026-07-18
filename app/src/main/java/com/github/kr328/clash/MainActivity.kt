@@ -18,7 +18,6 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.bridge.*
-import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.store.AppStore
@@ -163,15 +162,11 @@ class MainActivity : BaseActivity<MainDesign>() {
     private suspend fun MainDesign.fetch() {
         setClashRunning(clashRunning)
 
-        val state = withClash {
-            queryTunnelState()
-        }
-        val providers = withClash {
-            queryProviders()
-        }
-
-        val selectedNode = if (clashRunning) {
-            withClash {
+        // One binder hop for mode + hasProviders + selected node name (no full proxy/provider lists).
+        withClash {
+            val state = queryTunnelState()
+            val hasProviders = hasProviders()
+            val selectedNode = if (clashRunning) {
                 val groups = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
                 val preferred = uiStore.proxyLastGroup
                 val groupName = when {
@@ -179,14 +174,16 @@ class MainActivity : BaseActivity<MainDesign>() {
                     groups.isNotEmpty() -> groups.first()
                     else -> null
                 }
-                groupName?.let { queryProxyGroup(it, ProxySort.Default).now }?.takeIf { it.isNotBlank() }
+                groupName
+                    ?.let { queryProxyGroupNow(it) }
+                    ?.takeIf { it.isNotBlank() }
+            } else {
+                null
             }
-        } else {
-            null
-        }
 
-        setProxySummary(state.mode, selectedNode)
-        setHasProviders(providers.isNotEmpty())
+            setProxySummary(state.mode, selectedNode)
+            setHasProviders(hasProviders)
+        }
 
         withProfile {
             setProfileName(queryActive()?.name)

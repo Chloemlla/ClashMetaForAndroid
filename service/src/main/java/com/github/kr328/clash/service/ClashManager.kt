@@ -38,12 +38,20 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.queryGroup(name, proxySort)
     }
 
+    override fun queryProxyGroupNow(name: String): String {
+        return Clash.queryGroupNow(name)
+    }
+
     override fun queryConfiguration(): UiConfiguration {
         return Clash.queryConfiguration()
     }
 
     override fun queryProviders(): ProviderList {
         return ProviderList(Clash.queryProviders())
+    }
+
+    override fun hasProviders(): Boolean {
+        return Clash.hasProviders()
     }
 
     override fun queryOverride(slot: Clash.OverrideSlot): ConfigurationOverride {

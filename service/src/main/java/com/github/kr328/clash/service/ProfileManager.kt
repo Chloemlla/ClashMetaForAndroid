@@ -2,6 +2,7 @@ package com.github.kr328.clash.service
 
 import android.content.Context
 import com.github.kr328.clash.service.data.Database
+import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.Pending
 import com.github.kr328.clash.service.data.PendingDao
@@ -9,10 +10,10 @@ import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IFetchObserver
 import com.github.kr328.clash.service.remote.IProfileManager
 import com.github.kr328.clash.service.store.ServiceStore
-import com.github.kr328.clash.service.util.directoryLastModified
 import com.github.kr328.clash.service.util.generateProfileUUID
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
+import com.github.kr328.clash.service.util.profileContentModified
 import com.github.kr328.clash.service.util.sendProfileChanged
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -154,11 +155,24 @@ class ProfileManager(private val context: Context) : IProfileManager,
     }
 
     override suspend fun queryAll(): List<Profile> {
-        val uuids = withContext(Dispatchers.IO) {
-            (ImportedDao().queryAllUUIDs() + PendingDao().queryAllUUIDs()).distinct()
-        }
+        return withContext(Dispatchers.IO) {
+            val imported = ImportedDao().queryAll()
+            val pending = PendingDao().queryAll()
+            val active = store.activeProfile
 
-        return uuids.mapNotNull { resolveProfile(it) }
+            val pendingByUuid = pending.associateBy { it.uuid }
+            val importedByUuid = imported.associateBy { it.uuid }
+            val uuids = (importedByUuid.keys + pendingByUuid.keys)
+
+            uuids.mapNotNull { uuid ->
+                buildProfile(
+                    uuid = uuid,
+                    imported = importedByUuid[uuid],
+                    pending = pendingByUuid[uuid],
+                    active = active,
+                )
+            }
+        }
     }
 
     override suspend fun queryActive(): Profile? {
@@ -178,8 +192,15 @@ class ProfileManager(private val context: Context) : IProfileManager,
     private suspend fun resolveProfile(uuid: UUID): Profile? {
         val imported = ImportedDao().queryByUUID(uuid)
         val pending = PendingDao().queryByUUID(uuid)
+        return buildProfile(uuid, imported, pending, store.activeProfile)
+    }
 
-        val active = store.activeProfile
+    private fun buildProfile(
+        uuid: UUID,
+        imported: Imported?,
+        pending: Pending?,
+        active: UUID?,
+    ): Profile? {
         val name = pending?.name ?: imported?.name ?: return null
         val type = pending?.type ?: imported?.type ?: return null
         val source = pending?.source ?: imported?.source ?: return null
@@ -208,8 +229,9 @@ class ProfileManager(private val context: Context) : IProfileManager,
     }
 
     private fun resolveUpdatedAt(uuid: UUID): Long {
-        return context.pendingDir.resolve(uuid.toString()).directoryLastModified
-            ?: context.importedDir.resolve(uuid.toString()).directoryLastModified
+        // Prefer config.yaml mtime over a full recursive walk of provider trees.
+        return context.pendingDir.resolve(uuid.toString()).profileContentModified
+            ?: context.importedDir.resolve(uuid.toString()).profileContentModified
             ?: -1
     }
 

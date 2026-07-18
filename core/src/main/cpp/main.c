@@ -381,14 +381,43 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryConfiguration(JNIEnv *
     return new_string(response);
 }
 
-JNIEXPORT void JNICALL
+JNIEXPORT jlong JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeSubscribeLogcat(JNIEnv *env, jobject thiz,
                                                                      jobject callback) {
     TRACE_METHOD();
 
     jobject _callback = new_global(callback);
 
-    subscribeLogcat(_callback);
+    return (jlong) subscribeLogcat(_callback);
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeUnsubscribeLogcat(JNIEnv *env, jobject thiz,
+                                                                        jlong token) {
+    TRACE_METHOD();
+
+    unsubscribeLogcat((int64_t) token);
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroupNow(JNIEnv *env, jobject thiz,
+                                                                    jstring name) {
+    TRACE_METHOD();
+
+    scoped_string _name = get_string(name);
+    scoped_string response = queryGroupNow(_name);
+
+    if (response == NULL)
+        return NULL;
+
+    return new_string(response);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeHasProviders(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    return (jboolean) hasProviders();
 }
 
 
@@ -488,12 +517,17 @@ static int call_logcat_interface_received_impl(void *callback, const char *paylo
 
     ATTACH_JNI();
 
-    (*env)->CallVoidMethod(env,
-                           (jobject) callback,
-                           (jmethodID) m_logcat_interface_received,
-                           (jstring) new_string(payload));
+    // Boolean false (or a thrown exception) tells Go to stop the subscriber.
+    jboolean accepted = (*env)->CallBooleanMethod(env,
+                                                  (jobject) callback,
+                                                  (jmethodID) m_logcat_interface_received,
+                                                  (jstring) new_string(payload));
 
     if (jni_catch_exception(env)) {
+        return 1;
+    }
+
+    if (!accepted) {
         return 1;
     }
 
@@ -573,7 +607,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
     m_completable_complete_exceptionally = find_method(c_completable, "completeExceptionally",
                                                        "(Ljava/lang/Throwable;)Z");
     m_logcat_interface_received = find_method(c_logcat_interface, "received",
-                                              "(Ljava/lang/String;)V");
+                                              "(Ljava/lang/String;)Z");
     m_clash_exception = find_method(_c_clash_exception, "<init>",
                                     "(Ljava/lang/String;)V");
     m_get_message = find_method(c_throwable, "getMessage",

@@ -119,6 +119,16 @@ object Clash {
             ?: ProxyGroup("Unknown", emptyList(), "")
     }
 
+    /** Selected proxy name only — skips full group materialization / subtitle regex. */
+    fun queryGroupNow(name: String): String {
+        return Bridge.nativeQueryGroupNow(name).orEmpty()
+    }
+
+    /** True when any non-compatible rule/proxy provider is loaded. */
+    fun hasProviders(): Boolean {
+        return Bridge.nativeHasProviders()
+    }
+
     fun healthCheck(name: String): CompletableDeferred<Unit> {
         return CompletableDeferred<Unit>().apply {
             Bridge.nativeHealthCheck(this, name)
@@ -172,12 +182,10 @@ object Clash {
     }
 
     fun queryProviders(): List<Provider> {
-        val providers =
-            Json.Default.decodeFromString(JsonArray.serializer(), Bridge.nativeQueryProviders())
-
-        return List(providers.size) {
-            Json.Default.decodeFromJsonElement(Provider.serializer(), providers[it])
-        }
+        return Json.Default.decodeFromString(
+            ListSerializer(Provider.serializer()),
+            Bridge.nativeQueryProviders(),
+        )
     }
 
     fun updateProvider(type: Provider.Type, name: String): CompletableDeferred<Unit> {
@@ -219,13 +227,19 @@ object Clash {
     }
 
     fun subscribeLogcat(): ReceiveChannel<LogMessage> {
-        return Channel<LogMessage>(32).apply {
-            Bridge.nativeSubscribeLogcat(object : LogcatInterface {
-                override fun received(jsonPayload: String) {
-                    trySend(Json.decodeFromString(LogMessage.serializer(), jsonPayload))
-                }
-            })
+        val channel = Channel<LogMessage>(32)
+        val token = Bridge.nativeSubscribeLogcat(object : LogcatInterface {
+            override fun received(jsonPayload: String): Boolean {
+                // false stops the native subscriber immediately (no exception abuse).
+                return channel.trySend(
+                    Json.decodeFromString(LogMessage.serializer(), jsonPayload)
+                ).isSuccess
+            }
+        })
+        channel.invokeOnClose {
+            Bridge.nativeUnsubscribeLogcat(token)
         }
+        return channel
     }
 
     fun setAgeSecretKey(key: String?) {

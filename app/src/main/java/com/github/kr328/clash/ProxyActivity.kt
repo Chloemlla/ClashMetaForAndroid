@@ -161,7 +161,9 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
     }
 
     private companion object {
-        const val URL_TEST_REFRESH_INTERVAL_MILLIS = 400L
+        // Intermediate full-group polls during URL test are expensive (JSON/JNI/Binder).
+        // 1s is enough for live delay feedback; a final full reload still runs on completion.
+        const val URL_TEST_REFRESH_INTERVAL_MILLIS = 1000L
     }
 }
 
