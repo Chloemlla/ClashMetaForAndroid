@@ -162,27 +162,15 @@ class MainActivity : BaseActivity<MainDesign>() {
     private suspend fun MainDesign.fetch() {
         setClashRunning(clashRunning)
 
-        // One binder hop for mode + hasProviders + selected node name (no full proxy/provider lists).
+        // Single core/JSON summary: mode + hasProviders + selected node (no full lists).
         withClash {
-            val state = queryTunnelState()
-            val hasProviders = hasProviders()
-            val selectedNode = if (clashRunning) {
-                val groups = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
-                val preferred = uiStore.proxyLastGroup
-                val groupName = when {
-                    preferred.isNotBlank() && preferred in groups -> preferred
-                    groups.isNotEmpty() -> groups.first()
-                    else -> null
-                }
-                groupName
-                    ?.let { queryProxyGroupNow(it) }
-                    ?.takeIf { it.isNotBlank() }
-            } else {
-                null
-            }
-
-            setProxySummary(state.mode, selectedNode)
-            setHasProviders(hasProviders)
+            val summary = queryDashboardSummary(
+                preferred = uiStore.proxyLastGroup,
+                excludeNotSelectable = uiStore.proxyExcludeNotSelectable,
+            )
+            val selected = summary.selectedNow.takeIf { clashRunning && it.isNotBlank() }
+            setProxySummary(summary.mode, selected)
+            setHasProviders(summary.hasProviders)
         }
 
         withProfile {

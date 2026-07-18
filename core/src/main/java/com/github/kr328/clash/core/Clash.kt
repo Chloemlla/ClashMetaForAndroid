@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -124,9 +125,28 @@ object Clash {
         return Bridge.nativeQueryGroupNow(name).orEmpty()
     }
 
+    /** name → last delay ms; used during URL-test intermediate polls. */
+    fun queryGroupDelays(name: String): Map<String, Int> {
+        return Json.Default.decodeFromString(
+            MapSerializer(String.serializer(), Int.serializer()),
+            Bridge.nativeQueryGroupDelays(name),
+        )
+    }
+
     /** True when any non-compatible rule/proxy provider is loaded. */
     fun hasProviders(): Boolean {
         return Bridge.nativeHasProviders()
+    }
+
+    /**
+     * Compact main-screen snapshot: mode + hasProviders + selected node for [preferred] group
+     * (or first selectable group when preferred is blank/missing).
+     */
+    fun queryDashboardSummary(preferred: String, excludeNotSelectable: Boolean): DashboardSummary {
+        return Json.Default.decodeFromString(
+            DashboardSummary.serializer(),
+            Bridge.nativeQueryDashboardSummary(preferred, excludeNotSelectable),
+        )
     }
 
     fun healthCheck(name: String): CompletableDeferred<Unit> {

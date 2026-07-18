@@ -107,6 +107,11 @@ subprojects {
             packagingOptions {
                 resources {
                     excludes.add("DebugProbesKt.bin")
+                    excludes.add("META-INF/*.kotlin_module")
+                    excludes.add("META-INF/AL2.0")
+                    excludes.add("META-INF/LGPL2.1")
+                    excludes.add("META-INF/LICENSE*")
+                    excludes.add("META-INF/NOTICE*")
                 }
             }
         }
@@ -252,7 +257,9 @@ subprojects {
             splits {
                 abi {
                     isEnable = true
-                    isUniversalApk = true
+                    // Per-ABI APKs only; universal fat APK roughly triples native size for
+                    // side-load users who pick the wrong artifact. CI still publishes all ABIs.
+                    isUniversalApk = false
                     reset()
                     include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
                 }

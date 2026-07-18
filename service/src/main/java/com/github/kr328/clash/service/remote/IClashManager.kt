@@ -13,10 +13,14 @@ interface IClashManager {
     fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup
     /** Selected proxy name only (no full member list). */
     fun queryProxyGroupNow(name: String): String
+    /** name → last delay ms; intermediate URL-test polls. */
+    fun queryProxyGroupDelays(name: String): Map<String, Int>
     fun queryConfiguration(): UiConfiguration
     fun queryProviders(): ProviderList
     /** True when any non-compatible provider is loaded. */
     fun hasProviders(): Boolean
+    /** Compact main-screen mode + providers + selected node. */
+    fun queryDashboardSummary(preferred: String, excludeNotSelectable: Boolean): DashboardSummary
 
     fun patchSelector(group: String, name: String): Boolean
 

@@ -413,11 +413,34 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroupNow(JNIEnv *env, 
     return new_string(response);
 }
 
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroupDelays(JNIEnv *env, jobject thiz,
+                                                                       jstring name) {
+    TRACE_METHOD();
+
+    scoped_string _name = get_string(name);
+    scoped_string response = queryGroupDelays(_name);
+
+    return new_string(response);
+}
+
 JNIEXPORT jboolean JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeHasProviders(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     return (jboolean) hasProviders();
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryDashboardSummary(JNIEnv *env, jobject thiz,
+                                                                            jstring preferred,
+                                                                            jboolean exclude_not_selectable) {
+    TRACE_METHOD();
+
+    scoped_string _preferred = get_string(preferred);
+    scoped_string response = queryDashboardSummary(_preferred, (int) exclude_not_selectable);
+
+    return new_string(response);
 }
 
 

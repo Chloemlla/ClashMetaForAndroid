@@ -115,26 +115,35 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
                         }
                         is ProxyDesign.Request.UrlTest -> {
                             launch {
+                                val groupName = names[it.index]
+                                // Ensure the page has a full dataset before delay-only patches.
+                                reloadGroup(
+                                    it.index,
+                                    animateDelay = false,
+                                    completeUrlTest = false,
+                                    preserveOrder = false,
+                                )
+
                                 val refreshJob = launch {
                                     while (isActive) {
                                         delay(URL_TEST_REFRESH_INTERVAL_MILLIS)
 
-                                        reloadGroup(
-                                            it.index,
-                                            animateDelay = true,
-                                            completeUrlTest = false,
-                                            preserveOrder = true,
-                                        )
+                                        // Intermediate polls: delay map only (no full group JSON).
+                                        val delays = reloadLock.withPermit {
+                                            withClash { queryProxyGroupDelays(groupName) }
+                                        }
+                                        design.patchDelays(it.index, delays, animateDelay = true)
                                     }
                                 }
 
                                 try {
                                     withClash {
-                                        healthCheck(names[it.index])
+                                        healthCheck(groupName)
                                     }
                                 } finally {
                                     refreshJob.cancelAndJoin()
 
+                                    // Final full reload for sort/selection consistency.
                                     reloadGroup(
                                         it.index,
                                         animateDelay = true,

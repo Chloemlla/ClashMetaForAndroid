@@ -91,6 +91,78 @@ class ProxyPageAdapter(
         )
     }
 
+    /**
+     * Update delay fields only for an already-loaded group page.
+     * Keeps order, titles, and selection; notifies only changed rows.
+     */
+    suspend fun patchDelays(
+        position: Int,
+        delays: Map<String, Int>,
+        animateDelay: Boolean,
+    ) {
+        if (position !in allProxies.indices || delays.isEmpty()) return
+
+        val previous = allProxies[position]
+        if (previous.isEmpty()) return
+
+        val patched = withContext(Dispatchers.Default) {
+            previous.map { proxy ->
+                val nextDelay = delays[proxy.name]
+                if (nextDelay != null && nextDelay != proxy.delay) {
+                    proxy.copy(delay = nextDelay)
+                } else {
+                    proxy
+                }
+            }
+        }
+
+        allProxies[position] = patched
+
+        val adapter = adapters[position]
+        val keyword = keywords[position]
+
+        val changedDisplayIndices = withContext(Dispatchers.Default) {
+            val display = patched.filterByKeyword(keyword)
+            val oldDisplay = adapter.states.map { it.proxy }
+            if (oldDisplay.size != display.size) {
+                // Keyword filter view drifted; fall back to full rebind of display list.
+                return@withContext display.indices.toList()
+            }
+            oldDisplay.indices.filter { index ->
+                oldDisplay[index].name == display[index].name &&
+                    oldDisplay[index].delay != display[index].delay
+            }
+        }
+
+        withContext(Dispatchers.Main) {
+            val display = patched.filterByKeyword(keyword)
+            if (adapter.states.size != display.size) {
+                // Structural mismatch — rebuild states for this page without binder round-trip.
+                val parentState = parents[position]
+                val links = linkMaps[position]
+                val oldByName = adapter.states.associateBy { it.proxy.name }
+                adapter.states = display.map { proxy ->
+                    oldByName[proxy.name]
+                        ?.takeIf { it.proxy.isGroup == proxy.isGroup }
+                        ?.apply { updateProxy(proxy, animateDelay) }
+                        ?: ProxyViewState(
+                            config,
+                            proxy,
+                            parentState,
+                            if (proxy.isGroup) links[proxy.name] else null,
+                        )
+                }
+                adapter.notifyDataSetChanged()
+                return@withContext
+            }
+
+            changedDisplayIndices.forEach { index ->
+                adapter.states[index].updateProxy(display[index], animateDelay)
+                adapter.notifyItemChanged(index, ProxyAdapter.PAYLOAD_PROXY)
+            }
+        }
+    }
+
     suspend fun setKeyword(position: Int, keyword: String) {
         val normalized = keyword.trim()
         if (keywords[position] == normalized) return

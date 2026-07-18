@@ -101,12 +101,22 @@ func queryGroupNow(name C.c_string) *C.char {
 	return marshalString(tunnel.QueryProxyGroupNow(C.GoString(name)))
 }
 
+//export queryGroupDelays
+func queryGroupDelays(name C.c_string) *C.char {
+	return marshalJson(tunnel.QueryProxyDelays(C.GoString(name)))
+}
+
 //export hasProviders
 func hasProviders() C.int {
 	if tunnel.HasProviders() {
 		return 1
 	}
 	return 0
+}
+
+//export queryDashboardSummary
+func queryDashboardSummary(preferred C.c_string, excludeNotSelectable C.int) *C.char {
+	return marshalJson(tunnel.QueryDashboardSummary(C.GoString(preferred), excludeNotSelectable != 0))
 }
 
 //export updateProvider

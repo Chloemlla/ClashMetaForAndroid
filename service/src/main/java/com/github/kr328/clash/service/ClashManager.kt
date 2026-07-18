@@ -42,6 +42,10 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.queryGroupNow(name)
     }
 
+    override fun queryProxyGroupDelays(name: String): Map<String, Int> {
+        return Clash.queryGroupDelays(name)
+    }
+
     override fun queryConfiguration(): UiConfiguration {
         return Clash.queryConfiguration()
     }
@@ -52,6 +56,13 @@ class ClashManager(private val context: Context) : IClashManager,
 
     override fun hasProviders(): Boolean {
         return Clash.hasProviders()
+    }
+
+    override fun queryDashboardSummary(
+        preferred: String,
+        excludeNotSelectable: Boolean,
+    ): DashboardSummary {
+        return Clash.queryDashboardSummary(preferred, excludeNotSelectable)
     }
 
     override fun queryOverride(slot: Clash.OverrideSlot): ConfigurationOverride {
