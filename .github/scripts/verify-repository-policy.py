@@ -117,14 +117,26 @@ require("keystore.file" in root_build, "release keystore path is not externally 
 release_workflow = (ROOT / ".github/workflows/build-release.yaml").read_text(encoding="utf-8")
 test_index = release_workflow.find("JVM unit tests")
 lint_index = release_workflow.find("Android Lint")
+prepare_index = release_workflow.find("Prepare release signing (GitHub secrets only)")
 build_index = release_workflow.find("Build signed release APKs")
-checksum_index = release_workflow.find("Generate APK checksums")
+# Stage step replaced the old "Generate APK checksums" name; accept either label.
+stage_index = release_workflow.find("Stage secret-signed APKs")
+if stage_index < 0:
+    stage_index = release_workflow.find("Generate APK checksums")
 push_index = release_workflow.find("Commit version and push verified tag")
 require(
-    0 <= test_index < lint_index < build_index < checksum_index < push_index,
+    0 <= test_index < lint_index < prepare_index < build_index < stage_index < push_index,
     "release test/lint/build/checksum/push order is unsafe",
 )
 require("cat signing.properties" not in release_workflow, "release workflow prints signing properties")
+require(
+    "prepare-signing.sh" in release_workflow,
+    "release workflow does not materialize signing from GitHub secrets",
+)
+require(
+    "stage-signed-apks.sh" in release_workflow,
+    "release workflow does not verify secret-keystore fingerprints before publish",
+)
 require(
     "verify-apk-signing.sh" not in release_workflow
     and "SIGNING_CERT_SHA256" not in release_workflow,
@@ -145,10 +157,23 @@ require(
 
 pre_release_workflow = (ROOT / ".github/workflows/build-pre-release.yaml").read_text(encoding="utf-8")
 require(
+    "prepare-signing.sh" in pre_release_workflow,
+    "pre-release workflow does not materialize signing from GitHub secrets",
+)
+require(
+    "stage-signed-apks.sh" in pre_release_workflow,
+    "pre-release workflow does not verify secret-keystore fingerprints before publish",
+)
+require(
+    pre_release_workflow.count("secrets.KEYSTORE_BASE64") >= 2,
+    "pre-release Meta/Alpha jobs do not both require KEYSTORE_BASE64",
+)
+require(
     "verify-apk-signing.sh" not in pre_release_workflow
     and "SIGNING_CERT_SHA256" not in pre_release_workflow,
     "pre-release workflow still requires SIGNING_CERT_SHA256 verification",
 )
+
 
 
 dimens = (ROOT / "design/src/main/res/values/dimens.xml").read_text(encoding="utf-8")
