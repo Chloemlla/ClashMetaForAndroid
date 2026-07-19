@@ -82,8 +82,12 @@ subprojects {
             resValue("string", "release_name", "v$versionName")
             resValue("integer", "release_code", "$versionCode")
 
-            ndk {
-                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            // App module uses splits.abi below; AGP rejects ndk.abiFilters when
+            // splits ABI filters are set. Libraries still need packaging filters.
+            if (!isApp) {
+                ndk {
+                    abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+                }
             }
 
             externalNativeBuild {
