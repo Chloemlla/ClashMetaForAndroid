@@ -164,7 +164,10 @@ jobs:
       - name: Generate APK checksums
         run: |
           cd app/build/outputs/apk/meta/release
-          sha256sum ./*.apk > SHA256SUMS
+          # ABI splits may place APKs under nested <abi>/ dirs.
+          mapfile -t apks < <(find . -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+          sha256sum "${apks[@]}" > SHA256SUMS
 
       - name: Commit version and push verified tag
         run: |
@@ -193,7 +196,7 @@ jobs:
           prerelease: false
           name: ClashMetaForAndroid ${{ env.CMFA_VERSION_NAME }}
           files: |
-            app/build/outputs/apk/meta/release/*.apk
+            app/build/outputs/apk/meta/release/**/*.apk
             app/build/outputs/apk/meta/release/SHA256SUMS
 
       - name: Remove signing credentials

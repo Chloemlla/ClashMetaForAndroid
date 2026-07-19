@@ -119,11 +119,18 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         # PR/debug validation does not need 4 ABIs + universal; arm64 covers primary devices.
-        run: ./gradlew app:assembleAlphaDebug -Pandroid.injected.build.abi=arm64-v8a
+        # ABI splits place per-ABI APKs under nested dirs (…/debug/<abi>/…), so do not rely on
+        # a flat …/debug/*.apk layout for upload.
+        run: |
+          ./gradlew app:assembleAlphaDebug -Pandroid.injected.build.abi=arm64-v8a
+          echo "Debug APK outputs:"
+          find app/build/outputs/apk/alpha/debug -type f -name '*.apk' -print
+          test -n "$(find app/build/outputs/apk/alpha/debug -type f -name '*.apk' -print -quit)"
 
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
           name: CMFA Debug APKs
-          path: app/build/outputs/apk/alpha/debug/*.apk
-          if-no-files-found: warn
+          # Nested ABI split dirs: app/build/outputs/apk/alpha/debug/**/*.apk
+          path: app/build/outputs/apk/alpha/debug/**/*.apk
+          if-no-files-found: error

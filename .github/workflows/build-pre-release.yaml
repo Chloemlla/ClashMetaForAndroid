@@ -197,7 +197,10 @@ jobs:
       - name: Generate APK checksums
         run: |
           cd app/build/outputs/apk/meta/release
-          sha256sum ./*.apk > SHA256SUMS
+          # ABI splits may place APKs under nested <abi>/ dirs.
+          mapfile -t apks < <(find . -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+          sha256sum "${apks[@]}" > SHA256SUMS
 
       - name: Publish Meta full release (latest)
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
@@ -210,7 +213,7 @@ jobs:
           prerelease: false
           name: ClashMetaForAndroid ${{ needs.Verify.outputs.version_name }} (${{ needs.Verify.outputs.short_hash }})
           files: |
-            app/build/outputs/apk/meta/release/*.apk
+            app/build/outputs/apk/meta/release/**/*.apk
             app/build/outputs/apk/meta/release/SHA256SUMS
 
       - name: Remove signing credentials
@@ -296,7 +299,10 @@ jobs:
           source_dir=app/build/outputs/apk/alpha/release
           migration_dir=app/build/outputs/apk/alpha/migration-release
           mkdir -p "$migration_dir"
-          for apk in "$source_dir"/*.apk; do
+          # ABI splits may place APKs under nested <abi>/ dirs.
+          mapfile -t apks < <(find "$source_dir" -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+          for apk in "${apks[@]}"; do
             name=$(basename "$apk")
             migration_name=${name/-alpha-/-alpha-migration-}
             test "$migration_name" != "$name"
@@ -306,9 +312,13 @@ jobs:
       - name: Generate APK checksums
         run: |
           cd app/build/outputs/apk/alpha/release
-          sha256sum ./*.apk > SHA256SUMS
+          mapfile -t apks < <(find . -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+          sha256sum "${apks[@]}" > SHA256SUMS
           cd ../migration-release
-          sha256sum ./*.apk > SHA256SUMS-migration
+          mapfile -t migration_apks < <(find . -type f -name '*.apk' | sort)
+          test "${#migration_apks[@]}" -gt 0
+          sha256sum "${migration_apks[@]}" > SHA256SUMS-migration
 
       - name: Publish Alpha pre-release
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
@@ -321,9 +331,9 @@ jobs:
           prerelease: true
           name: ClashMetaForAndroid Alpha ${{ needs.Verify.outputs.version_name }}-${{ needs.Verify.outputs.short_hash }}
           files: |
-            app/build/outputs/apk/alpha/release/*.apk
+            app/build/outputs/apk/alpha/release/**/*.apk
             app/build/outputs/apk/alpha/release/SHA256SUMS
-            app/build/outputs/apk/alpha/migration-release/*.apk
+            app/build/outputs/apk/alpha/migration-release/**/*.apk
             app/build/outputs/apk/alpha/migration-release/SHA256SUMS-migration
 
       - name: Remove signing credentials
