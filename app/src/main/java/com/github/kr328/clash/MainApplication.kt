@@ -18,6 +18,7 @@ import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.clashDir
 import java.io.File
 import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.github.kr328.clash.design.R as DesignR
@@ -41,11 +42,14 @@ class MainApplication : Application() {
         Log.d("Process $processName started")
         recordBreadcrumbSafe("Application.onCreate process=$processName")
 
-        if (processName == packageName) {
-            // Geo assets are consumed by the core, which only runs in the main process.
-            // Extracting them here (instead of unconditionally for every process) avoids
-            // duplicate main-thread I/O in the :background process on every launch.
+        // Geo assets are large; never copy them on the main thread. Both the UI process
+        // and :background may need them (core/VPN runs in :background), so extract is
+        // idempotent and cross-process locked via a lock file.
+        Global.launch(Dispatchers.IO) {
             extractGeoFiles()
+        }
+
+        if (processName == packageName) {
             maybeMigrateFromAlpha()
             Remote.launch()
         } else {
@@ -89,17 +93,22 @@ class MainApplication : Application() {
     private fun extractGeoFiles() {
         clashDir.mkdirs()
 
-        val updateDate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getPackageInfo(
-                packageName,
-                PackageManager.PackageInfoFlags.of(0),
-            ).lastUpdateTime
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(packageName, 0).lastUpdateTime
-        }
+        val lockFile = File(clashDir, ".geo-extract.lock")
+        RandomAccessFile(lockFile, "rw").channel.use { channel ->
+            channel.lock().use {
+                val updateDate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.getPackageInfo(
+                        packageName,
+                        PackageManager.PackageInfoFlags.of(0),
+                    ).lastUpdateTime
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+                }
 
-        GEO_ASSETS.forEach { asset -> extractAsset(asset, updateDate) }
+                GEO_ASSETS.forEach { asset -> extractAsset(asset, updateDate) }
+            }
+        }
     }
 
     /**

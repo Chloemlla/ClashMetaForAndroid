@@ -18,7 +18,6 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.bridge.*
-import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.store.AppStore
@@ -62,9 +61,8 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        design.fetch()
-        maybeShowAlphaMigrationToast(design)
-
+        // Initial state is driven by Event.ActivityStart (posted from onStart). An extra
+        // explicit fetch() here races that event and doubles Binder/core queries on cold start.
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
         while (isActive) {
@@ -120,7 +118,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                             design.showAbout(queryAppVersionName())
                     }
                 }
-                if (clashRunning) {
+                // Match Profiles/Providers: do not poll traffic while MainActivity is stopped.
+                if (clashRunning && activityStarted) {
                     ticker.onReceive {
                         design.fetchTraffic()
                     }
@@ -163,30 +162,16 @@ class MainActivity : BaseActivity<MainDesign>() {
     private suspend fun MainDesign.fetch() {
         setClashRunning(clashRunning)
 
-        val state = withClash {
-            queryTunnelState()
+        // Single core/JSON summary: mode + hasProviders + selected node (no full lists).
+        withClash {
+            val summary = queryDashboardSummary(
+                preferred = uiStore.proxyLastGroup,
+                excludeNotSelectable = uiStore.proxyExcludeNotSelectable,
+            )
+            val selected = summary.selectedNow.takeIf { clashRunning && it.isNotBlank() }
+            setProxySummary(summary.mode, selected)
+            setHasProviders(summary.hasProviders)
         }
-        val providers = withClash {
-            queryProviders()
-        }
-
-        val selectedNode = if (clashRunning) {
-            withClash {
-                val groups = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
-                val preferred = uiStore.proxyLastGroup
-                val groupName = when {
-                    preferred.isNotBlank() && preferred in groups -> preferred
-                    groups.isNotEmpty() -> groups.first()
-                    else -> null
-                }
-                groupName?.let { queryProxyGroup(it, ProxySort.Default).now }?.takeIf { it.isNotBlank() }
-            }
-        } else {
-            null
-        }
-
-        setProxySummary(state.mode, selectedNode)
-        setHasProviders(providers.isNotEmpty())
 
         withProfile {
             setProfileName(queryActive()?.name)

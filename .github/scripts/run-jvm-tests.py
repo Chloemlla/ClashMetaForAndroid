@@ -4,7 +4,8 @@ import subprocess
 import sys
 
 
-command = ["./gradlew", "--no-daemon", "--stacktrace", "--info", "testAlphaDebugUnitTest"]
+# Reuse the Gradle daemon within a job (setup-gradle caches it). Avoid --info noise unless debugging.
+command = ["./gradlew", "--stacktrace", "testAlphaDebugUnitTest"]
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,

@@ -18,6 +18,18 @@ val File.directoryLastModified: Long?
     }
 
 /**
+ * Cheap profile "updated at" signal: prefer config.yaml, then the profile directory itself.
+ * Avoids recursive provider-tree walks on every Profiles list refresh.
+ */
+val File.profileContentModified: Long?
+    get() {
+        if (!exists()) return null
+        val config = resolve("config.yaml")
+        if (config.isFile) return config.lastModified()
+        return lastModified().takeIf { it > 0L }
+    }
+
+/**
  * Atomically replace [target] with the contents of [source].
  *
  * Copies [source] into a sibling temporary directory first, then swaps it into

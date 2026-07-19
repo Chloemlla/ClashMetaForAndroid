@@ -26,10 +26,12 @@ class RemoteService : BaseService(), IRemoteService {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-
+        // Cancel managers first so their work is not restarted during service teardown.
+        // Do not join on the main thread — cancellation is cooperative.
         clash?.cancelAndJoinBlocking()
         profile?.cancelAndJoinBlocking()
+
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder {

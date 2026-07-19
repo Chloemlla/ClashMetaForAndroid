@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -119,6 +120,35 @@ object Clash {
             ?: ProxyGroup("Unknown", emptyList(), "")
     }
 
+    /** Selected proxy name only — skips full group materialization / subtitle regex. */
+    fun queryGroupNow(name: String): String {
+        return Bridge.nativeQueryGroupNow(name).orEmpty()
+    }
+
+    /** name → last delay ms; used during URL-test intermediate polls. */
+    fun queryGroupDelays(name: String): Map<String, Int> {
+        return Json.Default.decodeFromString(
+            MapSerializer(String.serializer(), Int.serializer()),
+            Bridge.nativeQueryGroupDelays(name),
+        )
+    }
+
+    /** True when any non-compatible rule/proxy provider is loaded. */
+    fun hasProviders(): Boolean {
+        return Bridge.nativeHasProviders()
+    }
+
+    /**
+     * Compact main-screen snapshot: mode + hasProviders + selected node for [preferred] group
+     * (or first selectable group when preferred is blank/missing).
+     */
+    fun queryDashboardSummary(preferred: String, excludeNotSelectable: Boolean): DashboardSummary {
+        return Json.Default.decodeFromString(
+            DashboardSummary.serializer(),
+            Bridge.nativeQueryDashboardSummary(preferred, excludeNotSelectable),
+        )
+    }
+
     fun healthCheck(name: String): CompletableDeferred<Unit> {
         return CompletableDeferred<Unit>().apply {
             Bridge.nativeHealthCheck(this, name)
@@ -172,12 +202,10 @@ object Clash {
     }
 
     fun queryProviders(): List<Provider> {
-        val providers =
-            Json.Default.decodeFromString(JsonArray.serializer(), Bridge.nativeQueryProviders())
-
-        return List(providers.size) {
-            Json.Default.decodeFromJsonElement(Provider.serializer(), providers[it])
-        }
+        return Json.Default.decodeFromString(
+            ListSerializer(Provider.serializer()),
+            Bridge.nativeQueryProviders(),
+        )
     }
 
     fun updateProvider(type: Provider.Type, name: String): CompletableDeferred<Unit> {
@@ -219,13 +247,19 @@ object Clash {
     }
 
     fun subscribeLogcat(): ReceiveChannel<LogMessage> {
-        return Channel<LogMessage>(32).apply {
-            Bridge.nativeSubscribeLogcat(object : LogcatInterface {
-                override fun received(jsonPayload: String) {
-                    trySend(Json.decodeFromString(LogMessage.serializer(), jsonPayload))
-                }
-            })
+        val channel = Channel<LogMessage>(32)
+        val token = Bridge.nativeSubscribeLogcat(object : LogcatInterface {
+            override fun received(jsonPayload: String): Boolean {
+                // false stops the native subscriber immediately (no exception abuse).
+                return channel.trySend(
+                    Json.decodeFromString(LogMessage.serializer(), jsonPayload)
+                ).isSuccess
+            }
+        })
+        channel.invokeOnClose {
+            Bridge.nativeUnsubscribeLogcat(token)
         }
+        return channel
     }
 
     fun setAgeSecretKey(key: String?) {

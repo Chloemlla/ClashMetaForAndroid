@@ -5,6 +5,8 @@ import "C"
 
 import (
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -16,6 +18,17 @@ type message struct {
 	Message string `json:"message"`
 	Time    int64  `json:"time"`
 }
+
+type logcatSubscription struct {
+	remote unsafe.Pointer
+	cancel chan struct{}
+}
+
+var (
+	logcatMu      sync.Mutex
+	logcatNextID  int64
+	logcatCancels = map[int64]*logcatSubscription{}
+)
 
 func init() {
 	go func() {
@@ -42,31 +55,77 @@ func init() {
 }
 
 //export subscribeLogcat
-func subscribeLogcat(remote unsafe.Pointer) {
-	go func(remote unsafe.Pointer) {
+func subscribeLogcat(remote unsafe.Pointer) int64 {
+	id := atomic.AddInt64(&logcatNextID, 1)
+	cancel := make(chan struct{})
+
+	logcatMu.Lock()
+	logcatCancels[id] = &logcatSubscription{remote: remote, cancel: cancel}
+	logcatMu.Unlock()
+
+	go func(id int64, remote unsafe.Pointer, cancel <-chan struct{}) {
 		sub := log.Subscribe()
 		defer log.UnSubscribe(sub)
 
-		for msg := range sub {
-			if msg.LogLevel < log.Level() && !strings.HasPrefix(msg.Payload, "[APP]") {
-				continue
+		released := false
+		release := func() {
+			if released {
+				return
 			}
+			released = true
+			C.release_object(remote)
+		}
+		defer release()
 
-			rMsg := &message{
-				Level:   msg.LogLevel.String(),
-				Message: msg.Payload,
-				Time:    time.Now().UnixNano() / 1000 / 1000,
-			}
+		defer func() {
+			logcatMu.Lock()
+			delete(logcatCancels, id)
+			logcatMu.Unlock()
+		}()
 
-			if C.logcat_received(remote, marshalJson(rMsg)) != 0 {
-				C.release_object(remote)
+		for {
+			select {
+			case <-cancel:
+				log.Debugln("Logcat subscriber cancelled")
+				return
+			case msg, ok := <-sub:
+				if !ok {
+					return
+				}
 
-				log.Debugln("Logcat subscriber closed")
+				if msg.LogLevel < log.Level() && !strings.HasPrefix(msg.Payload, "[APP]") {
+					continue
+				}
 
-				break
+				rMsg := &message{
+					Level:   msg.LogLevel.String(),
+					Message: msg.Payload,
+					Time:    time.Now().UnixNano() / 1000 / 1000,
+				}
+
+				// Non-zero means the Java side wants to stop (closed channel).
+				if C.logcat_received(remote, marshalJson(rMsg)) != 0 {
+					log.Debugln("Logcat subscriber closed")
+					return
+				}
 			}
 		}
-	}(remote)
+	}(id, remote, cancel)
 
 	log.Infoln("[APP] Logcat level: %s", log.Level().String())
+	return id
+}
+
+//export unsubscribeLogcat
+func unsubscribeLogcat(id int64) {
+	logcatMu.Lock()
+	sub, ok := logcatCancels[id]
+	if ok {
+		delete(logcatCancels, id)
+	}
+	logcatMu.Unlock()
+
+	if ok {
+		close(sub.cancel)
+	}
 }

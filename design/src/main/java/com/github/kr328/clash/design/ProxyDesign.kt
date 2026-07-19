@@ -111,6 +111,19 @@ class ProxyDesign(
         updateUrlTestButtonStatus()
     }
 
+    /**
+     * Patch only delay values during URL-test intermediate polls.
+     * Avoids full group JSON / title / subtitle rebuild.
+     */
+    suspend fun patchDelays(
+        position: Int,
+        delays: Map<String, Int>,
+        animateDelay: Boolean = true,
+    ) {
+        adapter.patchDelays(position, delays, animateDelay)
+        updateUrlTestButtonStatus()
+    }
+
     suspend fun notifySelectionChanged(position: Int) {
         withContext(Dispatchers.Main) {
             adapter.notifySelectionChanged(position)

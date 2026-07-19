@@ -34,7 +34,6 @@ class FilesActivity : BaseActivity<FilesDesign>() {
         val stack = Stack<String>()
 
         design.configurationEditable = profile.type != Profile.Type.Url
-        design.fetch(client, stack, root)
 
         setContentDesign(design)
 
@@ -44,7 +43,9 @@ class FilesActivity : BaseActivity<FilesDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
-                        Event.ActivityStart, Event.ActivityStop -> {
+                        // ActivityStart covers first enter (queued from onStart during setContentDesign)
+                        // and return-from-background. Do not refresh on ActivityStop — work is invisible.
+                        Event.ActivityStart -> {
                             design.fetch(client, stack, root)
                         }
                         else -> Unit

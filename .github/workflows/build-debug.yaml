@@ -4,9 +4,11 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  # main already runs the heavier pre-release pipeline; keep debug for PRs / manual runs.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   BuildDebug:
@@ -70,7 +72,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           set +e
-          output=$(./gradlew --no-daemon app:assembleMetaRelease 2>&1)
+          # Keep daemon for later steps in this job; only need the configuration error text.
+          output=$(./gradlew app:assembleMetaRelease 2>&1)
           status=$?
           set -e
           test "$status" -ne 0
@@ -111,14 +114,39 @@ jobs:
             **/build/reports/lint-results-*.html
           if-no-files-found: warn
 
-      - name: Build debug APKs
+      - name: Build debug APK (arm64 only)
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon app:assembleAlphaDebug
+        # PR/debug validation does not need 4 ABIs + universal; arm64 covers primary devices.
+        # AGP ABI-split / injected-ABI output layout varies; discover APKs under outputs/.
+        run: |
+          set -euo pipefail
+          ./gradlew app:assembleAlphaDebug -Pandroid.injected.build.abi=arm64-v8a
+          echo "APK tree under app/build/outputs:"
+          if [ -d app/build/outputs ]; then
+            find app/build/outputs -type f -name '*.apk' -print || true
+            find app/build/outputs -type d -print | head -n 80 || true
+          else
+            echo "app/build/outputs is missing"
+            find app/build -maxdepth 4 -type d -print | head -n 80 || true
+          fi
+          mapfile -t apks < <(find app/build -type f -name '*.apk' | sort)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No APK produced under app/build" >&2
+            exit 1
+          fi
+          printf 'Found %s APK(s):\n' "${#apks[@]}"
+          printf '  %s\n' "${apks[@]}"
+          # Stage a stable upload directory so artifact paths stay simple.
+          mkdir -p app/build/ci-apks
+          for apk in "${apks[@]}"; do
+            cp -f "$apk" "app/build/ci-apks/$(basename "$apk")"
+          done
 
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
           name: CMFA Debug APKs
-          path: app/build/outputs/apk/alpha/debug/*.apk
+          path: app/build/ci-apks/*.apk
+          if-no-files-found: error

@@ -98,6 +98,9 @@ class Broadcasts(private val context: Application) {
                 addAction(Intents.ACTION_PROFILE_UPDATE_FAILED)
                 addAction(Intents.ACTION_PROFILE_LOADED)
             })
+            // Mark registered as soon as the system accepted the receiver so a later
+            // failure (e.g. StatusClient) cannot leave a permanently leaked registration.
+            registered = true
 
             clashRunning = StatusClient(context).currentProfile() != null
         } catch (e: Exception) {
@@ -111,10 +114,12 @@ class Broadcasts(private val context: Application) {
 
         try {
             context.unregisterReceiver(broadcastReceiver)
-
             clashRunning = false
         } catch (e: Exception) {
             Log.w("Unregister global receiver: $e", e)
+        } finally {
+            // Always clear so a later foreground transition can register again.
+            registered = false
         }
     }
 }

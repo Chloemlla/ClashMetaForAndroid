@@ -66,16 +66,23 @@ object ApplicationObserver {
 fun Context.verifyApk(): Boolean {
     return try {
         val info = applicationInfo
-        val sources = info.splitSourceDirs ?: arrayOf(info.sourceDir) ?: return false
+        val sources = info.splitSourceDirs ?: arrayOf(info.sourceDir)
 
         val regexNativeLibrary = Regex("lib/(\\S+)/libclash.so")
         val availableAbi = Build.SUPPORTED_ABIS.toSet()
         val apkAbi = sources
             .asSequence()
             .filter { File(it).exists() }
-            .flatMap { ZipFile(it).entries().asSequence() }
-            .mapNotNull { regexNativeLibrary.matchEntire(it.name) }
-            .mapNotNull { it.groups[1]?.value }
+            .flatMap { path ->
+                // Materialize entries inside use{} so the ZipFile is closed before the sequence continues.
+                ZipFile(path).use { zip ->
+                    zip.entries()
+                        .asSequence()
+                        .mapNotNull { regexNativeLibrary.matchEntire(it.name) }
+                        .mapNotNull { it.groups[1]?.value }
+                        .toList()
+                }
+            }
             .toSet()
 
         availableAbi.intersect(apkAbi).isNotEmpty()

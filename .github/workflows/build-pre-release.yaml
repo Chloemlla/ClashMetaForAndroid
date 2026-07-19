@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: read
@@ -188,12 +192,26 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon app:assembleMetaRelease
+        run: ./gradlew app:assembleMetaRelease
 
       - name: Generate APK checksums
         run: |
-          cd app/build/outputs/apk/meta/release
-          sha256sum ./*.apk > SHA256SUMS
+          set -euo pipefail
+          # Discover APKs regardless of flat vs ABI-split nested layouts.
+          mapfile -t apks < <(find app/build/outputs -type f -name '*.apk' | sort)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No Meta release APKs under app/build/outputs" >&2
+            find app/build -type d | head -n 100 || true
+            exit 1
+          fi
+          printf 'Meta release APKs:\n'
+          printf '  %s\n' "${apks[@]}"
+          mkdir -p app/build/ci-apks/meta-release
+          : > app/build/ci-apks/meta-release/SHA256SUMS
+          for apk in "${apks[@]}"; do
+            cp -f "$apk" "app/build/ci-apks/meta-release/$(basename "$apk")"
+            (cd "$(dirname "$apk")" && sha256sum "$(basename "$apk")") >> app/build/ci-apks/meta-release/SHA256SUMS
+          done
 
       - name: Publish Meta full release (latest)
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
@@ -206,8 +224,8 @@ jobs:
           prerelease: false
           name: ClashMetaForAndroid ${{ needs.Verify.outputs.version_name }} (${{ needs.Verify.outputs.short_hash }})
           files: |
-            app/build/outputs/apk/meta/release/*.apk
-            app/build/outputs/apk/meta/release/SHA256SUMS
+            app/build/ci-apks/meta-release/*.apk
+            app/build/ci-apks/meta-release/SHA256SUMS
 
       - name: Remove signing credentials
         if: always()
@@ -285,26 +303,36 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon app:assembleAlphaRelease
+        run: ./gradlew app:assembleAlphaRelease
 
       - name: Prepare Alpha migration APK aliases
         run: |
-          source_dir=app/build/outputs/apk/alpha/release
-          migration_dir=app/build/outputs/apk/alpha/migration-release
-          mkdir -p "$migration_dir"
-          for apk in "$source_dir"/*.apk; do
+          set -euo pipefail
+          mapfile -t apks < <(find app/build/outputs -type f -name '*.apk' | sort)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No Alpha release APKs under app/build/outputs" >&2
+            find app/build -type d | head -n 100 || true
+            exit 1
+          fi
+          printf 'Alpha release APKs:\n'
+          printf '  %s\n' "${apks[@]}"
+          release_dir=app/build/ci-apks/alpha-release
+          migration_dir=app/build/ci-apks/alpha-migration-release
+          mkdir -p "$release_dir" "$migration_dir"
+          : > "$release_dir/SHA256SUMS"
+          : > "$migration_dir/SHA256SUMS-migration"
+          for apk in "${apks[@]}"; do
             name=$(basename "$apk")
+            cp -f "$apk" "$release_dir/$name"
+            (cd "$(dirname "$apk")" && sha256sum "$name") >> "$release_dir/SHA256SUMS"
             migration_name=${name/-alpha-/-alpha-migration-}
-            test "$migration_name" != "$name"
-            cp "$apk" "$migration_dir/$migration_name"
+            if [ "$migration_name" = "$name" ]; then
+              # Fallback when basename does not include the flavor segment.
+              migration_name=${name%.apk}-migration.apk
+            fi
+            cp -f "$apk" "$migration_dir/$migration_name"
+            (cd "$migration_dir" && sha256sum "$migration_name") >> "$migration_dir/SHA256SUMS-migration"
           done
-
-      - name: Generate APK checksums
-        run: |
-          cd app/build/outputs/apk/alpha/release
-          sha256sum ./*.apk > SHA256SUMS
-          cd ../migration-release
-          sha256sum ./*.apk > SHA256SUMS-migration
 
       - name: Publish Alpha pre-release
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
@@ -317,10 +345,10 @@ jobs:
           prerelease: true
           name: ClashMetaForAndroid Alpha ${{ needs.Verify.outputs.version_name }}-${{ needs.Verify.outputs.short_hash }}
           files: |
-            app/build/outputs/apk/alpha/release/*.apk
-            app/build/outputs/apk/alpha/release/SHA256SUMS
-            app/build/outputs/apk/alpha/migration-release/*.apk
-            app/build/outputs/apk/alpha/migration-release/SHA256SUMS-migration
+            app/build/ci-apks/alpha-release/*.apk
+            app/build/ci-apks/alpha-release/SHA256SUMS
+            app/build/ci-apks/alpha-migration-release/*.apk
+            app/build/ci-apks/alpha-migration-release/SHA256SUMS-migration
 
       - name: Remove signing credentials
         if: always()

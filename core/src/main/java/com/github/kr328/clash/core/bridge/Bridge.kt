@@ -1,12 +1,10 @@
 package com.github.kr328.clash.core.bridge
 
 import android.os.Build
-import android.os.ParcelFileDescriptor
 import androidx.annotation.Keep
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.log.Log
 import kotlinx.coroutines.CompletableDeferred
-import java.io.File
 
 @Keep
 object Bridge {
@@ -25,6 +23,10 @@ object Bridge {
     external fun nativeStopHttp()
     external fun nativeQueryGroupNames(excludeNotSelectable: Boolean): String
     external fun nativeQueryGroup(name: String, sort: String): String?
+    external fun nativeQueryGroupNow(name: String): String?
+    external fun nativeQueryGroupDelays(name: String): String
+    external fun nativeHasProviders(): Boolean
+    external fun nativeQueryDashboardSummary(preferred: String, excludeNotSelectable: Boolean): String
     external fun nativeHealthCheck(completable: CompletableDeferred<Unit>, name: String)
     external fun nativeHealthCheckAll()
     external fun nativePatchSelector(selector: String, name: String): Boolean
@@ -47,7 +49,8 @@ object Bridge {
     external fun nativeWriteOverride(slot: Int, content: String)
     external fun nativeClearOverride(slot: Int)
     external fun nativeQueryConfiguration(): String
-    external fun nativeSubscribeLogcat(callback: LogcatInterface)
+    external fun nativeSubscribeLogcat(callback: LogcatInterface): Long
+    external fun nativeUnsubscribeLogcat(token: Long)
     external fun nativeCoreVersion(): String
 
     external fun nativeSetAgeSecretKey(key: String?)
@@ -63,10 +66,8 @@ object Bridge {
         System.loadLibrary("bridge")
 
         val ctx = Global.application
-
-        ParcelFileDescriptor.open(File(ctx.packageCodePath), ParcelFileDescriptor.MODE_READ_ONLY)
-            .detachFd()
-
+        // Previous code opened packageCodePath and detachFd()'d without retaining the fd,
+        // permanently leaking one APK file descriptor per process that loads Bridge.
         val home = ctx.filesDir.resolve("clash").apply { mkdirs() }.absolutePath
         val versionName = ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "unknown"
         val sdkVersion = Build.VERSION.SDK_INT

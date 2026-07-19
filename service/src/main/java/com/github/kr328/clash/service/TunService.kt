@@ -107,6 +107,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
 
         sendClashStopped(reason)
 
+        // TunService is not a BaseService; cancel its scope without joining on the main thread.
         cancelAndJoinBlocking()
 
         Log.i("TunService destroyed: ${reason ?: "successfully"}")
