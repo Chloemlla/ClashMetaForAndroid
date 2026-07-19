@@ -134,50 +134,24 @@ jobs:
             **/build/reports/lint-results-*.html
           if-no-files-found: warn
 
-      - name: Prepare signing credentials
+      - name: Prepare release signing (GitHub secrets only)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          : "${KEYSTORE_BASE64:?KEYSTORE_BASE64 is required}"
-          : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
-          : "${KEY_ALIAS:?KEY_ALIAS is required}"
-          : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
-          KEYSTORE_FILE="$RUNNER_TEMP/cmfa-release.keystore"
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
-          chmod 600 "$KEYSTORE_FILE"
-          printf '%s\n' \
-            "keystore.file=$KEYSTORE_FILE" \
-            "keystore.password=$KEYSTORE_PASSWORD" \
-            "key.alias=$KEY_ALIAS" \
-            "key.password=$KEY_PASSWORD" \
-            > signing.properties
+        run: bash .github/scripts/prepare-signing.sh
 
       - name: Build signed release APKs
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: ./gradlew app:assembleMetaRelease
-
-      - name: Generate APK checksums
         run: |
-          set -euo pipefail
-          mapfile -t apks < <(find app/build/outputs -type f -name '*.apk' | sort)
-          if [ "${#apks[@]}" -eq 0 ]; then
-            echo "No release APKs under app/build/outputs" >&2
-            find app/build -type d | head -n 100 || true
-            exit 1
-          fi
-          printf 'Release APKs:\n'
-          printf '  %s\n' "${apks[@]}"
-          mkdir -p app/build/ci-apks/meta-release
-          : > app/build/ci-apks/meta-release/SHA256SUMS
-          for apk in "${apks[@]}"; do
-            cp -f "$apk" "app/build/ci-apks/meta-release/$(basename "$apk")"
-            (cd "$(dirname "$apk")" && sha256sum "$(basename "$apk")") >> app/build/ci-apks/meta-release/SHA256SUMS
-          done
+          test -f signing.properties
+          ./gradlew app:assembleMetaRelease
+
+      - name: Stage secret-signed APKs
+        run: bash .github/scripts/stage-signed-apks.sh app/build/ci-apks/meta-release
 
       - name: Commit version and push verified tag
         run: |

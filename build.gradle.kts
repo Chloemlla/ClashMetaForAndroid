@@ -172,6 +172,8 @@ subprojects {
 
         val signingPropertiesFile = rootProject.file("signing.properties")
         val signingProperties = Properties()
+        // Prefer signing.properties materialized from GitHub Actions secrets
+        // (KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD).
         val releaseKeystore = if (isApp && signingPropertiesFile.isFile) {
             signingPropertiesFile.inputStream().use { signingProperties.load(it) }
 
@@ -213,10 +215,17 @@ subprojects {
                             taskName.startsWith("publish") ||
                             taskName.startsWith("sign")))
             }
+            val onGithubActions = System.getenv("GITHUB_ACTIONS") == "true"
             if (releaseBuildRequested && releaseKeystore == null) {
                 throw GradleException(
-                    "Release signing is required. Create signing.properties with " +
-                        "keystore.file, keystore.password, key.alias, and key.password."
+                    if (onGithubActions) {
+                        "Release signing is required. Release APKs on CI must be signed " +
+                            "with GitHub secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, " +
+                            "KEY_ALIAS, KEY_PASSWORD) via prepare-signing.sh."
+                    } else {
+                        "Release signing is required. Create signing.properties with " +
+                            "keystore.file, keystore.password, key.alias, and key.password."
+                    }
                 )
             }
 
@@ -237,6 +246,8 @@ subprojects {
                 isMinifyEnabled = isApp
                 isShrinkResources = isApp
                 if (isApp) {
+                    // Only attach when secret-backed signing.properties is present.
+                    // Missing credentials are rejected above when a release task is requested.
                     signingConfig = signingConfigs.findByName("release")
                 }
                 proguardFiles(
