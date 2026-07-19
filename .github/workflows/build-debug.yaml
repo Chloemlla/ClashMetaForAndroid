@@ -119,18 +119,34 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         # PR/debug validation does not need 4 ABIs + universal; arm64 covers primary devices.
-        # ABI splits place per-ABI APKs under nested dirs (…/debug/<abi>/…), so do not rely on
-        # a flat …/debug/*.apk layout for upload.
+        # AGP ABI-split / injected-ABI output layout varies; discover APKs under outputs/.
         run: |
+          set -euo pipefail
           ./gradlew app:assembleAlphaDebug -Pandroid.injected.build.abi=arm64-v8a
-          echo "Debug APK outputs:"
-          find app/build/outputs/apk/alpha/debug -type f -name '*.apk' -print
-          test -n "$(find app/build/outputs/apk/alpha/debug -type f -name '*.apk' -print -quit)"
+          echo "APK tree under app/build/outputs:"
+          if [ -d app/build/outputs ]; then
+            find app/build/outputs -type f -name '*.apk' -print || true
+            find app/build/outputs -type d -print | head -n 80 || true
+          else
+            echo "app/build/outputs is missing"
+            find app/build -maxdepth 4 -type d -print | head -n 80 || true
+          fi
+          mapfile -t apks < <(find app/build -type f -name '*.apk' | sort)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No APK produced under app/build" >&2
+            exit 1
+          fi
+          printf 'Found %s APK(s):\n' "${#apks[@]}"
+          printf '  %s\n' "${apks[@]}"
+          # Stage a stable upload directory so artifact paths stay simple.
+          mkdir -p app/build/ci-apks
+          for apk in "${apks[@]}"; do
+            cp -f "$apk" "app/build/ci-apks/$(basename "$apk")"
+          done
 
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
           name: CMFA Debug APKs
-          # Nested ABI split dirs: app/build/outputs/apk/alpha/debug/**/*.apk
-          path: app/build/outputs/apk/alpha/debug/**/*.apk
+          path: app/build/ci-apks/*.apk
           if-no-files-found: error

@@ -163,11 +163,21 @@ jobs:
 
       - name: Generate APK checksums
         run: |
-          cd app/build/outputs/apk/meta/release
-          # ABI splits may place APKs under nested <abi>/ dirs.
-          mapfile -t apks < <(find . -type f -name '*.apk' | sort)
-          test "${#apks[@]}" -gt 0
-          sha256sum "${apks[@]}" > SHA256SUMS
+          set -euo pipefail
+          mapfile -t apks < <(find app/build/outputs -type f -name '*.apk' | sort)
+          if [ "${#apks[@]}" -eq 0 ]; then
+            echo "No release APKs under app/build/outputs" >&2
+            find app/build -type d | head -n 100 || true
+            exit 1
+          fi
+          printf 'Release APKs:\n'
+          printf '  %s\n' "${apks[@]}"
+          mkdir -p app/build/ci-apks/meta-release
+          : > app/build/ci-apks/meta-release/SHA256SUMS
+          for apk in "${apks[@]}"; do
+            cp -f "$apk" "app/build/ci-apks/meta-release/$(basename "$apk")"
+            (cd "$(dirname "$apk")" && sha256sum "$(basename "$apk")") >> app/build/ci-apks/meta-release/SHA256SUMS
+          done
 
       - name: Commit version and push verified tag
         run: |
@@ -196,8 +206,8 @@ jobs:
           prerelease: false
           name: ClashMetaForAndroid ${{ env.CMFA_VERSION_NAME }}
           files: |
-            app/build/outputs/apk/meta/release/**/*.apk
-            app/build/outputs/apk/meta/release/SHA256SUMS
+            app/build/ci-apks/meta-release/*.apk
+            app/build/ci-apks/meta-release/SHA256SUMS
 
       - name: Remove signing credentials
         if: always()
