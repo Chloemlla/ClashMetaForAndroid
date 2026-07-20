@@ -73,10 +73,13 @@ jobs:
         run: |
           set +e
           # Keep daemon for later steps in this job; only need the configuration error text.
+          # Ensure no leftover signing.properties can soft-succeed this negative check.
+          rm -f signing.properties
           output=$(./gradlew app:assembleMetaRelease 2>&1)
           status=$?
           set -e
           test "$status" -ne 0
+          # CI path must require GitHub secrets; local wording still accepted as fallback.
           grep -F "Release signing is required" <<< "$output"
 
       - name: JVM unit tests
