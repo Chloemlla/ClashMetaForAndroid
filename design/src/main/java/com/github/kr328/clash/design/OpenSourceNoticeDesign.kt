@@ -62,10 +62,10 @@ class OpenSourceNoticeDesign(
 
             clickable(
                 title = R.string.open_source_repository_upstream_title,
-                summary = R.string.meta_github_url,
+                summary = R.string.open_source_repository_upstream_url,
             ) {
                 clicked {
-                    openLink(Uri.parse(context.getString(R.string.meta_github_url)))
+                    openLink(Uri.parse(context.getString(R.string.open_source_repository_upstream_url)))
                 }
             }
 
