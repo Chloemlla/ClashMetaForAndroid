@@ -111,7 +111,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val repositoryUrl = context.getString(R.string.meta_github_url)
             val binding = DesignAboutBinding.inflate(context.layoutInflater).apply {
                 this.versionName = versionName
-                this.repositoryUrl = repositoryUrl
+                this.repositoryUrlText = repositoryUrl
             }
 
             val openRepository = {
