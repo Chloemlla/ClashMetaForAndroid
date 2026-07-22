@@ -72,6 +72,24 @@ class HelpDesign(
                     openLink(Uri.parse(context.getString(R.string.meta_github_url)))
                 }
             }
+
+            clickable(
+                title = R.string.github_releases,
+                summary = R.string.meta_github_releases_url
+            ) {
+                clicked {
+                    openLink(Uri.parse(context.getString(R.string.meta_github_releases_url)))
+                }
+            }
+
+            clickable(
+                title = R.string.github_issues,
+                summary = R.string.meta_github_issues_url
+            ) {
+                clicked {
+                    openLink(Uri.parse(context.getString(R.string.meta_github_issues_url)))
+                }
+            }
         }
 
         binding.content.addView(screen.root)

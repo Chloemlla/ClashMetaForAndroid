@@ -360,7 +360,7 @@
     <string name="open_source_notice_title">开源声明</string>
     <string name="open_source_notice_intro"><![CDATA[本应用是 <strong>Clash Meta</strong> 的<strong>开源</strong>客户端。源码公开，可在项目协议下检查、编译与再分发。]]></string>
     <string name="open_source_notice_free_forever"><![CDATA[本项目<strong>永久免费</strong>。不存在官方付费解锁、订阅墙或商业收费版本。]]></string>
-    <string name="open_source_notice_scam_warning"><![CDATA[<strong>谨防上当受骗</strong>：任何出售本应用、收取“激活费”，或声称提供本免费客户端独家付费支持的行为，均未经授权。请优先使用官方 GitHub Releases 或 F-Droid。]]></string>
+    <string name="open_source_notice_scam_warning"><![CDATA[<strong>谨防上当受骗</strong>：任何出售本应用、收取“激活费”，或声称提供本免费客户端独家付费支持的行为，均未经授权。请优先使用 https://github.com/Chloemlla/ClashMetaForAndroid 的 Releases 或 F-Droid。]]></string>
     <string name="open_source_project_license">本项目开源协议</string>
     <string name="open_source_project_license_title">GNU 通用公共许可证 第 3 版</string>
     <string name="open_source_project_license_summary">本项目采用 GPL-3.0 协议。点按可查看完整协议文本。</string>

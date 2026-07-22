@@ -38,4 +38,4 @@ The app is not directed to children under 13 and does not knowingly operate a se
 
 ## Changes and contact
 
-This policy may be updated with the source code. Questions or security reports can be submitted through the project's GitHub repository.
+This policy may be updated with the source code. Questions or security reports can be submitted through the project's GitHub repository: https://github.com/Chloemlla/ClashMetaForAndroid.

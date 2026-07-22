@@ -351,7 +351,7 @@
     <string name="open_source_notice_title">開源聲明</string>
     <string name="open_source_notice_intro"><![CDATA[本應用是 <strong>Clash Meta</strong> 的<strong>開源</strong>用戶端。源代碼公開，可在專案協議下檢查、編譯與再分發。]]></string>
     <string name="open_source_notice_free_forever"><![CDATA[本專案<strong>永久免費</strong>。不存在官方付費解鎖、訂閱牆或商業收費版本。]]></string>
-    <string name="open_source_notice_scam_warning"><![CDATA[<strong>請謹防受騙</strong>：任何售賣本應用、收取「啟動費」，或聲稱提供本免費用戶端獨家付費支援的行為，均未經授權。請優先使用官方 GitHub Releases 或 F-Droid。]]></string>
+    <string name="open_source_notice_scam_warning"><![CDATA[<strong>請謹防受騙</strong>：任何售賣本應用、收取「啟動費」，或聲稱提供本免費用戶端獨家付費支援的行為，均未經授權。請優先使用 https://github.com/Chloemlla/ClashMetaForAndroid 的 Releases 或 F-Droid。]]></string>
     <string name="open_source_project_license">本專案開源協議</string>
     <string name="open_source_project_license_title">GNU 通用公共許可證 第 3 版</string>
     <string name="open_source_project_license_summary">本專案採用 GPL-3.0 協議。點按可查看完整協議文本。</string>

@@ -247,6 +247,8 @@
     <string name="clash_meta_core">Clash Meta Core</string>
     <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
     <string name="meta_github_url" translatable="false">https://github.com/Chloemlla/ClashMetaForAndroid</string>
+    <string name="meta_github_releases_url" translatable="false">https://github.com/Chloemlla/ClashMetaForAndroid/releases</string>
+    <string name="meta_github_issues_url" translatable="false">https://github.com/Chloemlla/ClashMetaForAndroid/issues</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
 
     <string name="tips_properties"><![CDATA[Accept Only <strong>Clash Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>
@@ -418,7 +420,7 @@
     <string name="open_source_notice_title">Open Source Notice</string>
     <string name="open_source_notice_intro"><![CDATA[This app is an <strong>open-source</strong> client for Clash Meta. Source code is public; you can inspect, build, and redistribute it under the project license.]]></string>
     <string name="open_source_notice_free_forever"><![CDATA[This project is <strong>permanently free</strong>. No paid unlock, subscription wall, or official commercial edition exists for this client.]]></string>
-    <string name="open_source_notice_scam_warning"><![CDATA[<strong>Beware of scams</strong>: anyone selling this app, charging “activation fees”, or claiming exclusive paid support for this free client is unauthorized. Prefer official GitHub releases or F-Droid.]]></string>
+    <string name="open_source_notice_scam_warning"><![CDATA[<strong>Beware of scams</strong>: anyone selling this app, charging “activation fees”, or claiming exclusive paid support for this free client is unauthorized. Prefer releases from https://github.com/Chloemlla/ClashMetaForAndroid or F-Droid.]]></string>
     <string name="open_source_project_license">Project License</string>
     <string name="open_source_project_license_title">GNU General Public License v3.0</string>
     <string name="open_source_project_license_summary">This project is licensed under GPL-3.0. Tap to open the full license text.</string>
