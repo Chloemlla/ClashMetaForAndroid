@@ -63,22 +63,32 @@ class MainApplication : Application() {
 
     private fun installLumenCrashSdk() {
         // First-boot critical path. Must not depend on Global/Remote and must not
-        // throw out of attachBaseContext (integrity mismatch is fail-closed in SDK).
-        if (LumenCrash.isInstalled()) return
+        // throw out of attachBaseContext (author integrity is fail-closed in the SDK).
+        //
+        // Published AARs expose LumenCrash.install(...). installSafely() is only on newer
+        // unreleased source; always wrap install in runCatching so cold start survives.
+        val alreadyInstalled = runCatching { LumenCrash.isInstalled() }.getOrDefault(false)
+        if (alreadyInstalled) return
 
         runCatching {
             val appName = runCatching {
                 getString(DesignR.string.application_name)
             }.getOrDefault("Clash Meta for Android")
+            val versionName = runCatching { BuildConfig.VERSION_NAME }.getOrDefault("unknown")
+            val versionCode = runCatching { BuildConfig.VERSION_CODE }.getOrDefault(0)
+            val commitHash = runCatching { BuildConfig.COMMIT_HASH }.getOrDefault("unknown")
 
+            // Prefer SDK-owned FileProvider authority so share-as-file works without
+            // host path-xml entries. Host ${applicationId}.fileprovider still exists
+            // for other app features.
             LumenCrash.install(
                 this,
                 LumenCrashConfig(
                     appDisplayName = appName,
-                    versionName = BuildConfig.VERSION_NAME,
-                    versionCode = BuildConfig.VERSION_CODE,
-                    commitHash = BuildConfig.COMMIT_HASH,
-                    fileProviderAuthority = "$packageName.fileprovider",
+                    versionName = versionName,
+                    versionCode = versionCode,
+                    commitHash = commitHash,
+                    fileProviderAuthority = "$packageName.lumen.crash.fileprovider",
                     shareSubject = runCatching {
                         getString(DesignR.string.crash_report_share_subject)
                     }.getOrNull(),
@@ -89,13 +99,11 @@ class MainApplication : Application() {
                         getString(DesignR.string.crash_report_message)
                     }.getOrNull(),
                     onCrashSaved = { report: CrashReport ->
-                        onLumenCrashSaved(report.reportId)
+                        runCatching { onLumenCrashSaved(report.reportId) }
                     },
                 ),
             )
         }.onFailure { error ->
-            // Avoid Log.* here: logging stack may not be ready this early.
-            // Best-effort stderr only; never rethrow.
             runCatching {
                 System.err.println("LumenCrash install failed: ${error.message}")
             }
@@ -103,8 +111,10 @@ class MainApplication : Application() {
     }
 
     private fun recordBreadcrumbSafe(event: String) {
-        if (!LumenCrash.isInstalled()) return
-        runCatching { CrashBreadcrumbs.record(event) }
+        runCatching {
+            if (!LumenCrash.isInstalled()) return
+            CrashBreadcrumbs.record(event)
+        }
     }
 
     private fun extractGeoFiles() {

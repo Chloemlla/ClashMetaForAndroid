@@ -110,7 +110,9 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         super.onCreate(savedInstanceState)
 
         // Pending Lumen crash UI owns the process; gate before dayNight / main design work.
-        if (presentPendingLumenCrashReportIfNeeded()) {
+        // Fail-soft: a broken gate must never abort Activity creation.
+        val gated = runCatching { presentPendingLumenCrashReportIfNeeded() }.getOrDefault(false)
+        if (gated) {
             return
         }
 

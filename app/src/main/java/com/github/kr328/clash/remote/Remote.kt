@@ -23,17 +23,22 @@ object Remote {
         // Prefer Lumen crash UI. If no pending report exists, synthesize one from a
         // RemoteService crash marker so the host still lands on the unified surface.
         runCatching {
-            if (LumenCrash.isInstalled() && LumenCrash.loadPendingReport() == null) {
+            if (LumenCrash.isInstalled() &&
+                runCatching { LumenCrash.loadPendingReport() }.getOrNull() == null
+            ) {
                 LumenCrash.record(
                     IllegalStateException("RemoteService crashed or was killed repeatedly"),
                 )
             }
         }
 
-        val intent = LumenCrashReportActivity::class.intent
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-
-        Global.application.startActivity(intent)
+        runCatching {
+            if (LumenCrash.isInstalled()) {
+                val intent = LumenCrashReportActivity::class.intent
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                Global.application.startActivity(intent)
+            }
+        }
     }
 
     private val visible = Channel<Boolean>(Channel.CONFLATED)
