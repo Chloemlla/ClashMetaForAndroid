@@ -117,15 +117,24 @@ jobs:
             **/build/reports/lint-results-*.html
           if-no-files-found: warn
 
-      - name: Build debug APK (arm64 only)
+      - name: Prepare release signing (GitHub secrets only)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: bash .github/scripts/prepare-signing.sh
+
+      - name: Build signed Alpha release APK (arm64 only)
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         # PR/debug validation does not need 4 ABIs + universal; arm64 covers primary devices.
-        # AGP ABI-split / injected-ABI output layout varies; discover APKs under outputs/.
+        # AGP ABI-split / injected-ABI output layout varies; stage via secret-keystore verifier.
         run: |
           set -euo pipefail
-          ./gradlew app:assembleAlphaDebug -Pandroid.injected.build.abi=arm64-v8a
+          test -f signing.properties
+          ./gradlew app:assembleAlphaRelease -Pandroid.injected.build.abi=arm64-v8a
           echo "APK tree under app/build/outputs:"
           if [ -d app/build/outputs ]; then
             find app/build/outputs -type f -name '*.apk' -print || true
@@ -134,22 +143,19 @@ jobs:
             echo "app/build/outputs is missing"
             find app/build -maxdepth 4 -type d -print | head -n 80 || true
           fi
-          mapfile -t apks < <(find app/build -type f -name '*.apk' | sort)
-          if [ "${#apks[@]}" -eq 0 ]; then
-            echo "No APK produced under app/build" >&2
-            exit 1
-          fi
-          printf 'Found %s APK(s):\n' "${#apks[@]}"
-          printf '  %s\n' "${apks[@]}"
-          # Stage a stable upload directory so artifact paths stay simple.
-          mkdir -p app/build/ci-apks
-          for apk in "${apks[@]}"; do
-            cp -f "$apk" "app/build/ci-apks/$(basename "$apk")"
-          done
+
+      - name: Stage secret-signed Alpha APKs
+        run: bash .github/scripts/stage-signed-apks.sh app/build/ci-apks/alpha-release
 
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
-          name: CMFA Debug APKs
-          path: app/build/ci-apks/*.apk
+          name: CMFA Alpha Release APKs
+          path: |
+            app/build/ci-apks/alpha-release/*.apk
+            app/build/ci-apks/alpha-release/SHA256SUMS
           if-no-files-found: error
+
+      - name: Remove signing credentials
+        if: always()
+        run: rm -f signing.properties "$RUNNER_TEMP/cmfa-release.keystore"
