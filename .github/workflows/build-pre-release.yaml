@@ -173,6 +173,10 @@ jobs:
           sudo update-ca-certificates
           cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
+      - name: Resolve lumen-crash version
+        env:
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/resolve-lumen-crash-version.sh
       - name: Prepare release signing (GitHub secrets only)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -257,6 +261,10 @@ jobs:
           sudo update-ca-certificates
           cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
+      - name: Resolve lumen-crash version
+        env:
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/resolve-lumen-crash-version.sh
       - name: Prepare release signing (GitHub secrets only)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

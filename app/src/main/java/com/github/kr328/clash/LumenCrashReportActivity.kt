@@ -13,14 +13,20 @@ import com.github.kr328.clash.common.util.intent
  * Host surface for a pending Lumen Crash SDK report.
  *
  * The rest of the app remains view-based; this activity is the only Compose entry.
+ * Must never process-kill on open: every SDK/Compose path is wrapped.
  */
 class LumenCrashReportActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val report = runCatching { LumenCrash.loadPendingReport() }.getOrNull()
+        val report = runCatching {
+            if (!LumenCrash.isInstalled()) return@runCatching null
+            LumenCrash.loadPendingReport()
+        }.getOrNull()
+
         if (report == null) {
-            finish()
+            // Nothing to show — resume normal app without looping.
+            resumeMainQuietly()
             return
         }
 
@@ -31,20 +37,35 @@ class LumenCrashReportActivity : ComponentActivity() {
                         report = report,
                         onContinue = {
                             runCatching { LumenCrash.clearPendingReport() }
-                            startActivity(MainActivity::class.intent)
-                            finish()
+                            resumeMainQuietly()
                         },
                         clearStoredReportOnContinue = true,
                     )
                 }
             }
-        }.isSuccess
+            true
+        }.getOrDefault(false)
 
         if (!opened) {
             // Compose crash-UI deps missing / integrity blocked: drop report and resume app.
             runCatching { LumenCrash.clearPendingReport() }
-            startActivity(MainActivity::class.intent)
-            finish()
+            resumeMainQuietly()
         }
+    }
+
+    private fun resumeMainQuietly() {
+        runCatching {
+            startActivity(
+                MainActivity::class.intent.addFlags(
+                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                ),
+            )
+        }
+        finish()
+    }
+
+    companion object {
+        const val EXTRA_REPORT_ID: String = "lumen_crash_report_id"
     }
 }

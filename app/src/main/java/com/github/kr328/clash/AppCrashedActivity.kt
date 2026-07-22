@@ -14,13 +14,15 @@ class AppCrashedActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (presentPendingLumenCrashReportIfNeeded()) {
+        val presented = runCatching { presentPendingLumenCrashReportIfNeeded() }.getOrDefault(false)
+        if (presented) {
+            finish()
             return
         }
 
         // No pending Lumen report: still open the Lumen surface (it self-finishes when empty).
-        if (LumenCrash.isInstalled()) {
-            startActivity(LumenCrashReportActivity::class.intent)
+        if (runCatching { LumenCrash.isInstalled() }.getOrDefault(false)) {
+            runCatching { startActivity(LumenCrashReportActivity::class.intent) }
         }
         finish()
     }
