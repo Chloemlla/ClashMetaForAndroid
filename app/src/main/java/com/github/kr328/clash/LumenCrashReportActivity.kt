@@ -18,7 +18,7 @@ class LumenCrashReportActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val report = LumenCrash.loadPendingReport()
+        val report = runCatching { LumenCrash.loadPendingReport() }.getOrNull()
         if (report == null) {
             finish()
             return

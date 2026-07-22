@@ -108,6 +108,12 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Pending Lumen crash UI owns the process; gate before dayNight / main design work.
+        if (maybePresentPendingCrashReport()) {
+            return
+        }
+
         applyDayNight()
 
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
@@ -115,10 +121,6 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         // Apply excludeFromRecents setting to all app tasks.
         checkNotNull(getSystemService<ActivityManager>()).appTasks.forEach { task ->
             task.setExcludeFromRecents(uiStore.hideFromRecents)
-        }
-
-        if (maybePresentPendingCrashReport()) {
-            return
         }
 
         launch {

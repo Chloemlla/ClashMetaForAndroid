@@ -29,8 +29,10 @@ class MainApplication : Application() {
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
 
-        Global.init(this)
+        // LumenCrash must be first host startup work: uncaught handler + pending report
+        // store must be live before Global/Remote/geo/migration can throw.
         installLumenCrashSdk()
+        Global.init(this)
         recordBreadcrumbSafe("Application.attachBaseContext")
     }
 
@@ -58,7 +60,8 @@ class MainApplication : Application() {
     }
 
     private fun installLumenCrashSdk() {
-        // README safe production path: wrap install so integrity failures cannot kill startup.
+        // First-boot critical path. Must not depend on Global/Remote and must not
+        // throw out of attachBaseContext (integrity mismatch is fail-closed in SDK).
         if (LumenCrash.isInstalled()) return
 
         runCatching {
@@ -85,8 +88,12 @@ class MainApplication : Application() {
                     }.getOrNull(),
                 ),
             )
-        }.onFailure {
-            Log.w("LumenCrash install failed: ${it.message}", it)
+        }.onFailure { error ->
+            // Avoid Log.* here: logging stack may not be ready this early.
+            // Best-effort stderr only; never rethrow.
+            runCatching {
+                System.err.println("LumenCrash install failed: ${error.message}")
+            }
         }
     }
 

@@ -74,3 +74,4 @@ lint/
 
 # Internal agent tooling session artifacts (not release content)
 outputs/
+local-maven/com/chloemlla/lumen/lumen-crash/0.1.0-a1657268/
