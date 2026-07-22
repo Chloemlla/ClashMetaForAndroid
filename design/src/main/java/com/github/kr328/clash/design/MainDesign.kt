@@ -1,6 +1,8 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.view.View
 import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.core.model.TunnelState
@@ -106,12 +108,26 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     suspend fun showAbout(versionName: String) {
         withContext(Dispatchers.Main) {
+            val repositoryUrl = context.getString(R.string.meta_github_url)
             val binding = DesignAboutBinding.inflate(context.layoutInflater).apply {
                 this.versionName = versionName
+                this.repositoryUrl = repositoryUrl
             }
+
+            val openRepository = {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(repositoryUrl))
+                )
+            }
+
+            binding.repositoryUrl.setOnClickListener { openRepository() }
 
             AlertDialog.Builder(context)
                 .setView(binding.root)
+                .setPositiveButton(R.string.open_source_repository) { _, _ ->
+                    openRepository()
+                }
+                .setNegativeButton(android.R.string.ok, null)
                 .show()
         }
     }

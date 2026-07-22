@@ -4,6 +4,9 @@
         <variable
             name="versionName"
             type="String" />
+        <variable
+            name="repositoryUrl"
+            type="String" />
     </data>
 
     <LinearLayout
@@ -36,6 +39,15 @@
                 android:layout_marginTop="@dimen/item_text_margin"
                 android:text="@{versionName}"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+
+            <TextView
+                android:id="@+id/repository_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/item_text_margin"
+                android:text="@{repositoryUrl}"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textColor="?attr/colorPrimary" />
         </LinearLayout>
     </LinearLayout>
 </layout>
