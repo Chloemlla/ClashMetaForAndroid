@@ -1,28 +1,43 @@
 #!/usr/bin/env bash
 # Resolve the latest lumen-crash main auto-release version and write lumen-crash.resolved.version.
 # Prefer GitHub Packages-compatible releases tagged lumen-crash-v*.
+# Falls back to an existing lumen-crash.resolved.version when GitHub API is unavailable.
 set -euo pipefail
 
 OWNER_REPO="${LUMEN_CRASH_OWNER_REPO:-Chloemlla/Project-Lumen}"
 OUT_FILE="${LUMEN_CRASH_VERSION_FILE:-lumen-crash.resolved.version}"
 API_URL="https://api.github.com/repos/${OWNER_REPO}/releases?per_page=100"
 
-auth_header=()
+auth_args=()
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  auth_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
 elif [[ -n "${GH_TOKEN:-}" ]]; then
-  auth_header=(-H "Authorization: Bearer ${GH_TOKEN}")
+  auth_args+=(-H "Authorization: Bearer ${GH_TOKEN}")
 fi
 
-version="$(
-  curl -fsSL \
-    -H "Accept: application/vnd.github+json" \
-    -H "User-Agent: clashmeta-lumen-crash-resolver" \
-    "${auth_header[@]}" \
-    "$API_URL" \
-  | python3 - <<'PY'
+tmp_json="$(mktemp)"
+trap 'rm -f "$tmp_json"' EXIT
+
+if ! curl -fsSL \
+  -H "Accept: application/vnd.github+json" \
+  -H "User-Agent: clashmeta-lumen-crash-resolver" \
+  "${auth_args[@]}" \
+  "$API_URL" \
+  -o "$tmp_json"; then
+  if [[ -s "$OUT_FILE" ]]; then
+    echo "GitHub API unavailable; keeping existing $OUT_FILE ($(tr -d '\r\n' < "$OUT_FILE"))" >&2
+    exit 0
+  fi
+  echo "Failed to fetch releases and no existing $OUT_FILE" >&2
+  exit 1
+fi
+
+if ! version="$(
+  python3 - "$tmp_json" <<'PY'
 import json, sys
-releases = json.load(sys.stdin)
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    releases = json.load(fh)
 candidates = []
 for rel in releases:
     if rel.get("draft"):
@@ -37,7 +52,13 @@ if not candidates:
 candidates.sort(reverse=True)
 print(candidates[0][1])
 PY
-)"
+)"; then
+  if [[ -s "$OUT_FILE" ]]; then
+    echo "Failed to parse releases; keeping existing $OUT_FILE ($(tr -d '\r\n' < "$OUT_FILE"))" >&2
+    exit 0
+  fi
+  exit 1
+fi
 
 if [[ -z "${version}" ]]; then
   echo "Failed to resolve lumen-crash version" >&2
