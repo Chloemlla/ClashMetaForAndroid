@@ -127,7 +127,16 @@ private fun formatCompact(value: Double, unit: String): String {
     return text + unit
 }
 
-private fun scaleTrafficBytes(value: Long): Long {
+
+// Platform extras used by Android 16 Live Updates / status chips.
+private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
+private const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
+private const val STATUS_CHIP_TEXT_LIMIT = 7
+
+/**
+ * Decode Clash packed traffic samples into raw byte counts.
+ */
+internal fun scaleTrafficBytes(value: Long): Long {
     val type = (value ushr 30) and 0x3
     val data = value and 0x3FFFFFFF
     return when (type) {
@@ -139,7 +148,3 @@ private fun scaleTrafficBytes(value: Long): Long {
     }
 }
 
-// Platform extras used by Android 16 Live Updates / status chips.
-private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
-private const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
-private const val STATUS_CHIP_TEXT_LIMIT = 7

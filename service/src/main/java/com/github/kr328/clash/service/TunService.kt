@@ -39,6 +39,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         else
             install(StaticNotificationModule(self))
 
+        install(LocalTrafficAccountingModule(self))
+
         install(AppListCacheModule(self))
         install(TimeZoneModule(self))
         install(SuspendModule(self))
@@ -265,3 +267,4 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         )
     }
 }
+

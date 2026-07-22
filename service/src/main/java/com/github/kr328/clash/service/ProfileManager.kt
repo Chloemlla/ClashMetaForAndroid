@@ -9,6 +9,7 @@ import com.github.kr328.clash.service.data.PendingDao
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IFetchObserver
 import com.github.kr328.clash.service.remote.IProfileManager
+import com.github.kr328.clash.service.store.LocalSubscriptionTrafficStore
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.generateProfileUUID
 import com.github.kr328.clash.service.util.importedDir
@@ -25,6 +26,7 @@ import java.util.*
 class ProfileManager(private val context: Context) : IProfileManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
     private val store = ServiceStore(context)
+    private val localTraffic = LocalSubscriptionTrafficStore(context)
 
     init {
         launch {
@@ -69,16 +71,17 @@ class ProfileManager(private val context: Context) : IProfileManager,
         val imported = ImportedDao().queryByUUID(uuid)
             ?: throw FileNotFoundException("profile $uuid not found")
 
+        // Cloned profiles start local usage at 0 B; never inherit upstream/local counters.
         val pending = Pending(
             uuid = newUUID,
             name = imported.name,
             type = Profile.Type.File,
             source = imported.source,
             interval = imported.interval,
-            upload = imported.upload,
-            total = imported.total,
-            download = imported.download,
-            expire = imported.expire,
+            upload = 0,
+            total = 0,
+            download = 0,
+            expire = 0,
             ageSecretKey = imported.ageSecretKey
         )
 
@@ -205,10 +208,11 @@ class ProfileManager(private val context: Context) : IProfileManager,
         val type = pending?.type ?: imported?.type ?: return null
         val source = pending?.source ?: imported?.source ?: return null
         val interval = pending?.interval ?: imported?.interval ?: return null
-        val upload = pending?.upload ?: imported?.upload ?: return null
-        val download = pending?.download ?: imported?.download ?: return null
-        val total = pending?.total ?: imported?.total ?: return null
-        val expire = pending?.expire ?: imported?.expire ?: return null
+        // Config page traffic is local-only and starts at 0 B for every subscription.
+        val upload = localTraffic.getUpload(uuid)
+        val download = localTraffic.getDownload(uuid)
+        val total = 0L
+        val expire = 0L
 
         return Profile(
             uuid = uuid,
@@ -257,3 +261,4 @@ class ProfileManager(private val context: Context) : IProfileManager,
         }
     }
 }
+

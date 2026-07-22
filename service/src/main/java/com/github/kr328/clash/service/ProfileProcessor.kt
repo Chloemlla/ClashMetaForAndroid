@@ -11,6 +11,7 @@ import com.github.kr328.clash.service.data.Pending
 import com.github.kr328.clash.service.data.PendingDao
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IFetchObserver
+import com.github.kr328.clash.service.store.LocalSubscriptionTrafficStore
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
@@ -62,16 +63,18 @@ object ProfileProcessor {
                         val updateInterval = subscriptionInfo?.subUpdateInterval
                             ?.takeIf { old == null && snapshot.interval == 0L }
                             ?: snapshot.interval
+                        // Never persist upstream subscription-userinfo traffic.
+                        // Local usage is owned by LocalSubscriptionTrafficStore (starts at 0 B).
                         val new = Imported(
                             snapshot.uuid,
                             snapshot.name,
                             snapshot.type,
                             snapshot.source,
                             updateInterval,
-                            subscriptionInfo?.subUpload ?: 0,
-                            subscriptionInfo?.subDownload ?: 0,
-                            subscriptionInfo?.subTotal ?: 0,
-                            subscriptionInfo?.subExpire ?: 0,
+                            old?.upload ?: 0,
+                            old?.download ?: 0,
+                            old?.total ?: 0,
+                            old?.expire ?: 0,
                             old?.createdAt ?: System.currentTimeMillis(),
                             ageSecretKey = snapshot.ageSecretKey
                         )
@@ -110,7 +113,8 @@ object ProfileProcessor {
 
                 Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                val subscriptionInfo = fetchProfile(context, snapshot.source, true, callback)
+                // Fetch/validate config only. Do not consume upstream subscription-userinfo traffic.
+                fetchProfile(context, snapshot.source, true, callback)
 
                 profileLock.withLock {
                     val imported = ImportedDao().queryByUUID(snapshot.uuid)
@@ -120,18 +124,7 @@ object ProfileProcessor {
                             context.importedDir.resolve(snapshot.uuid.toString()),
                         )
 
-                        val upload = subscriptionInfo?.subUpload
-                        if (upload != null) {
-                            ImportedDao().update(
-                                imported.copy(
-                                    upload = upload,
-                                    download = subscriptionInfo.subDownload ?: 0,
-                                    total = subscriptionInfo.subTotal ?: 0,
-                                    expire = subscriptionInfo.subExpire ?: 0,
-                                )
-                            )
-                        }
-
+                        // Keep previously stored local traffic fields; ignore upstream userinfo.
                         context.sendProfileChanged(snapshot.uuid)
                     }
                 }
@@ -177,6 +170,8 @@ object ProfileProcessor {
 
                 pending.deleteRecursively()
                 imported.deleteRecursively()
+
+                LocalSubscriptionTrafficStore(context).clear(uuid)
 
                 context.sendProfileChanged(uuid)
             }
@@ -224,3 +219,7 @@ object ProfileProcessor {
     }
 
 }
+
+
+
+
