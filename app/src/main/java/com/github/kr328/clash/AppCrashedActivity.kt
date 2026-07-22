@@ -1,33 +1,27 @@
 package com.github.kr328.clash
 
-import com.github.kr328.clash.common.compat.versionCodeCompat
-import com.github.kr328.clash.common.log.Log
-import com.github.kr328.clash.design.AppCrashedDesign
-import com.github.kr328.clash.log.SystemLogcat
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.chloemlla.lumen.crash.LumenCrash
+import com.github.kr328.clash.common.util.intent
+import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 
-class AppCrashedActivity : BaseActivity<AppCrashedDesign>() {
-    override suspend fun main() {
-        val design = AppCrashedDesign(this)
+/**
+ * Legacy entry kept for deep-links / old intents.
+ * All crash UX is owned by [LumenCrashReportActivity].
+ */
+class AppCrashedActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-        setContentDesign(design)
-
-        val packageInfo = withContext(Dispatchers.IO) {
-            packageManager.getPackageInfo(packageName, 0)
+        if (presentPendingLumenCrashReportIfNeeded()) {
+            return
         }
 
-        Log.i("App version: versionName = ${packageInfo.versionName} versionCode = ${packageInfo.versionCodeCompat}")
-
-        val logs = withContext(Dispatchers.IO) {
-            SystemLogcat.dumpCrash()
+        // No pending Lumen report: still open the Lumen surface (it self-finishes when empty).
+        if (LumenCrash.isInstalled()) {
+            startActivity(LumenCrashReportActivity::class.intent)
         }
-
-        design.setAppLogs(logs)
-
-        while (isActive) {
-            events.receive()
-        }
+        finish()
     }
 }

@@ -17,6 +17,8 @@ class InternalControlActivity : Activity() {
         @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
 
+        if (presentPendingLumenCrashReportIfNeeded()) return
+
         when (intent.action) {
             Intents.ACTION_TOGGLE_CLASH -> if (Remote.broadcasts.clashRunning) stopClash() else startClash()
             Intents.ACTION_START_CLASH -> if (Remote.broadcasts.clashRunning) showStarted() else startClash()

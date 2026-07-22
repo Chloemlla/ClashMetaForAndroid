@@ -8,6 +8,7 @@ import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
@@ -20,6 +21,8 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
         super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
+
+        if (presentPendingLumenCrashReportIfNeeded()) return
 
         if (intent.action != Intent.ACTION_VIEW) return finish()
 

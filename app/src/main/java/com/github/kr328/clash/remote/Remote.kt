@@ -3,7 +3,8 @@ package com.github.kr328.clash.remote
 import android.content.Context
 import android.content.Intent
 import com.github.kr328.clash.ApkBrokenActivity
-import com.github.kr328.clash.AppCrashedActivity
+import com.github.kr328.clash.LumenCrashReportActivity
+import com.chloemlla.lumen.crash.LumenCrash
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.intent
@@ -19,8 +20,18 @@ object Remote {
     val service: Service = Service(Global.application) {
         ApplicationObserver.createdActivities.forEach { it.finish() }
 
-        val intent = AppCrashedActivity::class.intent
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // Prefer Lumen crash UI. If no pending report exists, synthesize one from a
+        // RemoteService crash marker so the host still lands on the unified surface.
+        runCatching {
+            if (LumenCrash.isInstalled() && LumenCrash.loadPendingReport() == null) {
+                LumenCrash.record(
+                    IllegalStateException("RemoteService crashed or was killed repeatedly"),
+                )
+            }
+        }
+
+        val intent = LumenCrashReportActivity::class.intent
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         Global.application.startActivity(intent)
     }

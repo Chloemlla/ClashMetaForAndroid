@@ -3,8 +3,32 @@
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.BaseExtension
 import org.gradle.api.GradleException
+import java.io.File
 import java.net.URL
 import java.util.*
+
+fun gitCommitHash(rootDir: File): String {
+    val envHash = sequenceOf(
+        System.getenv("GIT_COMMIT"),
+        System.getenv("GITHUB_SHA"),
+    ).firstOrNull { !it.isNullOrBlank() }
+    if (!envHash.isNullOrBlank()) {
+        return envHash.take(7)
+    }
+    return try {
+        ProcessBuilder("git", "rev-parse", "--short=7", "HEAD")
+            .directory(rootDir)
+            .redirectErrorStream(true)
+            .start()
+            .inputStream
+            .bufferedReader()
+            .readText()
+            .trim()
+            .ifBlank { "unknown" }
+    } catch (_: Exception) {
+        "unknown"
+    }
+}
 
 buildscript {
     repositories {
@@ -83,6 +107,11 @@ subprojects {
 
             versionName = "2.11.32"
             versionCode = 211032
+
+            if (isApp) {
+                val commitHash = gitCommitHash(rootProject.projectDir)
+                buildConfigField("String", "COMMIT_HASH", "\"$commitHash\"")
+            }
 
             resValue("string", "release_name", "v$versionName")
             resValue("integer", "release_code", "$versionCode")

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import com.chloemlla.lumen.crash.CrashBreadcrumbs
 import com.chloemlla.lumen.crash.LumenCrash
+import com.chloemlla.lumen.crash.CrashReport
 import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.currentProcessName
@@ -16,6 +17,7 @@ import com.github.kr328.clash.service.migration.AlphaDataMigrator
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.clashDir
+import com.github.kr328.clash.util.onLumenCrashSaved
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -75,7 +77,7 @@ class MainApplication : Application() {
                     appDisplayName = appName,
                     versionName = BuildConfig.VERSION_NAME,
                     versionCode = BuildConfig.VERSION_CODE,
-                    commitHash = "unknown",
+                    commitHash = BuildConfig.COMMIT_HASH,
                     fileProviderAuthority = "$packageName.fileprovider",
                     shareSubject = runCatching {
                         getString(DesignR.string.crash_report_share_subject)
@@ -86,6 +88,9 @@ class MainApplication : Application() {
                     reportMessage = runCatching {
                         getString(DesignR.string.crash_report_message)
                     }.getOrNull(),
+                    onCrashSaved = { report: CrashReport ->
+                        onLumenCrashSaved(report.reportId)
+                    },
                 ),
             )
         }.onFailure { error ->

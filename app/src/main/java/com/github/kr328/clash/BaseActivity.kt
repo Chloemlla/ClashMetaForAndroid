@@ -10,7 +10,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import androidx.core.view.WindowCompat
-import com.chloemlla.lumen.crash.LumenCrash
+import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.common.compat.isAllowForceDarkCompat
 import com.github.kr328.clash.common.compat.isLightNavigationBarCompat
 import com.github.kr328.clash.common.compat.isLightStatusBarsCompat
@@ -110,7 +110,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         super.onCreate(savedInstanceState)
 
         // Pending Lumen crash UI owns the process; gate before dayNight / main design work.
-        if (maybePresentPendingCrashReport()) {
+        if (presentPendingLumenCrashReportIfNeeded()) {
             return
         }
 
@@ -128,17 +128,6 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         }
     }
 
-    /**
-     * Gate normal design content when a persisted Lumen crash report is pending.
-     * Returns true when the crash UI owns the process and [main] must not start.
-     */
-    private fun maybePresentPendingCrashReport(): Boolean {
-        if (!LumenCrash.isInstalled()) return false
-        runCatching { LumenCrash.loadPendingReport() }.getOrNull() ?: return false
-        startActivity(LumenCrashReportActivity::class.intent)
-        finish()
-        return true
-    }
 
     override fun onStart() {
         super.onStart()
