@@ -58,31 +58,36 @@ class MainApplication : Application() {
     }
 
     private fun installLumenCrashSdk() {
+        // README safe production path: wrap install so integrity failures cannot kill startup.
         if (LumenCrash.isInstalled()) return
 
-        val appName = runCatching {
-            getString(DesignR.string.application_name)
-        }.getOrDefault("Clash Meta for Android")
+        runCatching {
+            val appName = runCatching {
+                getString(DesignR.string.application_name)
+            }.getOrDefault("Clash Meta for Android")
 
-        LumenCrash.install(
-            this,
-            LumenCrashConfig(
-                appDisplayName = appName,
-                versionName = BuildConfig.VERSION_NAME,
-                versionCode = BuildConfig.VERSION_CODE,
-                commitHash = "unknown",
-                fileProviderAuthority = "$packageName.fileprovider",
-                shareSubject = runCatching {
-                    getString(DesignR.string.crash_report_share_subject)
-                }.getOrNull(),
-                reportTitle = runCatching {
-                    getString(DesignR.string.crash_report_title)
-                }.getOrNull(),
-                reportMessage = runCatching {
-                    getString(DesignR.string.crash_report_message)
-                }.getOrNull(),
-            ),
-        )
+            LumenCrash.install(
+                this,
+                LumenCrashConfig(
+                    appDisplayName = appName,
+                    versionName = BuildConfig.VERSION_NAME,
+                    versionCode = BuildConfig.VERSION_CODE,
+                    commitHash = "unknown",
+                    fileProviderAuthority = "$packageName.fileprovider",
+                    shareSubject = runCatching {
+                        getString(DesignR.string.crash_report_share_subject)
+                    }.getOrNull(),
+                    reportTitle = runCatching {
+                        getString(DesignR.string.crash_report_title)
+                    }.getOrNull(),
+                    reportMessage = runCatching {
+                        getString(DesignR.string.crash_report_message)
+                    }.getOrNull(),
+                ),
+            )
+        }.onFailure {
+            Log.w("LumenCrash install failed: ${it.message}", it)
+        }
     }
 
     private fun recordBreadcrumbSafe(event: String) {

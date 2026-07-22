@@ -20,8 +20,16 @@ dependencies {
     implementation(project(":design"))
     implementation(project(":common"))
 
-    // Pin lumen-crash away from activity/core 1.13+/1.18+ AAR metadata that needs AGP 8.9.1 + compileSdk 36.
-    implementation("com.chloemlla.lumen:lumen-crash:0.1.0") {
+    // Lumen Crash SDK (Project-Lumen/lumen-crash README).
+    // Prefer lumen-crash.resolved.version (auto-release / release-asset sync), else 0.1.0.
+    // Keep activity/core forced below to avoid AGP 8.9.1 + compileSdk 36 AAR metadata.
+    val lumenCrashVersion = rootProject.file("lumen-crash.resolved.version")
+        .takeIf { it.exists() }
+        ?.readText()
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: "0.1.0"
+    implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion") {
         exclude(group = "androidx.navigationevent")
     }
 
@@ -228,3 +236,4 @@ tasks.configureEach {
 tasks.getByName("clean", type = Delete::class) {
     delete(file(geoFilesDownloadDir))
 }
+

@@ -27,6 +27,11 @@ subprojects {
         mavenCentral()
         google()
         maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
+        // README option C: no-auth release assets synced under ./local-maven
+        maven {
+            name = "LocalMavenLumenCrash"
+            url = uri(rootProject.file("local-maven"))
+        }
         maven {
             name = "GitHubPackagesProjectLumen"
             url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
@@ -327,3 +332,4 @@ tasks.wrapper {
             .appendText("distributionSha256Sum=$sha256")
     }
 }
+

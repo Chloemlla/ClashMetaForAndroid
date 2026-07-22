@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep Lumen Crash SDK strings when isShrinkResources = true. See lumen-crash README. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/lumen_crash_*,@plurals/lumen_crash_*" />
