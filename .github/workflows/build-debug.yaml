@@ -5,6 +5,7 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
   # main already runs the heavier pre-release pipeline; keep debug for PRs / manual runs.
+  # Manual dispatch can also publish a signed Alpha pre-release.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -14,7 +15,7 @@ jobs:
   BuildDebug:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: read
     steps:
       - name: Checkout Repository
@@ -22,6 +23,17 @@ jobs:
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v5
+
+      - name: Set Alpha release metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' build.gradle.kts | head -n 1)
+          SHORT_HASH=$(git rev-parse --short=7 HEAD)
+          test -n "$VERSION_NAME"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "short_hash=$SHORT_HASH" >> "$GITHUB_OUTPUT"
+          echo "alpha_tag=v${VERSION_NAME}-${SHORT_HASH}-alpha" >> "$GITHUB_OUTPUT"
 
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
@@ -147,6 +159,25 @@ jobs:
       - name: Stage secret-signed Alpha APKs
         run: bash .github/scripts/stage-signed-apks.sh app/build/ci-apks/alpha-release
 
+      - name: Prepare Alpha migration APK aliases
+        run: |
+          set -euo pipefail
+          release_dir=app/build/ci-apks/alpha-release
+          migration_dir=app/build/ci-apks/alpha-migration-release
+          mkdir -p "$migration_dir"
+          mapfile -t apks < <(find "$release_dir" -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+          : > "$migration_dir/SHA256SUMS-migration"
+          for apk in "${apks[@]}"; do
+            name=$(basename "$apk")
+            migration_name=${name/-alpha-/-alpha-migration-}
+            if [ "$migration_name" = "$name" ]; then
+              migration_name=${name%.apk}-migration.apk
+            fi
+            cp -f "$apk" "$migration_dir/$migration_name"
+            (cd "$migration_dir" && sha256sum "$migration_name") >> "$migration_dir/SHA256SUMS-migration"
+          done
+
       - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
@@ -154,7 +185,27 @@ jobs:
           path: |
             app/build/ci-apks/alpha-release/*.apk
             app/build/ci-apks/alpha-release/SHA256SUMS
+            app/build/ci-apks/alpha-migration-release/*.apk
+            app/build/ci-apks/alpha-migration-release/SHA256SUMS-migration
           if-no-files-found: error
+
+      # Avoid PR noise: only manual runs publish GitHub pre-releases.
+      - name: Publish Alpha pre-release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: false
+          generate_release_notes: true
+          tag_name: ${{ steps.meta.outputs.alpha_tag }}
+          prerelease: true
+          name: ClashMetaForAndroid Alpha ${{ steps.meta.outputs.version_name }}-${{ steps.meta.outputs.short_hash }}
+          files: |
+            app/build/ci-apks/alpha-release/*.apk
+            app/build/ci-apks/alpha-release/SHA256SUMS
+            app/build/ci-apks/alpha-migration-release/*.apk
+            app/build/ci-apks/alpha-migration-release/SHA256SUMS-migration
 
       - name: Remove signing credentials
         if: always()
