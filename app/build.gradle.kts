@@ -21,7 +21,9 @@ dependencies {
     implementation(project(":common"))
 
     // Lumen Crash SDK (Project-Lumen/lumen-crash README).
-    // Prefer lumen-crash.resolved.version (auto-release / release-asset sync), else 0.1.0.
+    // Prefer lumen-crash.resolved.version written by CI
+    // (.github/scripts/resolve-lumen-crash-version.sh) or local
+    // scripts/Resolve-LumenCrashLatest.ps1; fallback 0.1.0.
     // Keep activity/core forced below to avoid AGP 8.9.1 + compileSdk 36 AAR metadata.
     val lumenCrashVersion = rootProject.file("lumen-crash.resolved.version")
         .takeIf { it.exists() }

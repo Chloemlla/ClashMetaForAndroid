@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/local-subscription-traffic
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -82,6 +83,11 @@ jobs:
           sudo update-ca-certificates
           cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
+
+      - name: Resolve lumen-crash version
+        env:
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/resolve-lumen-crash-version.sh
       - name: Repository policy checks
         run: python3 .github/scripts/verify-repository-policy.py
 

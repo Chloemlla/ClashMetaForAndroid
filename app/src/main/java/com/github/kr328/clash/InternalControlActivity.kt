@@ -6,6 +6,7 @@ import android.widget.Toast
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.remote.Remote
+import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 
