@@ -59,6 +59,15 @@ if [ -z "$APKSIGNER" ]; then
   exit 1
 fi
 
+AAPT=""
+if [ -n "$SDK_ROOT" ]; then
+  # Prefer classic aapt for `dump badging` (aapt2 path/layout varies by build-tools).
+  AAPT=$(find "$SDK_ROOT/build-tools" -type f -name aapt 2>/dev/null | sort -V | tail -n 1 || true)
+  if [ -z "$AAPT" ]; then
+    AAPT=$(find "$SDK_ROOT/build-tools" -type f -name aapt2 2>/dev/null | sort -V | tail -n 1 || true)
+  fi
+fi
+
 mkdir -p "$STAGE_DIR"
 : > "$STAGE_DIR/$CHECKSUM_NAME"
 
@@ -72,6 +81,24 @@ for apk in "${apks[@]}"; do
   esac
 
   "$APKSIGNER" verify --verbose "$apk" >/dev/null
+
+  # INSTALL_FAILED_TEST_ONLY (-15) / Chinese package installers "应用程序安装异常(-15)"
+  # when android:testOnly=true. Refuse to stage such packages.
+  if [ -n "$AAPT" ]; then
+    badging=$("$AAPT" dump badging "$apk" 2>/dev/null || true)
+    if printf '%s' "$badging" | grep -Eq "testOnly=['\"]?true"; then
+      echo "Refusing testOnly APK (install code -15): $apk" >&2
+      printf '%s\n' "$badging" | head -n 20 >&2 || true
+      exit 1
+    fi
+    # Surface package name / version for install triage.
+    printf '%s\n' "$badging" | awk '
+      /^package: / { print "  " $0 }
+      /native-code:/ { print "  " $0 }
+    ' || true
+  else
+    echo "aapt/aapt2 not found; skipping testOnly badging check for $apk" >&2
+  fi
 
   # Normalize apksigner cert digests to a bare uppercase hex SHA-256.
   actual_fp=$(

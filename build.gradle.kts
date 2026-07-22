@@ -151,6 +151,13 @@ subprojects {
                     excludes.add("META-INF/LICENSE*")
                     excludes.add("META-INF/NOTICE*")
                 }
+                // AGP 8 defaults to uncompressed page-aligned native libs + extractNativeLibs=false.
+                // Several package installers (and older/custom ROMs) report that layout as
+                // "package invalid" / INSTALL_FAILED_TEST_ONLY (-15) on sideload. Prefer the
+                // legacy compressed+extract path for installability.
+                jniLibs {
+                    useLegacyPackaging = true
+                }
             }
         }
 
@@ -284,6 +291,9 @@ subprojects {
                     // Missing credentials are rejected above when a release task is requested.
                     signingConfig = signingConfigs.findByName("release")
                 }
+                // Package installers reject android:testOnly=true with code -15.
+                // Keep release/debug publishable artifacts installable without adb -t.
+                isDebuggable = false
                 proguardFiles(
                     getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro"
@@ -291,6 +301,8 @@ subprojects {
             }
             named("debug") {
                 versionNameSuffix = ".debug"
+                // Still installable via package installer when not IDE-injected as testOnly.
+                isDebuggable = true
             }
         }
 
@@ -306,9 +318,11 @@ subprojects {
             splits {
                 abi {
                     isEnable = true
-                    // Per-ABI APKs only; universal fat APK roughly triples native size for
-                    // side-load users who pick the wrong artifact. CI still publishes all ABIs.
-                    isUniversalApk = false
+                    // Keep per-ABI APKs for size, but also emit a universal APK so sideload
+                    // users who pick the wrong artifact still get a package that installs.
+                    // INSTALL_FAILED_TEST_ONLY (-15) / "package invalid" often comes from
+                    // incomplete ABI-split packages installed via package installer UI.
+                    isUniversalApk = true
                     reset()
                     include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
                 }
