@@ -75,3 +75,4 @@ lint/
 # Internal agent tooling session artifacts (not release content)
 outputs/
 local-maven/
+tmp/
