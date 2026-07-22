@@ -52,8 +52,10 @@ dependencies {
     androidTestImplementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
-    // material-icons-extended was unused by host UI (only Lumen crash Compose screen);
-    // drop the large icons set — crash SDK can pull icons-core transitively if needed.
+    // Required by LumenCrashReportScreen (Icons.Outlined.* + calculateWindowSizeClass).
+    // Keep explicit pins under the Compose BOM so release minify/R8 cannot drop them.
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material3:material3-window-size-class")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
 

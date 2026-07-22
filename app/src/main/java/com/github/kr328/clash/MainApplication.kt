@@ -66,18 +66,23 @@ class MainApplication : Application() {
         // throw out of attachBaseContext (integrity mismatch is fail-closed in SDK).
         if (LumenCrash.isInstalled()) return
 
-        runCatching {
+        // Prefer installSafely (SDK-owned fail-soft). Fall back to explicit config install
+        // wrapped in runCatching so no integrity / metadata failure can kill process start.
+        val installed = runCatching {
             val appName = runCatching {
                 getString(DesignR.string.application_name)
             }.getOrDefault("Clash Meta for Android")
+            val versionName = runCatching { BuildConfig.VERSION_NAME }.getOrDefault("unknown")
+            val versionCode = runCatching { BuildConfig.VERSION_CODE }.getOrDefault(0)
+            val commitHash = runCatching { BuildConfig.COMMIT_HASH }.getOrDefault("unknown")
 
-            LumenCrash.install(
+            LumenCrash.installSafely(
                 this,
                 LumenCrashConfig(
                     appDisplayName = appName,
-                    versionName = BuildConfig.VERSION_NAME,
-                    versionCode = BuildConfig.VERSION_CODE,
-                    commitHash = BuildConfig.COMMIT_HASH,
+                    versionName = versionName,
+                    versionCode = versionCode,
+                    commitHash = commitHash,
                     fileProviderAuthority = "$packageName.fileprovider",
                     shareSubject = runCatching {
                         getString(DesignR.string.crash_report_share_subject)
@@ -89,15 +94,15 @@ class MainApplication : Application() {
                         getString(DesignR.string.crash_report_message)
                     }.getOrNull(),
                     onCrashSaved = { report: CrashReport ->
-                        onLumenCrashSaved(report.reportId)
+                        runCatching { onLumenCrashSaved(report.reportId) }
                     },
                 ),
             )
-        }.onFailure { error ->
-            // Avoid Log.* here: logging stack may not be ready this early.
-            // Best-effort stderr only; never rethrow.
+        }.getOrDefault(false)
+
+        if (!installed && !LumenCrash.isInstalled()) {
             runCatching {
-                System.err.println("LumenCrash install failed: ${error.message}")
+                System.err.println("LumenCrash install failed; continuing without crash capture")
             }
         }
     }

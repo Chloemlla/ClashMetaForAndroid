@@ -143,10 +143,17 @@ object Clash {
      * (or first selectable group when preferred is blank/missing).
      */
     fun queryDashboardSummary(preferred: String, excludeNotSelectable: Boolean): DashboardSummary {
-        return Json.Default.decodeFromString(
-            DashboardSummary.serializer(),
-            Bridge.nativeQueryDashboardSummary(preferred, excludeNotSelectable),
-        )
+        val raw = Bridge.nativeQueryDashboardSummary(preferred, excludeNotSelectable)
+        return runCatching {
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+                coerceInputValues = true
+            }.decodeFromString(DashboardSummary.serializer(), raw)
+        }.getOrElse {
+            // Native may return "{}" on marshal failure; never let decode kill the UI process.
+            DashboardSummary()
+        }
     }
 
     fun healthCheck(name: String): CompletableDeferred<Unit> {

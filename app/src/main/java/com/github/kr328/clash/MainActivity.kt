@@ -163,22 +163,32 @@ class MainActivity : BaseActivity<MainDesign>() {
         setClashRunning(clashRunning)
 
         // Single core/JSON summary: mode + hasProviders + selected node (no full lists).
-        withClash {
-            val summary = queryDashboardSummary(
-                preferred = uiStore.proxyLastGroup,
-                excludeNotSelectable = uiStore.proxyExcludeNotSelectable,
-            )
-            val selected = summary.selectedNow.takeIf { clashRunning && it.isNotBlank() }
-            setProxySummary(summary.mode, selected)
-            setHasProviders(summary.hasProviders)
+        // Fail soft: dashboard/native decode issues must never take down the home screen.
+        runCatching {
+            withClash {
+                val summary = queryDashboardSummary(
+                    preferred = uiStore.proxyLastGroup,
+                    excludeNotSelectable = uiStore.proxyExcludeNotSelectable,
+                )
+                val selected = summary.selectedNow.takeIf { clashRunning && it.isNotBlank() }
+                setProxySummary(summary.mode, selected)
+                setHasProviders(summary.hasProviders)
+            }
+        }.onFailure { error ->
+            recordBreadcrumbSafe("MainDesign.fetch summary failed: ${error::class.java.simpleName}")
+            runCatching { LumenCrash.record(error) }
         }
 
-        withProfile {
-            setProfileName(queryActive()?.name)
+        runCatching {
+            withProfile {
+                setProfileName(queryActive()?.name)
+            }
+        }.onFailure { error ->
+            recordBreadcrumbSafe("MainDesign.fetch profile failed: ${error::class.java.simpleName}")
         }
 
         if (clashRunning) {
-            fetchTraffic()
+            runCatching { fetchTraffic() }
         }
     }
 

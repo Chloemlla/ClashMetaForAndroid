@@ -13,6 +13,8 @@ import com.github.kr328.clash.common.util.intent
  */
 fun Activity.presentPendingLumenCrashReportIfNeeded(): Boolean {
     if (!LumenCrash.isInstalled()) return false
+    // loadPendingReport() is fail-closed on integrity; always wrap so a
+    // corrupt / stripped SDK never process-kills Activity.onCreate.
     runCatching { LumenCrash.loadPendingReport() }.getOrNull() ?: return false
     startActivity(
         LumenCrashReportActivity::class.intent.addFlags(

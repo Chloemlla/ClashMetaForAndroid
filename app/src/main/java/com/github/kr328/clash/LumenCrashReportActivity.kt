@@ -24,18 +24,27 @@ class LumenCrashReportActivity : ComponentActivity() {
             return
         }
 
-        setContent {
-            MaterialTheme(colorScheme = lightColorScheme()) {
-                LumenCrashReportScreen(
-                    report = report,
-                    onContinue = {
-                        LumenCrash.clearPendingReport()
-                        startActivity(MainActivity::class.intent)
-                        finish()
-                    },
-                    clearStoredReportOnContinue = true,
-                )
+        val opened = runCatching {
+            setContent {
+                MaterialTheme(colorScheme = lightColorScheme()) {
+                    LumenCrashReportScreen(
+                        report = report,
+                        onContinue = {
+                            runCatching { LumenCrash.clearPendingReport() }
+                            startActivity(MainActivity::class.intent)
+                            finish()
+                        },
+                        clearStoredReportOnContinue = true,
+                    )
+                }
             }
+        }.isSuccess
+
+        if (!opened) {
+            // Compose crash-UI deps missing / integrity blocked: drop report and resume app.
+            runCatching { LumenCrash.clearPendingReport() }
+            startActivity(MainActivity::class.intent)
+            finish()
         }
     }
 }
