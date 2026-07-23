@@ -251,8 +251,8 @@
     <string name="geoip_fallback_code">GeoIP Fallback 区域代码</string>
     <string name="allow_bypass">允许应用绕过</string>
     <string name="allow_bypass_summary">允许其他应用绕过 VPN</string>
-    <string name="piliplus_auto_adapt">PiliPlus 自动适配</string>
-    <string name="piliplus_auto_adapt_summary">同时安装 PiliPlus 时自动保证其走 VPN 访问控制，无需手动勾选。修改后需重启 VPN 生效。</string>
+    <string name="piliplus_auto_adapt">伙伴应用自动适配</string>
+    <string name="piliplus_auto_adapt_summary">同时安装 PiliPlus / NexAI / Project-Lumen 时自动保证其走 VPN 访问控制，无需手动勾选。修改后需重启 VPN 生效。</string>
     <string name="allow_ipv6">允许 Ipv6</string>
     <string name="allow_ipv6_summary">通过 VpnService 代理 Ipv6 流量</string>
     <string name="clash_meta_wiki">Clash Meta Wiki</string>

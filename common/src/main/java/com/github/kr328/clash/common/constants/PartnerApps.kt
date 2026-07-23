@@ -14,12 +14,31 @@ object PartnerApps {
         "com.chloemlla.piliplus.dev",
     )
 
+    val nexAiPackages: Set<String> = setOf(
+        "com.chloemlla.nexai",
+        "com.chloemlla.nexai.debug",
+        "com.chloemlla.nexai.dev",
+    )
+
+    val projectLumenPackages: Set<String> = setOf(
+        "com.chloemlla.projectlumen",
+        "com.chloemlla.projectlumen.debug",
+        "com.chloemlla.projectlumen.dev",
+    )
+
+    /** All partner applicationIds (release + common suffixes). */
+    val allPackages: Set<String> =
+        piliPlusPackages + nexAiPackages + projectLumenPackages
+
     fun isPiliPlusPackage(packageName: String): Boolean =
         packageName in piliPlusPackages
 
-    fun installedPiliPlusPackages(context: Context): Set<String> {
+    fun isPartnerPackage(packageName: String): Boolean =
+        packageName in allPackages
+
+    fun installedPartnerPackages(context: Context): Set<String> {
         val pm = context.packageManager
-        return piliPlusPackages.filter { pkg ->
+        return allPackages.filter { pkg ->
             try {
                 pm.getApplicationInfo(pkg, 0)
                 true
@@ -28,4 +47,8 @@ object PartnerApps {
             }
         }.toSet()
     }
+
+    /** Backward-compatible alias used by older call sites. */
+    fun installedPiliPlusPackages(context: Context): Set<String> =
+        installedPartnerPackages(context)
 }

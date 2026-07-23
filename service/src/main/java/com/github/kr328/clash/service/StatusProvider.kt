@@ -34,6 +34,7 @@ class StatusProvider : ContentProvider() {
                     putBoolean("running", serviceRunning)
                     putBoolean("vpnRunning", vpnRunning)
                     putBoolean("piliPlusAutoAdapt", autoAdapt)
+                    putBoolean("partnerAppAutoAdapt", autoAdapt)
                     putString("name", currentProfile)
                     putString("package", context?.packageName)
                 }
@@ -49,7 +50,7 @@ class StatusProvider : ContentProvider() {
         if (packages.any { it == ctx.packageName }) {
             return true
         }
-        return packages.any { PartnerApps.isPiliPlusPackage(it) }
+        return packages.any { PartnerApps.isPartnerPackage(it) }
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
