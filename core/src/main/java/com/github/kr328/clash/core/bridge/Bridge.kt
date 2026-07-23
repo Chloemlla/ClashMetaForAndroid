@@ -51,6 +51,8 @@ object Bridge {
     external fun nativeQueryConfiguration(): String
     external fun nativeSubscribeLogcat(callback: LogcatInterface): Long
     external fun nativeUnsubscribeLogcat(token: Long)
+    external fun nativeSubscribeConnections(callback: ConnectionsInterface, intervalMs: Long): Long
+    external fun nativeUnsubscribeConnections(token: Long)
     external fun nativeCoreVersion(): String
 
     external fun nativeSetAgeSecretKey(key: String?)

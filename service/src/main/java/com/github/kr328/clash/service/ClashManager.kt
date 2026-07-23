@@ -7,6 +7,7 @@ import com.github.kr328.clash.core.model.*
 import com.github.kr328.clash.service.data.Selection
 import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.remote.IClashManager
+import com.github.kr328.clash.service.remote.IConnectionsObserver
 import com.github.kr328.clash.service.remote.ILogObserver
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.sendOverrideChanged
@@ -17,6 +18,7 @@ class ClashManager(private val context: Context) : IClashManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
     private val store = ServiceStore(context)
     private var logReceiver: ReceiveChannel<LogMessage>? = null
+    private var connectionsReceiver: ReceiveChannel<com.github.kr328.clash.core.model.ConnectionSnapshot>? = null
 
     override fun queryTunnelState(): TunnelState {
         return Clash.queryTunnelState()
@@ -119,6 +121,39 @@ class ClashManager(private val context: Context) : IClashManager,
                             // ignore
                         } catch (e: Exception) {
                             Log.w("UI crashed", e)
+                        } finally {
+                            withContext(NonCancellable) {
+                                c.cancel()
+
+                                Clash.forceGc()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun setConnectionsObserver(observer: IConnectionsObserver?) {
+        synchronized(this) {
+            connectionsReceiver?.apply {
+                cancel()
+
+                Clash.forceGc()
+            }
+            connectionsReceiver = null
+
+            if (observer != null) {
+                connectionsReceiver = Clash.subscribeConnections(1000L).also { c ->
+                    launch {
+                        try {
+                            while (isActive) {
+                                observer.newSnapshot(c.receive())
+                            }
+                        } catch (e: CancellationException) {
+                            // intended behavior
+                        } catch (e: Exception) {
+                            Log.w("connections observer crashed", e)
                         } finally {
                             withContext(NonCancellable) {
                                 c.cancel()

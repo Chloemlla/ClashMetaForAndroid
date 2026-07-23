@@ -269,6 +269,28 @@ object Clash {
         return channel
     }
 
+    /**
+     * Subscribe to per-connection snapshots pushed at [intervalMs] cadence.
+     * The returned channel delivers [ConnectionSnapshot] until closed.
+     */
+    fun subscribeConnections(intervalMs: Long = 1000L): ReceiveChannel<ConnectionSnapshot> {
+        val channel = Channel<ConnectionSnapshot>(Channel.CONFLATED)
+        val token = Bridge.nativeSubscribeConnections(
+            object : com.github.kr328.clash.core.bridge.ConnectionsInterface {
+                override fun received(jsonPayload: String): Boolean {
+                    return channel.trySend(
+                        Json.decodeFromString(ConnectionSnapshot.serializer(), jsonPayload)
+                    ).isSuccess
+                }
+            },
+            intervalMs,
+        )
+        channel.invokeOnClose {
+            Bridge.nativeUnsubscribeConnections(token)
+        }
+        return channel
+    }
+
     fun setAgeSecretKey(key: String?) {
         Bridge.nativeSetAgeSecretKey(key)
     }

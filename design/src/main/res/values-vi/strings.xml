@@ -157,6 +157,9 @@
     <string name="log_level">Mức nhật ký</string>
     <string name="logcat">Nhật ký</string>
     <string name="logs">Nhật ký</string>
+    <string name="connections">Xem kết nối</string>
+    <string name="format_connections_title">Xem kết nối · %d</string>
+    <string name="connections_empty">Không có kết nối đang hoạt động</string>
     <string name="mapping">IP thực với ánh xạ miền</string>
     <string name="mixed_port">Cổng Mixed</string>
     <string name="mode">Chế độ</string>

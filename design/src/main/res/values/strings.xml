@@ -26,6 +26,9 @@
     <string name="format_profile_activated">%s Activated</string>
 
     <string name="logs">Logs</string>
+    <string name="connections">Connections</string>
+    <string name="format_connections_title">Connections · %d</string>
+    <string name="connections_empty">No active connections</string>
     <string name="settings">Settings</string>
     <string name="help">Help</string>
     <string name="about">About</string>

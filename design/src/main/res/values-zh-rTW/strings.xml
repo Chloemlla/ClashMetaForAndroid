@@ -45,6 +45,9 @@
     <string name="invalid_url">無效 URL</string>
     <string name="logcat">Logcat</string>
     <string name="logs">日誌</string>
+    <string name="connections">查看使用</string>
+    <string name="format_connections_title">查看使用 · %d</string>
+    <string name="connections_empty">暫無活動連線</string>
     <string name="mode">模式</string>
     <string name="name">名稱</string>
     <string name="network">網路</string>

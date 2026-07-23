@@ -15,6 +15,9 @@
     <string name="format_profile_activated">%s активирован</string>
 
     <string name="logs">Логи</string>
+    <string name="connections">Подключения</string>
+    <string name="format_connections_title">Подключения · %d</string>
+    <string name="connections_empty">Нет активных подключений</string>
     <string name="settings">Настройки</string>
     <string name="help">Помощь</string>
     <string name="about">О программе</string>
