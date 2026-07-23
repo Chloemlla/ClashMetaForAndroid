@@ -77,6 +77,7 @@ jobs:
 
       - name: Apply Patches
         run: |
+          set -euo pipefail
           cd "$(go env GOROOT)"
           for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
 

@@ -470,7 +470,7 @@
     <string name="open_source_mod_sdk">:sdk ClashRuntime embed facade — same-app Profile / VPN / proxy-group control without the stock UI (not cross-app remote control)</string>
     <string name="open_source_mod_ci">Main push: parallel Meta latest + Alpha pre-release · signing fail-fast · SHA256SUMS · full unit-test / Lint visibility · community i18n · repository policy scripts</string>
     <!-- Immersive update notes (Trellis android/update-notes) -->
-    <string name="update_notes_title">What's New</string>
+    <string name="update_notes_title">What is New</string>
     <string name="update_notes_intro"><![CDATA[This build includes changes since your last install. Review highlights, module notes, and recent commits before continuing.]]></string>
     <string name="update_notes_immersive_hint"><![CDATA[Build identity is <strong>version + commit hash + build time</strong>. Each new commit/merge ships a fresh notes page.]]></string>
     <string name="update_notes_build_identity">Build identity</string>

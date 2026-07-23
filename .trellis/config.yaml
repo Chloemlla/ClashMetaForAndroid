@@ -1,5 +1,15 @@
 project: ClashMetaForAndroid
 specs:
   - android/update-notes
+  - ci/gh-action-auto-repair
 notes_asset: design/src/main/res/raw/update_notes.json
 gate_key: versionCode|commitHash
+ci:
+  control_plane: gh
+  forbid_local_gradle: true
+  forbid_local_flutter: true
+  scripts:
+    - scripts/ci-status.ps1
+    - scripts/ci-diagnose.ps1
+    - scripts/ci-rerun-failed.ps1
+    - scripts/generate-update-notes.ps1
