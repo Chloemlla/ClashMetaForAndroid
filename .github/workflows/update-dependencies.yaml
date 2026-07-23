@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
-      
+
       - name: Checkout and Update submodules
         run: |
           set -euo pipefail
@@ -42,7 +42,7 @@ jobs:
           for p in "${patches[@]}"; do
             patch --verbose -p 1 < "$p"
           done
-      
+
       - uses: actions/cache@v5
         with:
           path: |
@@ -93,7 +93,7 @@ jobs:
             - Update Go Module Dependecies
           labels: |
             Update
-        
+
       - name: PR result
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
