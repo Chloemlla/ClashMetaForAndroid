@@ -51,6 +51,7 @@ object ProfileProcessor {
 
                 val force = snapshot.type != Profile.Type.File
                 val subscriptionInfo = fetchProfile(context, snapshot.source, force, callback)
+                val useLocalTraffic = ServiceStore(context).localSubscriptionTraffic
 
                 profileLock.withLock {
                     if (PendingDao().queryByUUID(snapshot.uuid) == snapshot) {
@@ -63,18 +64,35 @@ object ProfileProcessor {
                         val updateInterval = subscriptionInfo?.subUpdateInterval
                             ?.takeIf { old == null && snapshot.interval == 0L }
                             ?: snapshot.interval
-                        // Never persist upstream subscription-userinfo traffic.
-                        // Local usage is owned by LocalSubscriptionTrafficStore (starts at 0 B).
+
+                        // Local mode: keep DB traffic fields unchanged / 0; UI uses LocalSubscriptionTrafficStore.
+                        // Upstream mode: persist subscription-userinfo into Imported.
+                        val upload: Long
+                        val download: Long
+                        val total: Long
+                        val expire: Long
+                        if (useLocalTraffic) {
+                            upload = old?.upload ?: 0
+                            download = old?.download ?: 0
+                            total = old?.total ?: 0
+                            expire = old?.expire ?: 0
+                        } else {
+                            upload = subscriptionInfo?.subUpload ?: 0
+                            download = subscriptionInfo?.subDownload ?: 0
+                            total = subscriptionInfo?.subTotal ?: 0
+                            expire = subscriptionInfo?.subExpire ?: 0
+                        }
+
                         val new = Imported(
                             snapshot.uuid,
                             snapshot.name,
                             snapshot.type,
                             snapshot.source,
                             updateInterval,
-                            old?.upload ?: 0,
-                            old?.download ?: 0,
-                            old?.total ?: 0,
-                            old?.expire ?: 0,
+                            upload,
+                            download,
+                            total,
+                            expire,
                             old?.createdAt ?: System.currentTimeMillis(),
                             ageSecretKey = snapshot.ageSecretKey
                         )
@@ -113,8 +131,8 @@ object ProfileProcessor {
 
                 Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                // Fetch/validate config only. Do not consume upstream subscription-userinfo traffic.
-                fetchProfile(context, snapshot.source, true, callback)
+                val subscriptionInfo = fetchProfile(context, snapshot.source, true, callback)
+                val useLocalTraffic = ServiceStore(context).localSubscriptionTraffic
 
                 profileLock.withLock {
                     val imported = ImportedDao().queryByUUID(snapshot.uuid)
@@ -124,7 +142,20 @@ object ProfileProcessor {
                             context.importedDir.resolve(snapshot.uuid.toString()),
                         )
 
-                        // Keep previously stored local traffic fields; ignore upstream userinfo.
+                        if (!useLocalTraffic) {
+                            val upload = subscriptionInfo?.subUpload
+                            if (upload != null) {
+                                ImportedDao().update(
+                                    imported.copy(
+                                        upload = upload,
+                                        download = subscriptionInfo.subDownload ?: 0,
+                                        total = subscriptionInfo.subTotal ?: 0,
+                                        expire = subscriptionInfo.subExpire ?: 0,
+                                    )
+                                )
+                            }
+                        }
+
                         context.sendProfileChanged(snapshot.uuid)
                     }
                 }
@@ -219,7 +250,3 @@ object ProfileProcessor {
     }
 
 }
-
-
-
-

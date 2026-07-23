@@ -15,4 +15,5 @@ interface ServiceSettings {
     var allowIpv6: Boolean
     var tunStackMode: String
     var dynamicNotification: Boolean
+    var localSubscriptionTraffic: Boolean
 }

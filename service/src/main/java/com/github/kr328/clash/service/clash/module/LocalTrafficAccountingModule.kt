@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Accumulates Clash core session traffic into [LocalSubscriptionTrafficStore]
- * for the currently active profile. Upstream subscription-userinfo is never used.
+ * for the currently active profile when local-subscription traffic mode is enabled.
  */
 class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
     private val serviceStore = ServiceStore(service)
@@ -66,6 +66,11 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
     }
 
     private fun flushDelta() {
+        if (!serviceStore.localSubscriptionTraffic) {
+            // Upstream userinfo mode: do not accumulate local counters.
+            captureBaseline()
+            return
+        }
         val uuid = trackedProfile ?: return
         val (upload, download) = decodeTraffic(Clash.queryTrafficTotal())
 
