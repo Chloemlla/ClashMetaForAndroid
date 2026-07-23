@@ -31,6 +31,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs['release-tag'] }}
         run: |
+          set -euo pipefail
           test "$GITHUB_REF" = refs/heads/main
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           VERSION_NAME=${RELEASE_TAG#v}
@@ -78,8 +79,16 @@ jobs:
       - name: Apply Patches
         run: |
           set -euo pipefail
+          shopt -s nullglob
           cd "$(go env GOROOT)"
-          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
+          patches=("$GITHUB_WORKSPACE"/.github/patch/*.patch)
+          if [ "${#patches[@]}" -eq 0 ]; then
+            echo "No Go patches found under .github/patch" >&2
+            exit 1
+          fi
+          for p in "${patches[@]}"; do
+            patch --verbose -p 1 < "$p"
+          done
 
       - uses: actions/cache@v5
         with:
@@ -92,6 +101,7 @@ jobs:
 
       - name: Update CA
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y ca-certificates
           sudo update-ca-certificates
@@ -153,6 +163,7 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           test -f signing.properties
           ./gradlew app:assembleMetaRelease
 
@@ -161,6 +172,7 @@ jobs:
 
       - name: Commit version and push verified tag
         run: |
+          set -euo pipefail
           git diff --check
           if git rev-parse -q --verify "refs/tags/$CMFA_RELEASE_TAG" >/dev/null; then
             echo "Tag already exists: $CMFA_RELEASE_TAG" >&2
@@ -176,6 +188,7 @@ jobs:
           git push --atomic origin HEAD:main "refs/tags/$CMFA_RELEASE_TAG"
 
       - name: Automatic release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

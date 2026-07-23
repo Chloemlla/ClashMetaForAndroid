@@ -28,6 +28,7 @@ jobs:
         id: meta
         shell: bash
         run: |
+          set -euo pipefail
           VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' build.gradle.kts | head -n 1)
           SHORT_HASH=$(git rev-parse --short=7 HEAD)
           test -n "$VERSION_NAME"
@@ -56,8 +57,16 @@ jobs:
       - name: Apply Patches
         run: |
           set -euo pipefail
+          shopt -s nullglob
           cd "$(go env GOROOT)"
-          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
+          patches=("$GITHUB_WORKSPACE"/.github/patch/*.patch)
+          if [ "${#patches[@]}" -eq 0 ]; then
+            echo "No Go patches found under .github/patch" >&2
+            exit 1
+          fi
+          for p in "${patches[@]}"; do
+            patch --verbose -p 1 < "$p"
+          done
 
       - uses: actions/cache@v5
         with:
@@ -70,6 +79,7 @@ jobs:
 
       - name: Update CA
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y ca-certificates
           sudo update-ca-certificates
@@ -197,7 +207,8 @@ jobs:
 
       # Avoid PR noise: only manual runs publish GitHub pre-releases.
       - name: Publish Alpha pre-release
-        if: github.event_name == 'workflow_dispatch'
+        # Manual dispatch only, and only from main to avoid tag/release pollution from feature branches.
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

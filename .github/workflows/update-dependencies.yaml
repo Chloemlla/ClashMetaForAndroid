@@ -13,7 +13,9 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Checkout and Update submodules
-        run: git submodule update --init --recursive --remote --force
+        run: |
+          set -euo pipefail
+          git submodule update --init --recursive --remote --force
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -30,8 +32,16 @@ jobs:
       - name: Apply Patches
         run: |
           set -euo pipefail
+          shopt -s nullglob
           cd "$(go env GOROOT)"
-          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
+          patches=("$GITHUB_WORKSPACE"/.github/patch/*.patch)
+          if [ "${#patches[@]}" -eq 0 ]; then
+            echo "No Go patches found under .github/patch" >&2
+            exit 1
+          fi
+          for p in "${patches[@]}"; do
+            patch --verbose -p 1 < "$p"
+          done
       
       - uses: actions/cache@v5
         with:
@@ -44,18 +54,21 @@ jobs:
 
       - name: Install update-go-mod-replace
         run: |
+          set -euo pipefail
           go install github.com/metacubex/update-go-mod-replace@latest
 
       - name: Update Foss Gomod
         run: |
-          cd ${{ github.workspace }}/core/src/foss/golang/
-          update-go-mod-replace ${{ github.workspace }}/core/src/foss/golang/clash/go.mod $(pwd)/go.mod
+          set -euo pipefail
+          cd "${{ github.workspace }}/core/src/foss/golang/"
+          update-go-mod-replace "${{ github.workspace }}/core/src/foss/golang/clash/go.mod" "$(pwd)/go.mod"
           go mod tidy
 
       - name: Update Main Gomod
         run: |
-          cd ${{ github.workspace }}/core/src/main/golang/
-          update-go-mod-replace ${{ github.workspace }}/core/src/foss/golang/clash/go.mod $(pwd)/go.mod
+          set -euo pipefail
+          cd "${{ github.workspace }}/core/src/main/golang/"
+          update-go-mod-replace "${{ github.workspace }}/core/src/foss/golang/clash/go.mod" "$(pwd)/go.mod"
           go mod tidy
 
       - uses: actions/create-github-app-token@v3
