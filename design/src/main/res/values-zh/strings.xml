@@ -73,6 +73,10 @@
     <string name="settings">设置</string>
     <string name="show_traffic">显示流量</string>
     <string name="show_traffic_summary">在通知中自动刷新流量</string>
+
+    <string name="local_subscription_traffic_title">本地订阅流量</string>
+    <string name="local_subscription_traffic_summary">启用后从 0 GB 本地计费，忽略上游 subscription-userinfo</string>
+    <string name="local_subscription_traffic_unlocked">已解锁高级流量选项</string>
     <string name="allow_clash_auto_restart">允许 Clash 自动重启</string>
     <string name="auto_restart">自动重启</string>
     <string name="stopped">已停止</string>
@@ -387,4 +391,14 @@
     <string name="open_source_dep_gvisor">核心集成的用户态网络栈选项。</string>
     <string name="open_source_dep_meta_rules">核心使用的 geoip / geosite / ASN 规则资源。</string>
     <string name="open_source_dep_lumen_crash">本分支使用的崩溃捕获与本地崩溃报告界面。</string>
+
+    <string name="open_source_fork_modules">模块级改进（Chloemlla/main）</string>
+    <string name="open_source_fork_modules_intro"><![CDATA[相对上游 <strong>MetaCubeX/CMFA</strong>，本分支在<strong>首装开屏页</strong>按 Android 模块概括生产向增量。完整清单见 README → Branch Improvements / 本分支改进。]]></string>
+    <string name="open_source_mod_app">首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限说明</string>
+    <string name="open_source_mod_design">渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 无障碍与 48dp 触控</string>
+    <string name="open_source_mod_service">Live Update 状态通知（promoted ongoing）· POST_NOTIFICATIONS 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝</string>
+    <string name="open_source_mod_core">保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力</string>
+    <string name="open_source_mod_common">应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径</string>
+    <string name="open_source_mod_sdk">:sdk ClashRuntime 同 App 嵌入门面 — Profile / VPN / 代理组控制，无需 stock UI（非跨应用遥控）</string>
+    <string name="open_source_mod_ci">main 推送并行 Meta latest + Alpha pre-release · 签名 fail-fast · SHA256SUMS · 单测/Lint 全量可见 · 社区 i18n · 仓库策略脚本</string>
 </resources>

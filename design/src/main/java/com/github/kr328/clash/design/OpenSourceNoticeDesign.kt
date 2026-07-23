@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.view.View
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
+import com.github.kr328.clash.design.model.ForkModuleNote
 import com.github.kr328.clash.design.model.OpenSourceDependency
 import com.github.kr328.clash.design.preference.category
 import com.github.kr328.clash.design.preference.clickable
@@ -66,6 +67,17 @@ class OpenSourceNoticeDesign(
             ) {
                 clicked {
                     openLink(Uri.parse(context.getString(R.string.open_source_repository_upstream_url)))
+                }
+            }
+
+            // Module-level Chloemlla/main deltas vs upstream CMFA (first-install splash).
+            category(R.string.open_source_fork_modules)
+            tips(R.string.open_source_fork_modules_intro)
+
+            ForkModuleNote.defaults().forEach { note ->
+                clickable(title = R.string.application_name) {
+                    title = note.module
+                    summary = context.getString(note.summaryRes)
                 }
             }
 
