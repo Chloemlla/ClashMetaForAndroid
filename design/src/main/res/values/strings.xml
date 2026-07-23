@@ -265,7 +265,7 @@
     <string name="show_traffic_summary">Auto refresh traffic in notification</string>
 
     <string name="local_subscription_traffic_title">Local subscription traffic</string>
-    <string name="local_subscription_traffic_summary">Bill usage from 0 GB locally; ignore upstream subscription-userinfo when enabled</string>
+    <string name="local_subscription_traffic_summary">Bill used traffic from 0 GB locally; progress bar still uses the subscription total/quota</string>
     <string name="local_subscription_traffic_unlocked">Advanced traffic option unlocked</string>
 
     <string name="follow_system_android_10">Follow System (Android 10+)</string>

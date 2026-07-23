@@ -65,17 +65,19 @@ object ProfileProcessor {
                             ?.takeIf { old == null && snapshot.interval == 0L }
                             ?: snapshot.interval
 
-                        // Local mode: keep DB traffic fields unchanged / 0; UI uses LocalSubscriptionTrafficStore.
-                        // Upstream mode: persist subscription-userinfo into Imported.
+                        // Local mode: bill used traffic from 0 B via LocalSubscriptionTrafficStore,
+                        // but still persist upstream total/expire so the config UI can show a
+                        // progress bar against the subscription quota.
+                        // Upstream mode: persist full subscription-userinfo into Imported.
                         val upload: Long
                         val download: Long
                         val total: Long
                         val expire: Long
                         if (useLocalTraffic) {
-                            upload = old?.upload ?: 0
-                            download = old?.download ?: 0
-                            total = old?.total ?: 0
-                            expire = old?.expire ?: 0
+                            upload = 0
+                            download = 0
+                            total = subscriptionInfo?.subTotal ?: old?.total ?: 0
+                            expire = subscriptionInfo?.subExpire ?: old?.expire ?: 0
                         } else {
                             upload = subscriptionInfo?.subUpload ?: 0
                             download = subscriptionInfo?.subDownload ?: 0
@@ -142,7 +144,19 @@ object ProfileProcessor {
                             context.importedDir.resolve(snapshot.uuid.toString()),
                         )
 
-                        if (!useLocalTraffic) {
+                        if (useLocalTraffic) {
+                            // Refresh quota/expiry for the progress bar; never bill from userinfo.
+                            val nextTotal = subscriptionInfo?.subTotal
+                            val nextExpire = subscriptionInfo?.subExpire
+                            if (nextTotal != null || nextExpire != null) {
+                                ImportedDao().update(
+                                    imported.copy(
+                                        total = nextTotal ?: imported.total,
+                                        expire = nextExpire ?: imported.expire,
+                                    )
+                                )
+                            }
+                        } else {
                             val upload = subscriptionInfo?.subUpload
                             if (upload != null) {
                                 ImportedDao().update(

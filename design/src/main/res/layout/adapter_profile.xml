@@ -75,8 +75,8 @@
                     android:textSize="12sp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:visibility="@{(profile.download + profile.upload) == 0 ? View.GONE : View.VISIBLE}"
-                    android:text='@{(profile.download + profile.upload) > 0 ? I18nKt.toBytesString(profile.download + profile.upload) : ""}'
+                    android:visibility="@{(profile.total &gt; 1) || ((profile.download + profile.upload) &gt; 0) ? View.VISIBLE : View.GONE}"
+                    android:text='@{I18nKt.toBytesString(profile.download + profile.upload)}'
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
                 <TextView

@@ -75,7 +75,7 @@
     <string name="show_traffic_summary">在通知中自动刷新流量</string>
 
     <string name="local_subscription_traffic_title">本地订阅流量</string>
-    <string name="local_subscription_traffic_summary">启用后从 0 GB 本地计费，忽略上游 subscription-userinfo</string>
+    <string name="local_subscription_traffic_summary">启用后已用流量从 0 GB 本地计费，进度条终点仍取订阅总量</string>
     <string name="local_subscription_traffic_unlocked">已解锁高级流量选项</string>
     <string name="allow_clash_auto_restart">允许 Clash 自动重启</string>
     <string name="auto_restart">自动重启</string>
