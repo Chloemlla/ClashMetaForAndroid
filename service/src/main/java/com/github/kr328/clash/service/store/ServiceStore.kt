@@ -53,6 +53,15 @@ class ServiceStore(context: Context) {
         defaultValue = true
     )
 
+    /**
+     * When true (default), installed PiliPlus packages are auto-kept in VPN
+     * access control (allow on AcceptSelected / never deny on DenySelected).
+     */
+    var piliPlusAutoAdapt by store.boolean(
+        key = "pili_plus_auto_adapt",
+        defaultValue = true
+    )
+
     var allowIpv6 by store.boolean(
         key = "allow_ipv6",
         defaultValue = false

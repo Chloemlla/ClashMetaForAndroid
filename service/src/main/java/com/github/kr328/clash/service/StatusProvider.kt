@@ -8,6 +8,7 @@ import android.os.Binder
 import android.os.Bundle
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.constants.PartnerApps
+import com.github.kr328.clash.service.store.ServiceStore
 
 class StatusProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
@@ -27,9 +28,12 @@ class StatusProvider : ContentProvider() {
                 if (!isSelfOrPartnerCaller()) {
                     return null
                 }
+                val ctx = context
+                val autoAdapt = ctx?.let { ServiceStore(it).piliPlusAutoAdapt } ?: true
                 Bundle().apply {
                     putBoolean("running", serviceRunning)
                     putBoolean("vpnRunning", vpnRunning)
+                    putBoolean("piliPlusAutoAdapt", autoAdapt)
                     putString("name", currentProfile)
                     putString("package", context?.packageName)
                 }

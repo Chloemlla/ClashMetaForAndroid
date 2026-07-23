@@ -151,6 +151,8 @@
     <string name="block_loopback_summary">Block loopback connections</string>
     <string name="allow_bypass">Allow Bypass</string>
     <string name="allow_bypass_summary">Allows all apps to bypass this VPN connection</string>
+    <string name="piliplus_auto_adapt">PiliPlus Auto Adapt</string>
+    <string name="piliplus_auto_adapt_summary">Automatically keep PiliPlus in VPN access control when both apps are installed. Restart VPN after changing.</string>
     <string name="allow_ipv6">Allow Ipv6</string>
     <string name="allow_ipv6_summary">Allows ipv6 traffic via VpnService</string>
     <string name="system_proxy">System Proxy</string>

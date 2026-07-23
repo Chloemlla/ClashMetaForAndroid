@@ -159,8 +159,17 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control (auto-include installed PiliPlus partners — zero manual setup)
-            val partnerPackages = PartnerApps.installedPiliPlusPackages(self)
+            // Access Control (optional auto-include for installed PiliPlus partners)
+            val partnerPackages = if (store.piliPlusAutoAdapt) {
+                PartnerApps.installedPiliPlusPackages(self)
+            } else {
+                emptySet()
+            }
+            val partnerDenyExclude = if (store.piliPlusAutoAdapt) {
+                PartnerApps.piliPlusPackages
+            } else {
+                emptySet()
+            }
             when (store.accessControlMode) {
                 AccessControlMode.AcceptAll -> Unit
                 AccessControlMode.AcceptSelected -> {
@@ -169,7 +178,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                     }
                 }
                 AccessControlMode.DenySelected -> {
-                    (store.accessControlPackages - packageName - PartnerApps.piliPlusPackages).forEach {
+                    (store.accessControlPackages - packageName - partnerDenyExclude).forEach {
                         runCatching { addDisallowedApplication(it) }
                     }
                 }

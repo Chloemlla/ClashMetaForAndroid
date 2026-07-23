@@ -78,6 +78,13 @@ class NetworkSettingsDesign(
             )
 
             switch(
+                value = srvStore::piliPlusAutoAdapt,
+                title = R.string.piliplus_auto_adapt,
+                summary = R.string.piliplus_auto_adapt_summary,
+                configure = vpnDependencies::add,
+            )
+
+            switch(
                 value = srvStore::allowIpv6,
                 title = R.string.allow_ipv6,
                 summary = R.string.allow_ipv6_summary,
