@@ -31,6 +31,15 @@ class AppStore(context: Context) {
         defaultValue = false,
     )
 
+    /**
+     * Last acknowledged build identity (`versionCode|commitHash`).
+     * Empty means first install after open-source accept (seed without showing notes).
+     */
+    var lastSeenBuildIdentity: String by store.string(
+        key = "last_seen_build_identity",
+        defaultValue = "",
+    )
+
     companion object {
         private const val FILE_NAME = "app"
     }

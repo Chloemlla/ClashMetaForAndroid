@@ -56,6 +56,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
     override suspend fun main() {
         ensureOpenSourceNoticeAccepted()
+        ensureUpdateNotesAcknowledged()
 
         val design = MainDesign(this)
 
@@ -144,6 +145,32 @@ class MainActivity : BaseActivity<MainDesign>() {
                 getString(DesignR.string.alpha_migration_success, count),
                 ToastDuration.Long,
             )
+        }
+    }
+
+    private suspend fun ensureUpdateNotesAcknowledged() {
+        val store = AppStore(this)
+        val identity = "${BuildConfig.VERSION_CODE}|${BuildConfig.COMMIT_HASH}"
+        val last = store.lastSeenBuildIdentity
+
+        // Same build already acknowledged.
+        if (last == identity) return
+
+        // First install: OpenSourceNoticeActivity seeds lastSeen on accept so this is skipped.
+        // Upgrade from builds without this field: last is blank while open-source is already accepted
+        // → show immersive update notes once.
+        if (last.isBlank() && !store.openSourceNoticeAccepted) {
+            store.lastSeenBuildIdentity = identity
+            return
+        }
+
+        startActivityForResult(
+            ActivityResultContracts.StartActivityForResult(),
+            UpdateNotesActivity::class.intent,
+        )
+
+        if (AppStore(this).lastSeenBuildIdentity != identity) {
+            finishAffinity()
         }
     }
 
@@ -363,7 +390,3 @@ class MainActivity : BaseActivity<MainDesign>() {
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
     }
 }
-
-
-
-

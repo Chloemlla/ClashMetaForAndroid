@@ -1,0 +1,5 @@
+project: ClashMetaForAndroid
+specs:
+  - android/update-notes
+notes_asset: design/src/main/res/raw/update_notes.json
+gate_key: versionCode|commitHash

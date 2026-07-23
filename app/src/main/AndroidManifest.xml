@@ -199,6 +199,11 @@
             android:exported="false"
             android:label="@string/open_source_notice_title" />
         <activity
+            android:name=".UpdateNotesActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/update_notes_title" />
+        <activity
             android:name=".FilesActivity"
             android:configChanges="uiMode"
             android:exported="false"

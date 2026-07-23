@@ -7,6 +7,22 @@ import java.io.File
 import java.net.URL
 import java.util.*
 
+fun buildTimeIso(): String {
+    val env = sequenceOf(
+        System.getenv("BUILD_TIME"),
+        System.getenv("SOURCE_DATE_EPOCH"),
+    ).firstOrNull { !it.isNullOrBlank() }
+    if (!env.isNullOrBlank()) {
+        // SOURCE_DATE_EPOCH is unix seconds; BUILD_TIME may already be ISO.
+        val epoch = env.toLongOrNull()
+        if (epoch != null) {
+            return java.time.Instant.ofEpochSecond(epoch).toString()
+        }
+        return env
+    }
+    return java.time.Instant.now().toString()
+}
+
 fun gitCommitHash(rootDir: File): String {
     val envHash = sequenceOf(
         System.getenv("GIT_COMMIT"),
@@ -110,7 +126,9 @@ subprojects {
 
             if (isApp) {
                 val commitHash = gitCommitHash(rootProject.projectDir)
+                val buildTime = buildTimeIso()
                 buildConfigField("String", "COMMIT_HASH", "\"$commitHash\"")
+                buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
             }
 
             resValue("string", "release_name", "v$versionName")
@@ -375,4 +393,3 @@ tasks.wrapper {
             .appendText("distributionSha256Sum=$sha256")
     }
 }
-

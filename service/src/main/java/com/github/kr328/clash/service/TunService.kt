@@ -11,6 +11,7 @@ import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
+import com.github.kr328.clash.common.constants.PartnerApps
 import com.github.kr328.clash.service.model.AccessControlMode
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.cancelAndJoinBlocking
@@ -89,6 +90,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             return stopSelf()
 
         StatusProvider.serviceRunning = true
+        StatusProvider.vpnRunning = true
 
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
@@ -106,6 +108,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         TunModule.requestStop()
 
         StatusProvider.serviceRunning = false
+        StatusProvider.vpnRunning = false
 
         sendClashStopped(reason)
 
@@ -156,16 +159,17 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control
+            // Access Control (auto-include installed PiliPlus partners — zero manual setup)
+            val partnerPackages = PartnerApps.installedPiliPlusPackages(self)
             when (store.accessControlMode) {
                 AccessControlMode.AcceptAll -> Unit
                 AccessControlMode.AcceptSelected -> {
-                    (store.accessControlPackages + packageName).forEach {
+                    (store.accessControlPackages + packageName + partnerPackages).forEach {
                         runCatching { addAllowedApplication(it) }
                     }
                 }
                 AccessControlMode.DenySelected -> {
-                    (store.accessControlPackages - packageName).forEach {
+                    (store.accessControlPackages - packageName - PartnerApps.piliPlusPackages).forEach {
                         runCatching { addDisallowedApplication(it) }
                     }
                 }
@@ -267,4 +271,5 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         )
     }
 }
+
 

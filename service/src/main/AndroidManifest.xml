@@ -63,8 +63,9 @@
         <provider
             android:name=".StatusProvider"
             android:authorities="${applicationId}.status"
-            android:exported="false"
-            android:process=":background" />
+            android:exported="true"
+            android:process=":background"
+            tools:ignore="ExportedContentProvider" />
 
         <provider
             android:name=".migration.MigrationProvider"
@@ -100,3 +101,4 @@
         </receiver>
     </application>
 </manifest>
+

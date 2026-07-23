@@ -467,4 +467,20 @@
     <string name="open_source_mod_common">App-wide CoroutineExceptionHandler · Components / Intent security boundary · internal-only control paths for shortcuts</string>
     <string name="open_source_mod_sdk">:sdk ClashRuntime embed facade — same-app Profile / VPN / proxy-group control without the stock UI (not cross-app remote control)</string>
     <string name="open_source_mod_ci">Main push: parallel Meta latest + Alpha pre-release · signing fail-fast · SHA256SUMS · full unit-test / Lint visibility · community i18n · repository policy scripts</string>
+    <!-- Immersive update notes (Trellis android/update-notes) -->
+    <string name="update_notes_title">What's New</string>
+    <string name="update_notes_intro"><![CDATA[This build includes changes since your last install. Review highlights, module notes, and recent commits before continuing.]]></string>
+    <string name="update_notes_immersive_hint"><![CDATA[Build identity is <strong>version + commit hash + build time</strong>. Each new commit/merge ships a fresh notes page.]]></string>
+    <string name="update_notes_build_identity">Build identity</string>
+    <string name="update_notes_build_identity_title">Version / commit / build time</string>
+    <string name="update_notes_identity_summary">v%1$s · %2$s · %3$s</string>
+    <string name="update_notes_highlights">Highlights</string>
+    <string name="update_notes_modules">Branch module notes</string>
+    <string name="update_notes_modules_intro"><![CDATA[Fork improvements by module (same inventory as the first-install open-source splash).]]></string>
+    <string name="update_notes_commits">Recent commits &amp; merges</string>
+    <string name="update_notes_commits_intro"><![CDATA[Generated from Git history packaged with this build (hash · subject).]]></string>
+    <string name="update_notes_action">Continue</string>
+    <string name="update_notes_continue">Got it</string>
+    <string name="update_notes_continue_summary">Enter the app</string>
+
 </resources>

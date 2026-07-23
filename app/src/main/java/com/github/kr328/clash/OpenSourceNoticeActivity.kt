@@ -16,7 +16,10 @@ class OpenSourceNoticeActivity : BaseActivity<OpenSourceNoticeDesign>() {
         while (isActive) {
             when (design.requests.receive()) {
                 OpenSourceNoticeDesign.Request.Accept -> {
-                    AppStore(this).openSourceNoticeAccepted = true
+                    val store = AppStore(this)
+                    store.openSourceNoticeAccepted = true
+                    // Seed gate so first install does not immediately show update notes.
+                    store.lastSeenBuildIdentity = "${BuildConfig.VERSION_CODE}|${BuildConfig.COMMIT_HASH}"
                     setResult(RESULT_OK)
                     finish()
                 }

@@ -4,13 +4,18 @@ import android.content.ContentProvider
 import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
+import android.os.Binder
 import android.os.Bundle
 import com.github.kr328.clash.common.Global
+import com.github.kr328.clash.common.constants.PartnerApps
 
 class StatusProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
         return when (method) {
             METHOD_CURRENT_PROFILE -> {
+                if (!isSelfOrPartnerCaller()) {
+                    return null
+                }
                 return if (serviceRunning)
                     Bundle().apply {
                         putString("name", currentProfile)
@@ -18,8 +23,29 @@ class StatusProvider : ContentProvider() {
                 else
                     null
             }
+            METHOD_PARTNER_STATUS -> {
+                if (!isSelfOrPartnerCaller()) {
+                    return null
+                }
+                Bundle().apply {
+                    putBoolean("running", serviceRunning)
+                    putBoolean("vpnRunning", vpnRunning)
+                    putString("name", currentProfile)
+                    putString("package", context?.packageName)
+                }
+            }
             else -> super.call(method, arg, extras)
         }
+    }
+
+    private fun isSelfOrPartnerCaller(): Boolean {
+        val ctx = context ?: return false
+        val packages = ctx.packageManager.getPackagesForUid(Binder.getCallingUid())
+            ?: return false
+        if (packages.any { it == ctx.packageName }) {
+            return true
+        }
+        return packages.any { PartnerApps.isPiliPlusPackage(it) }
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
@@ -59,6 +85,7 @@ class StatusProvider : ContentProvider() {
 
     companion object {
         const val METHOD_CURRENT_PROFILE = "currentProfile"
+        const val METHOD_PARTNER_STATUS = "partnerStatus"
 
         private const val CLASH_SERVICE_RUNNING_FILE = "service_running.lock"
 
@@ -68,6 +95,7 @@ class StatusProvider : ContentProvider() {
 
                 shouldStartClashOnBoot = value
             }
+        var vpnRunning: Boolean = false
         var shouldStartClashOnBoot: Boolean
             get() = Global.application.filesDir.resolve(CLASH_SERVICE_RUNNING_FILE).exists()
             set(value) {

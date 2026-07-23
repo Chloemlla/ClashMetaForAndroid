@@ -404,4 +404,19 @@
     <string name="open_source_mod_common">应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径</string>
     <string name="open_source_mod_sdk">:sdk ClashRuntime 同 App 嵌入门面 — Profile / VPN / 代理组控制，无需 stock UI（非跨应用遥控）</string>
     <string name="open_source_mod_ci">main 推送并行 Meta latest + Alpha pre-release · 签名 fail-fast · SHA256SUMS · 单测/Lint 全量可见 · 社区 i18n · 仓库策略脚本</string>
+    <string name="update_notes_title">本次更新说明</string>
+    <string name="update_notes_intro"><![CDATA[本构建相对你上次安装包含以下变化。请浏览亮点、模块说明与近期提交后再继续。]]></string>
+    <string name="update_notes_immersive_hint"><![CDATA[构建身份由 <strong>版本号 + Commit Hash + Build Time</strong> 组成。每一次提交/合并都会生成新的更新说明页。]]></string>
+    <string name="update_notes_build_identity">构建身份</string>
+    <string name="update_notes_build_identity_title">版本 / 提交 / 构建时间</string>
+    <string name="update_notes_identity_summary">v%1$s · %2$s · %3$s</string>
+    <string name="update_notes_highlights">更新亮点</string>
+    <string name="update_notes_modules">本分支模块说明</string>
+    <string name="update_notes_modules_intro"><![CDATA[按模块整理的分支改进（与首次安装开源声明中的模块卡片一致）。]]></string>
+    <string name="update_notes_commits">近期提交与合并</string>
+    <string name="update_notes_commits_intro"><![CDATA[来自本构建打包的 Git 历史（hash · subject）。]]></string>
+    <string name="update_notes_action">继续</string>
+    <string name="update_notes_continue">我知道了</string>
+    <string name="update_notes_continue_summary">进入应用</string>
+
 </resources>
