@@ -6,7 +6,7 @@ A Graphical user interface of [Clash.Meta](https://github.com/MetaCubeX/Clash.Me
 > **Chloemlla fork (`Chloemlla/ClashMetaForAndroid`)**  
 > Tracks community CMFA, then lands **hardening · UX · Alpha→Meta migration · CI/CD · i18n · Runtime SDK** on this fork’s `main`.  
 > **This is not a thin mirror** — the bulk of production-facing Android work is maintained here.  
-> Full inventory: **[Branch Improvements / 本分支改进](#branch-improvements-本分支改进)** · **[Feature Tracks](#feature-tracks-近期功能分支)** · **[Runtime SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**.
+> First-install module splash + inventory: **[Branch Improvements / 模块级开屏首装页](#branch-improvements-本分支改进)** · **[Feature Tracks](#feature-tracks-近期功能分支)** · **[Runtime SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**.
 
 ### Feature
 
@@ -14,7 +14,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 **Chloemlla additions (high level):**
 
-- Hardened Android client (audit remediation, CI/CD, i18n, Alpha→Meta migration) — see [Branch Improvements](#branch-improvements-本分支改进)
+- Hardened Android client (audit remediation, CI/CD, i18n, Alpha→Meta migration) — first-install **module splash** + full inventory in [Branch Improvements](#branch-improvements-本分支改进)
 - **Runtime / Service SDK** (`:sdk` / `ClashRuntime`) for in-app embedding without the stock UI — see [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) and [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)
 
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
@@ -117,28 +117,40 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 ## Branch Improvements (本分支改进)
 
-### Why Chloemlla?
+### 模块级开屏首装页说明
 
 > [!IMPORTANT]
-> 上游 CMFA 提供 Clash.Meta Android 图形壳；**Chloemlla 分支在此之上系统改造生产可用性**，而不是仅同步内核。
+> 上游 **MetaCubeX/CMFA** 提供 Clash.Meta Android 图形壳；**Chloemlla/main** 在此之上做生产可用性改造。  
+> 相对上游的增量，以 **模块级摘要** 展示在 **首装开屏页**（`OpenSourceNoticeActivity`），与下表同源；完整审计/提交轨见后续 Feature Tracks 与 §1–§11。
 
-主要强化维度如下：
+#### 首装门闸（何时出现）
 
-| 维度 | Chloemlla 强化 |
-|------|----------------|
-| **安全** | 外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧为 sharedpref |
-| **稳定** | 全量审计 F-01~F-18 · 全局协程异常隔离 · 日志有界/轮转 · Access Control 退出超时 |
-| **体验** | 渐进测速动画 · 代理搜索 · 首页首启引导 · 剪贴板导入 · 空状态 CTA · 当前节点定位 |
-| **体验+** | 首页实时上下行速率 · 代理卡显示模式+当前节点 · 状态卡无障碍文案 |
-| **迁移** | **Alpha → Meta 同签名自动导入**配置/节点/设置（Meta 正式包首次启动） |
-| **发布** | main 推送并行 **Meta latest + Alpha pre-release** · SHA256SUMS · 构建成功后再打 tag |
-| **质量** | JVM 单测 · Lint 全量报告 · 失败堆栈透明 · 仓库策略脚本 |
-| **i18n** | zh / zh-TW / zh-HK / ja / ko / ru / vi 等社区语言补全 |
-| **SDK** | `:sdk` Runtime 嵌入（Profile + VPN + 代理组）；同 App 边界；见 docs/sdk |
-| **Crash** | GitHub Packages `lumen-crash` 崩溃捕获 + Compose 报告页 + FileProvider 分享 |
-| **Live Update** | VPN 状态通知请求 promoted ongoing（Android 16+ Live Update / 状态栏 chip） |
+| 项 | 说明 |
+|----|------|
+| 入口 | `MainActivity.ensureOpenSourceNoticeAccepted()` |
+| 页面 | `OpenSourceNoticeActivity` + `OpenSourceNoticeDesign` |
+| 一次性 | `AppStore.openSourceNoticeAccepted`；未接受则 `finishAffinity()` 离开应用 |
+| 返回键 | 硬门闸：返回直接退出应用，不绕过声明 |
+| 展示内容 | 开源/永久免费/防诈 → 协议与源码 → **模块级相对上游改进** → 第三方鸣谢 →「我已了解」 |
 
-当前版本基线约为 **2.11.32**。下列改进均已落在源码/工作流中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
+#### 模块级增量（Chloemlla/main ↔ 上游 CMFA）
+
+首装页 `ForkModuleNote` / 字符串 `open_source_mod_*` 与下表对齐：
+
+| 模块 | 相对上游的增量要点 |
+|------|-------------------|
+| **`:app`** | 首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限 UX |
+| **`:design`** | 渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 无障碍与 48dp 触控 |
+| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 |
+| **`:core`** | 保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力 |
+| **`:common`** | 应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径 |
+| **`:sdk`** | `ClashRuntime` 同 App 嵌入门面（Profile / VPN / 代理组）；非跨应用遥控；见 [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) |
+| **CI / release** | main 并行 **Meta latest + Alpha pre-release** · 签名 fail-fast · `SHA256SUMS` · 单测/Lint 全量可见 · 社区 i18n · 仓库策略脚本 |
+
+当前版本基线约为 **2.11.32**。上表与首装页文案均已落在源码中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
+
+> [!TIP]
+> 改模块摘要时请 **同步** `design/.../ForkModuleNote.kt`、`open_source_mod_*` 多语言字符串与本表，避免首装页与 README 漂移。
 
 > [!NOTE]
 > 下列 Feature Tracks 按 **2026-07 近期提交** 归组，便于对照 PR / cherry-pick / 回归范围。短哈希可在仓库 History 中定位。

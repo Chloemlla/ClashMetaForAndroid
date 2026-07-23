@@ -56,6 +56,12 @@ class ServiceSettingsAdapter(
             store.dynamicNotification = value
         }
 
+    override var localSubscriptionTraffic: Boolean
+        get() = store.localSubscriptionTraffic
+        set(value) {
+            store.localSubscriptionTraffic = value
+        }
+
     private fun ServiceAccessControlMode.toDesignMode(): AccessControlMode = when (this) {
         ServiceAccessControlMode.AcceptAll -> AccessControlMode.AcceptAll
         ServiceAccessControlMode.AcceptSelected -> AccessControlMode.AcceptSelected

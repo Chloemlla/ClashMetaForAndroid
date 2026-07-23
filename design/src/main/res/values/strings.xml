@@ -264,6 +264,10 @@
     <string name="show_traffic">Show Traffic</string>
     <string name="show_traffic_summary">Auto refresh traffic in notification</string>
 
+    <string name="local_subscription_traffic_title">Local subscription traffic</string>
+    <string name="local_subscription_traffic_summary">Bill usage from 0 GB locally; ignore upstream subscription-userinfo when enabled</string>
+    <string name="local_subscription_traffic_unlocked">Advanced traffic option unlocked</string>
+
     <string name="follow_system_android_10">Follow System (Android 10+)</string>
     <string name="always_dark">Always Dark</string>
     <string name="always_light">Always Light</string>
@@ -450,4 +454,14 @@
     <string name="open_source_dep_gvisor">Userspace network stack option integrated by the core.</string>
     <string name="open_source_dep_meta_rules">Bundled geoip / geosite / ASN rule assets used by the core.</string>
     <string name="open_source_dep_lumen_crash">Crash capture and local crash-report surface for this fork.</string>
+
+    <string name="open_source_fork_modules">Module-level improvements (Chloemlla/main)</string>
+    <string name="open_source_fork_modules_intro"><![CDATA[Relative to upstream <strong>MetaCubeX/CMFA</strong>, this fork’s first-install splash summarizes production deltas by Android module. Full inventory: README → Branch Improvements.]]></string>
+    <string name="open_source_mod_app">First-install open-source gate · Alpha→Meta same-signature migration · LumenCrash host install/report · cold-start order and flash-exit guards · notification permission UX</string>
+    <string name="open_source_mod_design">Progressive proxy delay + animation · proxy search · live up/down speed and selected node on home · empty-profile / home setup CTAs · clipboard subscription import · accessibility and 48dp touch targets</string>
+    <string name="open_source_mod_service">Live Update status notification (promoted ongoing) · POST_NOTIFICATIONS guards · sharedpref-only backup · Access Control stop timeout · external VPN control denied by default</string>
+    <string name="open_source_mod_core">Mihomo bridge retained · subscription-userinfo / Go-side fetch and related kernel sync from upstream kept current</string>
+    <string name="open_source_mod_common">App-wide CoroutineExceptionHandler · Components / Intent security boundary · internal-only control paths for shortcuts</string>
+    <string name="open_source_mod_sdk">:sdk ClashRuntime embed facade — same-app Profile / VPN / proxy-group control without the stock UI (not cross-app remote control)</string>
+    <string name="open_source_mod_ci">Main push: parallel Meta latest + Alpha pre-release · signing fail-fast · SHA256SUMS · full unit-test / Lint visibility · community i18n · repository policy scripts</string>
 </resources>

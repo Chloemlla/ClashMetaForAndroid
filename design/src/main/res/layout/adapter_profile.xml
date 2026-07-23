@@ -75,16 +75,16 @@
                     android:textSize="12sp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:visibility="@{profile.download &lt;2 ? View.GONE : View.VISIBLE}"
-                    android:text='@{profile.download >1  ?I18nKt.toBytesString(profile.download+profile.upload)+"/" :""}'
+                    android:visibility="@{(profile.download + profile.upload) == 0 ? View.GONE : View.VISIBLE}"
+                    android:text='@{(profile.download + profile.upload) > 0 ? I18nKt.toBytesString(profile.download + profile.upload) : ""}'
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
                 <TextView
                     android:textSize="12sp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:visibility="@{profile.download &lt;2 ? View.GONE : View.VISIBLE}"
-                    android:text='@{profile.total >1 ?I18nKt.toBytesString(profile.total) : ""}'
+                    android:visibility="@{profile.total &lt; 2 ? View.GONE : View.VISIBLE}"
+                    android:text='@{profile.total > 1 ? ("/" + I18nKt.toBytesString(profile.total)) : ""}'
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
             </LinearLayout>
             <TextView
@@ -141,3 +141,5 @@
         </FrameLayout>
     </RelativeLayout>
 </layout>
+
+

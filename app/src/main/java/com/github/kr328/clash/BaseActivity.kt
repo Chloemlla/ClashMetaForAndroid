@@ -37,8 +37,26 @@ import kotlin.coroutines.suspendCoroutine
 import com.github.kr328.clash.design.R
 
 abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
-    CoroutineScope by MainScope(),
+    CoroutineScope,
     Broadcasts.Observer {
+
+    // SupervisorJob + handler: one failed main()/fetch must not cancel siblings or kill UI.
+    private val activityJob = SupervisorJob()
+    private val activityExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        runCatching {
+            com.github.kr328.clash.common.log.Log.w(
+                "Uncaught exception in ${javaClass.simpleName}: $throwable",
+                throwable,
+            )
+        }
+        runCatching {
+            if (com.chloemlla.lumen.crash.LumenCrash.isInstalled()) {
+                com.chloemlla.lumen.crash.LumenCrash.record(throwable)
+            }
+        }
+    }
+    override val coroutineContext =
+        Dispatchers.Main.immediate + activityJob + activityExceptionHandler
 
     protected val uiStore by lazy { UiStore(this) }
     protected val events = Channel<Event>(Channel.UNLIMITED)
@@ -147,7 +165,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
 
     override fun onDestroy() {
         design?.cancel()
-        cancel()
+        activityJob.cancel()
         super.onDestroy()
     }
 

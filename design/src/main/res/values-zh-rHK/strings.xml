@@ -378,4 +378,14 @@
     <string name="open_source_dep_gvisor">核心整合的用戶態網絡堆棧選項。</string>
     <string name="open_source_dep_meta_rules">核心使用的 geoip / geosite / ASN 規則資源。</string>
     <string name="open_source_dep_lumen_crash">本分支使用的崩潰捕獲與本機崩潰報告介面。</string>
+
+    <string name="open_source_fork_modules">模組級改進（Chloemlla/main）</string>
+    <string name="open_source_fork_modules_intro"><![CDATA[相對上游 <strong>MetaCubeX/CMFA</strong>，本分支在<strong>首裝開屏頁</strong>按 Android 模組概括生產向增量。完整清單見 README → Branch Improvements / 本分支改進。]]></string>
+    <string name="open_source_mod_app">首裝開源門閘 · Alpha→Meta 同簽名遷移 · LumenCrash 宿主安裝/報告 · 冷啟動順序與閃退防護 · 通知權限說明</string>
+    <string name="open_source_mod_design">漸進測速動畫 · 代理搜尋 · 首頁即時上下行與當前節點 · 空配置/首啟 CTA · 剪貼板匯入訂閱 · 無障礙與 48dp 觸控</string>
+    <string name="open_source_mod_service">Live Update 狀態通知（promoted ongoing）· POST_NOTIFICATIONS 門禁 · 備份僅 sharedpref · Access Control 退出超時 · 外部 VPN 控制預設拒絕</string>
+    <string name="open_source_mod_core">保留 mihomo 橋接 · 持續同步上游訂閱資訊 Go 側拉取等核心相關能力</string>
+    <string name="open_source_mod_common">應用級協程異常隔離 · Components/Intent 安全邊界 · 捷徑僅走內部控制路徑</string>
+    <string name="open_source_mod_sdk">:sdk ClashRuntime 同 App 嵌入門面 — Profile / VPN / 代理組控制，無需 stock UI（非跨應用遙控）</string>
+    <string name="open_source_mod_ci">main 推送並行 Meta latest + Alpha pre-release · 簽名 fail-fast · SHA256SUMS · 單測/Lint 全量可見 · 社群 i18n · 倉庫策略腳本</string>
 </resources>

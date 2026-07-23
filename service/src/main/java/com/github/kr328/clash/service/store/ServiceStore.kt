@@ -67,4 +67,14 @@ class ServiceStore(context: Context) {
         key = "dynamic_notification",
         defaultValue = true
     )
+
+    /**
+     * When true (default), config-page traffic is billed from 0 B via
+     * LocalSubscriptionTrafficStore and upstream subscription-userinfo is ignored.
+     * When false, upload/download/total/expire come from subscription-userinfo.
+     */
+    var localSubscriptionTraffic by store.boolean(
+        key = "local_subscription_traffic",
+        defaultValue = true
+    )
 }

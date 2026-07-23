@@ -32,6 +32,8 @@ class ClashService : BaseService() {
         else
             install(StaticNotificationModule(self))
 
+        install(LocalTrafficAccountingModule(self))
+
         install(AppListCacheModule(self))
         install(TimeZoneModule(self))
         install(SuspendModule(self))

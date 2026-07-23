@@ -37,8 +37,10 @@
         android:localeConfig="@xml/locales_config"
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:extractNativeLibs="true"
         android:supportsRtl="true"
         android:theme="@style/BootstrapTheme"
+        tools:replace="android:extractNativeLibs"
         tools:ignore="GoogleAppIndexingWarning"
         tools:targetApi="N">
         <meta-data
