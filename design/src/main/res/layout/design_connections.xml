@@ -21,17 +21,31 @@
             android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
             android:paddingBottom="@{self.surface.insets.bottom}" />
 
-        <TextView
+        <LinearLayout
             android:id="@+id/empty_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:gravity="center"
-            android:padding="24dp"
-            android:text="@string/connections_empty"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
-            android:textColor="?colorControlNormal"
-            android:visibility="gone" />
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/main_padding_horizontal"
+            android:visibility="gone">
+
+            <com.github.kr328.clash.design.svg.EmptyStateIllustrationView
+                android:id="@+id/empty_illustration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/item_text_margin"
+                android:gravity="center"
+                android:text="@string/connections_empty"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                android:textColor="?colorControlNormal" />
+        </LinearLayout>
 
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"

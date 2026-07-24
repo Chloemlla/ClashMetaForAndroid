@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.design.adapter.ConnectionAdapter
 import com.github.kr328.clash.design.databinding.DesignConnectionsBinding
+import com.github.kr328.clash.design.svg.UndrawIllustration
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -118,6 +119,7 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
         binding.recyclerList.bindAppBarElevation(binding.activityBarLayout)
         binding.recyclerList.layoutManager = LinearLayoutManager(context)
         binding.recyclerList.adapter = adapter
+        binding.emptyIllustration.illustration = UndrawIllustration.VideoStreaming
         binding.emptyView.visibility = View.VISIBLE
         binding.closeAllView.isEnabled = false
         binding.closeAllView.isClickable = false
