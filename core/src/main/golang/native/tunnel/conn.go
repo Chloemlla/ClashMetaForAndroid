@@ -12,6 +12,19 @@ func CloseAllConnections() {
 	})
 }
 
+func CloseConnection(id string) {
+	if id == "" {
+		return
+	}
+	statistic.DefaultManager.Range(func(c statistic.Tracker) bool {
+		if c.ID() == id {
+			_ = c.Close()
+			return false
+		}
+		return true
+	})
+}
+
 func closeMatch(filter func(conn C.Connection) bool) {
 	statistic.DefaultManager.Range(func(c statistic.Tracker) bool {
 		if filter(c) {

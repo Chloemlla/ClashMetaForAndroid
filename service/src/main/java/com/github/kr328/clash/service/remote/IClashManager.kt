@@ -33,4 +33,7 @@ interface IClashManager {
 
     fun setLogObserver(observer: ILogObserver?)
     fun setConnectionsObserver(observer: IConnectionsObserver?)
+
+    fun closeConnection(id: String)
+    fun closeAllConnections()
 }

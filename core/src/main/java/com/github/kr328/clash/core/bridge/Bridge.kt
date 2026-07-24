@@ -53,6 +53,8 @@ object Bridge {
     external fun nativeUnsubscribeLogcat(token: Long)
     external fun nativeSubscribeConnections(callback: ConnectionsInterface, intervalMs: Long): Long
     external fun nativeUnsubscribeConnections(token: Long)
+    external fun nativeCloseConnection(id: String)
+    external fun nativeCloseAllConnections()
     external fun nativeCoreVersion(): String
 
     external fun nativeSetAgeSecretKey(key: String?)

@@ -9,8 +9,8 @@
     "highlights":  [
                        {
                            "id":  "connections-viewer",
-                           "title":  "查看使用（连接列表）",
-                           "body":  "主页可查看当前活跃连接（主机/SNI、进程、流量、规则与链路）。"
+                           "title":  "活跃连接（连接列表）",
+                           "body":  "主页可查看并管理当前活跃连接（主机/SNI、进程、流量、规则与链路；支持关闭单条/全部）。"
                        },
                        {
                            "id":  "update-notes-gate",

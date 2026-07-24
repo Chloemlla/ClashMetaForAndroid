@@ -712,3 +712,20 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeUnsubscribeConnections(JNIE
 
     unsubscribeConnections((int64_t) token);
 }
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeCloseConnection(JNIEnv *env, jobject thiz,
+                                                                       jstring id) {
+    TRACE_METHOD();
+
+    scoped_string _id = get_string(id);
+
+    closeConnection(_id);
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeCloseAllConnections(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    closeAllConnections();
+}

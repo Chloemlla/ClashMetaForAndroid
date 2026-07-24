@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"cfa/native/app"
+	"cfa/native/tunnel"
 
 	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel/statistic"
@@ -190,4 +191,14 @@ func unsubscribeConnections(id int64) {
 	if ok {
 		close(sub.cancel)
 	}
+}
+
+//export closeConnection
+func closeConnection(id C.c_string) {
+	tunnel.CloseConnection(C.GoString(id))
+}
+
+//export closeAllConnections
+func closeAllConnections() {
+	tunnel.CloseAllConnections()
 }
