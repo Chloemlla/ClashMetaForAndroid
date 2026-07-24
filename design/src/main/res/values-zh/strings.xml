@@ -414,7 +414,7 @@
     <string name="open_source_fork_modules_intro"><![CDATA[相对上游 <strong>MetaCubeX/CMFA</strong>，本分支在<strong>首装开屏页</strong>按 Android 模块概括生产向增量。完整清单见 README → Branch Improvements / 本分支改进。]]></string>
     <string name="open_source_mod_app">首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限说明 · 沉浸式本次更新说明 · Android 16（API 36）target + edge-to-edge</string>
     <string name="open_source_mod_design">渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 活跃连接管理 · undraw 动态色空状态 · 无障碍与 48dp 触控</string>
-    <string name="open_source_mod_service">Live Update 状态通知（promoted ongoing）· POST_NOTIFICATIONS 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen/知乎++）</string>
+    <string name="open_source_mod_service">Live Update 状态通知（promoted ongoing）· POST_NOTIFICATIONS 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen/知乎++）</string>
     <string name="open_source_mod_core">保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力</string>
     <string name="open_source_mod_common">应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径</string>
     <string name="open_source_mod_sdk">:sdk ClashRuntime 同 App 嵌入门面 — Profile / VPN / 代理组控制，无需 stock UI（非跨应用遥控）</string>

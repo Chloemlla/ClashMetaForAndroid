@@ -1,230 +1,205 @@
 {
-    "schemaVersion":  1,
-    "identity":  {
-                     "commitHash":  "d1c0fb1",
-                     "buildTime":  "2026-07-24T05:25:22Z",
-                     "versionName":  "2.11.32",
-                     "versionCode":  211032
-                 },
-    "highlights":  [
-                       {
-                           "id":  "undraw-empty-states",
-                           "title":  "动态色空状态插画（unDraw）",
-                           "body":  "连接列表、配置列表与日志空状态展示主题色 undraw 插画；亮/暗与 Material 动态取色自动跟随，开源鸣谢含 unDraw。"
-                       },
-                       {
-                           "id":  "connections-viewer",
-                           "title":  "活跃连接（连接列表）",
-                           "body":  "主页可查看并管理当前活跃连接（主机/SNI、进程、流量、规则与链路；支持关闭单条/全部）。"
-                       },
-                       {
-                           "id":  "update-notes-gate",
-                           "title":  "沉浸式本次更新说明",
-                           "body":  "新构建（versionCode + commit hash）首次启动展示亮点、模块说明与近期提交/合并；身份含 Build Time。"
-                       },
-                       {
-                           "id":  "local-subscription-traffic",
-                           "title":  "本地订阅流量（默认从 0GB 计已用）",
-                           "body":  "配置页已用流量从 0 B 本地累计；进度条终点仍取订阅总量。导入/编辑页与应用设置可切换「从 0 本地 / 从订阅信息」全局计费；配置菜单可重置本地已用；旧版 ×100 虚高会自动迁移。"
-                       },
-                       {
-                           "id":  "partner-auto-adapt",
-                           "title":  "伙伴应用 VPN 自动适配",
-                           "body":  "网络设置可开关：已安装的 PiliPlus / NexAI / Project-Lumen / 知乎++ 自动纳入访问控制；StatusProvider 导出 partner 状态供伙伴查询。"
-                       },
-                       {
-                           "id":  "android-16-17",
-                           "title":  "Android 16 / 17 平台适配",
-                           "body":  "target/compile SDK 36（Android 16）；强制 edge-to-edge 与刘海安全区；系统返回 predictive back；动态广播默认 NOT_EXPORTED；清单声明 INTERACT_ACROSS_USERS 以应对 Android 17+ 跨 profile loopback（需 ADB 授予）。"
-                       },
-                       {
-                           "id":  "open-source-splash",
-                           "title":  "开源声明与模块改进开屏",
-                           "body":  "首次安装展示 GPL-3.0、第三方鸣谢，以及按 :app/:design/:service/:core 等模块整理的本分支改进说明。"
-                       },
-                       {
-                           "id":  "lumen-crash",
-                           "title":  "LumenCrash 崩溃捕获",
-                           "body":  "冷启动优先安装 LumenCrash；报告分享与宿主启动路径 fail-soft，避免闪退。"
-                       },
-                       {
-                           "id":  "release-signing",
-                           "title":  "可安装签名发布包",
-                           "body":  "CI 使用密钥库签名并校验 testOnly，降低 INSTALL -15 / 侧载安装失败。"
-                       }
-                   ],
-    "commits":  [
-                    {
-                        "hash":  "d1c0fb1",
-                        "subject":  "docs(ui): sync update_notes identity to HEAD after notes commit",
-                        "type":  "docs"
-                    },
-                    {
-                        "hash":  "c7547a4",
-                        "subject":  "docs(ui): refresh update_notes for undraw empty-state illustrations",
-                        "type":  "docs"
-                    },
-                    {
-                        "hash":  "8deeee9",
-                        "subject":  "feat(design): undraw dynamic-color empty-state illustrations",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "8876a46",
-                        "subject":  "feat(connections): rename to active connections and support close (#7)",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "a3235ef",
-                        "subject":  "feat(vpn): extend partner auto-adapt to NexAI and Project-Lumen",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "e3ec98e",
-                        "subject":  "docs(ci): Trellis workflow map and Actions reliability audit",
-                        "type":  "docs"
-                    },
-                    {
-                        "hash":  "f50e5b5",
-                        "subject":  "fix(ci): harden Actions patches and main-only release publish",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "9918430",
-                        "subject":  "docs(ci): expand gh failure forensics for last 3 failures",
-                        "type":  "docs"
-                    },
-                    {
-                        "hash":  "b651595",
-                        "subject":  "fix(ci): repair AAPT update_notes_title and codify gh auto-repair in Trellis",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "de0e6f3",
-                        "subject":  "feat(settings): add PiliPlus VPN auto-adapt toggle",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "b5f6dbe",
-                        "subject":  "chore(docs): refresh update_notes.json for HEAD identity",
-                        "type":  "chore"
-                    },
-                    {
-                        "hash":  "1767bab",
-                        "subject":  "feat(app): immersive update notes gate (Trellis android/update-notes)",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "f848db8",
-                        "subject":  "feat(vpn): auto-include PiliPlus partners and export partner status",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "88f95ab",
-                        "subject":  "feat(ui): add live connections viewer (查看使用)",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "849aafe",
-                        "subject":  "fix(profiles): show quota progress bar while billing used traffic from 0GB",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "cb24b51",
-                        "subject":  "merge: feature/local-subscription-traffic into main",
-                        "type":  "merge"
-                    },
-                    {
-                        "hash":  "6706a6e",
-                        "subject":  "feat(settings): dual-mode subscription traffic with hidden switch",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "b0ca643",
-                        "subject":  "docs(ui): rewrite fork deltas as module-level first-install splash",
-                        "type":  "docs"
-                    },
-                    {
-                        "hash":  "f763fb2",
-                        "subject":  "fix(app): stop cold-start flash-exit and restore LumenCrash capture",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "07b824c",
-                        "subject":  "fix(app): stop cold-start flash-exit and restore LumenCrash capture",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "c87f400",
-                        "subject":  "fix(build): make sideload APKs installable (INSTALL -15)",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "fe22dbb",
-                        "subject":  "fix(app): prevent cold-start crash from LumenCrash and dashboard fetch",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "e286f32",
-                        "subject":  "fix(ci): restore trailing newline in lumen-crash version resolver",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "1096b75",
-                        "subject":  "fix(ci): make lumen-crash version resolver parse API JSON safely",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "1d25e64",
-                        "subject":  "fix(ci): resolve lumen-crash version via stdin JSON parse",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "47644c0",
-                        "subject":  "feat(profiles): local subscription traffic from 0GB without upstream userinfo",
-                        "type":  "feat"
-                    },
-                    {
-                        "hash":  "f0184a9",
-                        "subject":  "fix(ci): make lumen-crash version resolver parse API JSON safely",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "ad87437",
-                        "subject":  "fix(app): complete lumen-crash host integration",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "fcd077b",
-                        "subject":  "Resolve lumen-crash version in build workflows",
-                        "type":  "chore"
-                    },
-                    {
-                        "hash":  "5ce30a6",
-                        "subject":  "fix(app): install LumenCrash before any other host startup work",
-                        "type":  "fix"
-                    }
-                ],
-    "modules":  [
-                    {
-                        "module":  ":app",
-                        "summary":  "开源/更新开屏门闸 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
-                    },
-                    {
-                        "module":  ":design",
-                        "summary":  "unDraw 动态色空状态插画 · 配置列表流量进度条 · 模块级首装说明卡片"
-                    },
-                    {
-                        "module":  ":service",
-                        "summary":  "本地订阅流量账本 · 双模式 userinfo · Live Update 通知"
-                    },
-                    {
-                        "module":  ":core",
-                        "summary":  "mihomo 桥接与 subscription-userinfo 解析保留"
-                    },
-                    {
-                        "module":  "CI / release",
-                        "summary":  "main 推送 Meta latest + Alpha 预发布 · 签名与 SHA256SUMS"
-                    }
-                ]
+    "schemaVersion": 1,
+    "identity": {
+        "commitHash": "d1c0fb1",
+        "buildTime": "2026-07-24T05:25:22Z",
+        "versionName": "2.11.32",
+        "versionCode": 211032
+    },
+    "highlights": [
+        {
+            "id": "undraw-empty-states",
+            "title": "动态色空状态插画（unDraw）",
+            "body": "连接列表、配置列表与日志空状态展示主题色 undraw 插画；亮/暗与 Material 动态取色自动跟随，开源鸣谢含 unDraw。"
+        },
+        {
+            "id": "connections-viewer",
+            "title": "活跃连接（连接列表）",
+            "body": "主页可查看并管理当前活跃连接（主机/SNI、进程、流量、规则与链路；支持关闭单条/全部）。"
+        },
+        {
+            "id": "update-notes-gate",
+            "title": "沉浸式本次更新说明",
+            "body": "新构建（versionCode + commit hash）首次启动展示亮点、模块说明与近期提交/合并；身份含 Build Time。"
+        },
+        {
+            "id": "partner-auto-adapt",
+            "title": "伙伴应用 VPN 自动适配",
+            "body": "网络设置可开关：已安装的 PiliPlus / NexAI / Project-Lumen / 知乎++ 自动纳入访问控制；StatusProvider 导出 partner 状态供伙伴查询。"
+        },
+        {
+            "id": "android-16-17",
+            "title": "Android 16 / 17 平台适配",
+            "body": "target/compile SDK 36（Android 16）；强制 edge-to-edge 与刘海安全区；系统返回 predictive back；动态广播默认 NOT_EXPORTED；清单声明 INTERACT_ACROSS_USERS 以应对 Android 17+ 跨 profile loopback（需 ADB 授予）。"
+        },
+        {
+            "id": "open-source-splash",
+            "title": "开源声明与模块改进开屏",
+            "body": "首次安装展示 GPL-3.0、第三方鸣谢，以及按 :app/:design/:service/:core 等模块整理的本分支改进说明。"
+        },
+        {
+            "id": "lumen-crash",
+            "title": "LumenCrash 崩溃捕获",
+            "body": "冷启动优先安装 LumenCrash；报告分享与宿主启动路径 fail-soft，避免闪退。"
+        },
+        {
+            "id": "release-signing",
+            "title": "可安装签名发布包",
+            "body": "CI 使用密钥库签名并校验 testOnly，降低 INSTALL -15 / 侧载安装失败。"
+        }
+    ],
+    "commits": [
+        {
+            "hash": "d1c0fb1",
+            "subject": "docs(ui): sync update_notes identity to HEAD after notes commit",
+            "type": "docs"
+        },
+        {
+            "hash": "c7547a4",
+            "subject": "docs(ui): refresh update_notes for undraw empty-state illustrations",
+            "type": "docs"
+        },
+        {
+            "hash": "8deeee9",
+            "subject": "feat(design): undraw dynamic-color empty-state illustrations",
+            "type": "feat"
+        },
+        {
+            "hash": "8876a46",
+            "subject": "feat(connections): rename to active connections and support close (#7)",
+            "type": "feat"
+        },
+        {
+            "hash": "a3235ef",
+            "subject": "feat(vpn): extend partner auto-adapt to NexAI and Project-Lumen",
+            "type": "feat"
+        },
+        {
+            "hash": "e3ec98e",
+            "subject": "docs(ci): Trellis workflow map and Actions reliability audit",
+            "type": "docs"
+        },
+        {
+            "hash": "f50e5b5",
+            "subject": "fix(ci): harden Actions patches and main-only release publish",
+            "type": "fix"
+        },
+        {
+            "hash": "9918430",
+            "subject": "docs(ci): expand gh failure forensics for last 3 failures",
+            "type": "docs"
+        },
+        {
+            "hash": "b651595",
+            "subject": "fix(ci): repair AAPT update_notes_title and codify gh auto-repair in Trellis",
+            "type": "fix"
+        },
+        {
+            "hash": "de0e6f3",
+            "subject": "feat(settings): add PiliPlus VPN auto-adapt toggle",
+            "type": "feat"
+        },
+        {
+            "hash": "b5f6dbe",
+            "subject": "chore(docs): refresh update_notes.json for HEAD identity",
+            "type": "chore"
+        },
+        {
+            "hash": "1767bab",
+            "subject": "feat(app): immersive update notes gate (Trellis android/update-notes)",
+            "type": "feat"
+        },
+        {
+            "hash": "f848db8",
+            "subject": "feat(vpn): auto-include PiliPlus partners and export partner status",
+            "type": "feat"
+        },
+        {
+            "hash": "88f95ab",
+            "subject": "feat(ui): add live connections viewer (查看使用)",
+            "type": "feat"
+        },
+        {
+            "hash": "b0ca643",
+            "subject": "docs(ui): rewrite fork deltas as module-level first-install splash",
+            "type": "docs"
+        },
+        {
+            "hash": "f763fb2",
+            "subject": "fix(app): stop cold-start flash-exit and restore LumenCrash capture",
+            "type": "fix"
+        },
+        {
+            "hash": "07b824c",
+            "subject": "fix(app): stop cold-start flash-exit and restore LumenCrash capture",
+            "type": "fix"
+        },
+        {
+            "hash": "c87f400",
+            "subject": "fix(build): make sideload APKs installable (INSTALL -15)",
+            "type": "fix"
+        },
+        {
+            "hash": "fe22dbb",
+            "subject": "fix(app): prevent cold-start crash from LumenCrash and dashboard fetch",
+            "type": "fix"
+        },
+        {
+            "hash": "e286f32",
+            "subject": "fix(ci): restore trailing newline in lumen-crash version resolver",
+            "type": "fix"
+        },
+        {
+            "hash": "1096b75",
+            "subject": "fix(ci): make lumen-crash version resolver parse API JSON safely",
+            "type": "fix"
+        },
+        {
+            "hash": "1d25e64",
+            "subject": "fix(ci): resolve lumen-crash version via stdin JSON parse",
+            "type": "fix"
+        },
+        {
+            "hash": "f0184a9",
+            "subject": "fix(ci): make lumen-crash version resolver parse API JSON safely",
+            "type": "fix"
+        },
+        {
+            "hash": "ad87437",
+            "subject": "fix(app): complete lumen-crash host integration",
+            "type": "fix"
+        },
+        {
+            "hash": "fcd077b",
+            "subject": "Resolve lumen-crash version in build workflows",
+            "type": "chore"
+        },
+        {
+            "hash": "5ce30a6",
+            "subject": "fix(app): install LumenCrash before any other host startup work",
+            "type": "fix"
+        }
+    ],
+    "modules": [
+        {
+            "module": ":app",
+            "summary": "开源/更新开屏门闸 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
+        },
+        {
+            "module": ":design",
+            "summary": "unDraw 动态色空状态插画 · 配置列表流量进度条 · 模块级首装说明卡片"
+        },
+        {
+            "module": ":service",
+            "summary": "Live Update 状态通知 · 伙伴应用自动适配 · 外部控制加固"
+        },
+        {
+            "module": ":core",
+            "summary": "mihomo 桥接与 subscription-userinfo 解析保留"
+        },
+        {
+            "module": "CI / release",
+            "summary": "main 推送 Meta latest + Alpha 预发布 · 签名与 SHA256SUMS"
+        }
+    ]
 }
