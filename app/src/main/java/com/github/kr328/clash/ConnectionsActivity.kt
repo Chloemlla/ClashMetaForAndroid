@@ -44,6 +44,34 @@ class ConnectionsActivity : BaseActivity<ConnectionsDesign>() {
                     snapshots.onReceive { snapshot ->
                         design.updateConnections(snapshot.connections)
                     }
+                    design.requests.onReceive { request ->
+                        when (request) {
+                            ConnectionsDesign.Request.CloseAll -> {
+                                if (design.requestCloseAll()) {
+                                    withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            withClash {
+                                                closeAllConnections()
+                                            }
+                                        }.onFailure {
+                                            Log.w("Failed to close all connections", it)
+                                        }
+                                    }
+                                }
+                            }
+                            is ConnectionsDesign.Request.Close -> {
+                                withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        withClash {
+                                            closeConnection(request.id)
+                                        }
+                                    }.onFailure {
+                                        Log.w("Failed to close connection", it)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } finally {

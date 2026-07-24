@@ -4,6 +4,7 @@
         <variable
             name="self"
             type="com.github.kr328.clash.design.ConnectionsDesign" />
+        <import type="com.github.kr328.clash.design.ConnectionsDesign.Request" />
     </data>
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -38,10 +39,34 @@
             android:layout_height="wrap_content"
             android:paddingTop="@{self.surface.insets.top}">
 
-            <include
-                layout="@layout/common_activity_bar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingEnd="@dimen/item_tailing_margin">
+
+                <include
+                    layout="@layout/common_activity_bar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/close_all_view" />
+
+                <ImageView
+                    android:id="@+id/close_all_view"
+                    android:layout_width="@dimen/toolbar_image_action_size"
+                    android:layout_height="@dimen/toolbar_image_action_size"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="@dimen/item_tailing_margin"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/close_all_connections"
+                    android:focusable="true"
+                    android:onClick="@{() -> self.requests.offer(Request.CloseAll.INSTANCE)}"
+                    android:padding="@dimen/toolbar_image_action_padding"
+                    android:src="@drawable/ic_baseline_clear_all" />
+            </RelativeLayout>
         </com.github.kr328.clash.design.view.ActivityBarLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>

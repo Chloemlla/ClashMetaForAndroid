@@ -166,4 +166,12 @@ class ClashManager(private val context: Context) : IClashManager,
             }
         }
     }
+
+    override fun closeConnection(id: String) {
+        Clash.closeConnection(id)
+    }
+
+    override fun closeAllConnections() {
+        Clash.closeAllConnections()
+    }
 }

@@ -13,6 +13,7 @@ import com.github.kr328.clash.design.util.toBytesString
 
 class ConnectionAdapter(
     private val context: Context,
+    private val onClick: (Connection) -> Unit,
     private val onCopy: (Connection) -> Unit,
 ) : ListAdapter<Connection, ConnectionAdapter.Holder>(DIFF) {
 
@@ -60,6 +61,9 @@ class ConnectionAdapter(
         holder.binding.trafficView.text =
             "↑${conn.upload.toBytesString()}  ↓${conn.download.toBytesString()}"
 
+        holder.binding.root.setOnClickListener {
+            onClick(conn)
+        }
         holder.binding.root.setOnLongClickListener {
             onCopy(conn)
             true

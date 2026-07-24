@@ -269,6 +269,14 @@ object Clash {
         return channel
     }
 
+    fun closeConnection(id: String) {
+        Bridge.nativeCloseConnection(id)
+    }
+
+    fun closeAllConnections() {
+        Bridge.nativeCloseAllConnections()
+    }
+
     /**
      * Subscribe to per-connection snapshots pushed at [intervalMs] cadence.
      * The returned channel delivers [ConnectionSnapshot] until closed.

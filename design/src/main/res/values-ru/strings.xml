@@ -15,9 +15,12 @@
     <string name="format_profile_activated">%s активирован</string>
 
     <string name="logs">Логи</string>
-    <string name="connections">Подключения</string>
-    <string name="format_connections_title">Подключения · %d</string>
+    <string name="connections">Активные подключения</string>
+    <string name="format_connections_title">Активные подключения · %d</string>
     <string name="connections_empty">Нет активных подключений</string>
+    <string name="close_all_connections">Закрыть все</string>
+    <string name="close_all_connections_warn">Закрыть все активные подключения?</string>
+    <string name="close_connection">Закрыть подключение</string>
     <string name="settings">Настройки</string>
     <string name="help">Помощь</string>
     <string name="about">О программе</string>
