@@ -68,6 +68,7 @@ func queryGroup(name C.c_string, sortMode C.c_string) *C.char {
 //export healthCheck
 func healthCheck(completable unsafe.Pointer, name C.c_string) {
 	go func(name string) {
+		defer safeRecover("healthCheck")
 		tunnel.HealthCheck(name)
 
 		C.complete(completable, nil)
@@ -122,6 +123,7 @@ func queryDashboardSummary(preferred C.c_string, excludeNotSelectable C.int) *C.
 //export updateProvider
 func updateProvider(completable unsafe.Pointer, pType C.c_string, name C.c_string) {
 	go func(pType, name string) {
+		defer safeRecover("updateProvider")
 		C.complete(completable, marshalString(tunnel.UpdateProvider(pType, name)))
 
 		C.release_object(completable)

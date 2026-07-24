@@ -139,11 +139,6 @@ object ProfileProcessor {
                 profileLock.withLock {
                     val imported = ImportedDao().queryByUUID(snapshot.uuid)
                     if (imported != null) {
-                        replaceDirectoryAtomically(
-                            context.processingDir,
-                            context.importedDir.resolve(snapshot.uuid.toString()),
-                        )
-
                         if (useLocalTraffic) {
                             // Refresh quota/expiry for the progress bar; never bill from userinfo.
                             val nextTotal = subscriptionInfo?.subTotal
@@ -169,6 +164,13 @@ object ProfileProcessor {
                                 )
                             }
                         }
+
+                        // Swap dir after DB so a mid-crash never leaves NEW dir + OLD
+                        // metadata; notify only after both are consistent.
+                        replaceDirectoryAtomically(
+                            context.processingDir,
+                            context.importedDir.resolve(snapshot.uuid.toString()),
+                        )
 
                         context.sendProfileChanged(snapshot.uuid)
                     }
@@ -207,9 +209,6 @@ object ProfileProcessor {
     suspend fun delete(context: Context, uuid: UUID) {
         withContext(NonCancellable) {
             profileLock.withLock {
-                ImportedDao().remove(uuid)
-                PendingDao().remove(uuid)
-
                 val pending = context.pendingDir.resolve(uuid.toString())
                 val imported = context.importedDir.resolve(uuid.toString())
 
@@ -217,6 +216,9 @@ object ProfileProcessor {
                 imported.deleteRecursively()
 
                 LocalSubscriptionTrafficStore(context).clear(uuid)
+
+                ImportedDao().remove(uuid)
+                PendingDao().remove(uuid)
 
                 context.sendProfileChanged(uuid)
             }

@@ -69,7 +69,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     suspend fun requestExitWithoutSaving(): Boolean {
         return withContext(Dispatchers.Main) {
-            suspendCancellableCoroutine { ctx ->
+            suspendCancellableCoroutine<Boolean> { ctx ->
                 val dialog = MaterialAlertDialogBuilder(context)
                     .setTitle(R.string.exit_without_save)
                     .setMessage(R.string.exit_without_save_warning)
@@ -177,7 +177,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             val selected = if (localTrafficBilling) 0 else 1
 
             val choice = withContext(Dispatchers.Main) {
-                suspendCancellableCoroutine { ctx ->
+                suspendCancellableCoroutine<Int?> { ctx ->
                     val dialog = MaterialAlertDialogBuilder(context)
                         .setTitle(R.string.subscription_traffic_billing)
                         .setSingleChoiceItems(options, selected) { d, which ->

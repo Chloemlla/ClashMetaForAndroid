@@ -32,6 +32,7 @@ var (
 
 func init() {
 	go func() {
+		defer safeRecover("logForwarder")
 		sub := log.Subscribe()
 		defer log.UnSubscribe(sub)
 
@@ -64,6 +65,7 @@ func subscribeLogcat(remote unsafe.Pointer) int64 {
 	logcatMu.Unlock()
 
 	go func(id int64, remote unsafe.Pointer, cancel <-chan struct{}) {
+		defer safeRecover("subscribeLogcat")
 		sub := log.Subscribe()
 		defer log.UnSubscribe(sub)
 

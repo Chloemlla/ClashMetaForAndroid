@@ -47,6 +47,8 @@ func reset() {
 //export forceGc
 func forceGc() {
 	go func() {
+		defer safeRecover("forceGc")
+
 		log.Infoln("[APP] request force GC")
 
 		runtime.GC()

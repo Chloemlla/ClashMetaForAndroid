@@ -11,6 +11,8 @@ import (
 
 func init() {
 	go func() {
+		defer safeRecover("pprofServer")
+
 		log.Debugln("pprof service listen at: 0.0.0.0:8888")
 
 		_ = http.ListenAndServe("0.0.0.0:8888", nil)

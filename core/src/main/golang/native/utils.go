@@ -5,9 +5,21 @@ import "C"
 import (
 	"encoding/json"
 	"reflect"
+	"runtime/debug"
 
 	"github.com/metacubex/mihomo/log"
 )
+
+// safeRecover must be deferred at the top of any goroutine launched from a
+// //export-ed JNI function. An unrecovered panic in such a goroutine tears down
+// the whole :background process, dropping an active VPN tunnel with no stack
+// context propagated back to Kotlin. Log the panic + stack instead and keep
+// the process alive.
+func safeRecover(name string) {
+	if r := recover(); r != nil {
+		log.Errorln("[APP] panic in %s: %v\n%s", name, r, debug.Stack())
+	}
+}
 
 func marshalJson(obj any) *C.char {
 	res, err := json.Marshal(obj)

@@ -136,6 +136,7 @@ func subscribeConnections(remote unsafe.Pointer, intervalMs C.int64_t) int64 {
 	}
 
 	go func(id int64, remote unsafe.Pointer, cancel <-chan struct{}) {
+		defer safeRecover("subscribeConnections")
 		released := false
 		release := func() {
 			if released {
