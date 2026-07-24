@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "identity": {
-    "commitHash": "52d374b",
-    "buildTime": "2026-07-24T04:57:06Z",
+    "commitHash": "e009c3b",
+    "buildTime": "2026-07-24T05:03:04Z",
     "versionName": "2.11.32",
     "versionCode": 211032
   },
@@ -39,6 +39,11 @@
     }
   ],
   "commits": [
+    {
+      "hash": "e009c3b",
+      "subject": "docs(ui): sync update_notes identity to HEAD after notes commit",
+      "type": "docs"
+    },
     {
       "hash": "52d374b",
       "subject": "docs(ui): refresh update notes for active connections manage",
@@ -182,11 +187,6 @@
     {
       "hash": "75b5127",
       "subject": "ci(debug): publish signed Alpha pre-release on workflow_dispatch",
-      "type": "ci"
-    },
-    {
-      "hash": "f1d348e",
-      "subject": "ci(debug): sign Alpha arm64 APK with release keystore secrets",
       "type": "ci"
     }
   ],
