@@ -1,8 +1,8 @@
 {
     "schemaVersion":  1,
     "identity":  {
-                     "commitHash":  "c7547a4",
-                     "buildTime":  "2026-07-24T05:25:15Z",
+                     "commitHash":  "d1c0fb1",
+                     "buildTime":  "2026-07-24T05:25:22Z",
                      "versionName":  "2.11.32",
                      "versionCode":  211032
                  },
@@ -44,6 +44,11 @@
                        }
                    ],
     "commits":  [
+                    {
+                        "hash":  "d1c0fb1",
+                        "subject":  "docs(ui): sync update_notes identity to HEAD after notes commit",
+                        "type":  "docs"
+                    },
                     {
                         "hash":  "c7547a4",
                         "subject":  "docs(ui): refresh update_notes for undraw empty-state illustrations",
@@ -188,11 +193,6 @@
                         "hash":  "5ce30a6",
                         "subject":  "fix(app): install LumenCrash before any other host startup work",
                         "type":  "fix"
-                    },
-                    {
-                        "hash":  "75b5127",
-                        "subject":  "ci(debug): publish signed Alpha pre-release on workflow_dispatch",
-                        "type":  "ci"
                     }
                 ],
     "modules":  [
