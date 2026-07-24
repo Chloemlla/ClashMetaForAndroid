@@ -27,8 +27,8 @@ object PartnerApps {
     )
 
     val zhihuPlusPackages: Set<String> = setOf(
-        "com.github.zly2006.zhplus",
-        "com.github.zly2006.zhplus.lite",
+        "com.chloemlla.zhplus",
+        "com.chloemlla.zhplus.lite",
     )
 
     /** All partner applicationIds (release + common suffixes). */
