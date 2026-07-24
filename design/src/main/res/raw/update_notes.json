@@ -1,8 +1,8 @@
 {
     "schemaVersion":  1,
     "identity":  {
-                     "commitHash":  "8deeee9",
-                     "buildTime":  "2026-07-24T05:24:54Z",
+                     "commitHash":  "c7547a4",
+                     "buildTime":  "2026-07-24T05:25:15Z",
                      "versionName":  "2.11.32",
                      "versionCode":  211032
                  },
@@ -44,6 +44,11 @@
                        }
                    ],
     "commits":  [
+                    {
+                        "hash":  "c7547a4",
+                        "subject":  "docs(ui): refresh update_notes for undraw empty-state illustrations",
+                        "type":  "docs"
+                    },
                     {
                         "hash":  "8deeee9",
                         "subject":  "feat(design): undraw dynamic-color empty-state illustrations",
@@ -187,11 +192,6 @@
                     {
                         "hash":  "75b5127",
                         "subject":  "ci(debug): publish signed Alpha pre-release on workflow_dispatch",
-                        "type":  "ci"
-                    },
-                    {
-                        "hash":  "f1d348e",
-                        "subject":  "ci(debug): sign Alpha arm64 APK with release keystore secrets",
                         "type":  "ci"
                     }
                 ],
