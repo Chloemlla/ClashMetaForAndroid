@@ -197,6 +197,11 @@ object ClashRuntime {
         delete(uuid)
     }
 
+    /** Reset local-from-0 used counters for a profile (subscription quota unchanged). */
+    suspend fun resetLocalTraffic(uuid: UUID) = withProfile {
+        resetLocalTraffic(uuid)
+    }
+
     suspend fun updateProfile(uuid: UUID) = withProfile {
         update(uuid)
     }

@@ -10,7 +10,7 @@
                        {
                            "id":  "undraw-empty-states",
                            "title":  "动态色空状态插画（unDraw）",
-                           "body":  "连接列表与配置列表空状态展示主题色 undraw 插画；亮/暗与 Material 动态取色自动跟随，开源鸣谢含 unDraw。"
+                           "body":  "连接列表、配置列表与日志空状态展示主题色 undraw 插画；亮/暗与 Material 动态取色自动跟随，开源鸣谢含 unDraw。"
                        },
                        {
                            "id":  "connections-viewer",
@@ -25,7 +25,17 @@
                        {
                            "id":  "local-subscription-traffic",
                            "title":  "本地订阅流量（默认从 0GB 计已用）",
-                           "body":  "配置页已用流量从 0 B 本地累计；进度条终点仍取订阅总量（subscription-userinfo total/expire）。可在设置标题连点 7 次解锁上游 userinfo 模式。"
+                           "body":  "配置页已用流量从 0 B 本地累计；进度条终点仍取订阅总量。导入/编辑页与应用设置可切换「从 0 本地 / 从订阅信息」全局计费；配置菜单可重置本地已用；旧版 ×100 虚高会自动迁移。"
+                       },
+                       {
+                           "id":  "partner-auto-adapt",
+                           "title":  "伙伴应用 VPN 自动适配",
+                           "body":  "网络设置可开关：已安装的 PiliPlus / NexAI / Project-Lumen / 知乎++ 自动纳入访问控制；StatusProvider 导出 partner 状态供伙伴查询。"
+                       },
+                       {
+                           "id":  "android-16-17",
+                           "title":  "Android 16 / 17 平台适配",
+                           "body":  "target/compile SDK 36（Android 16）；强制 edge-to-edge 与刘海安全区；系统返回 predictive back；动态广播默认 NOT_EXPORTED；清单声明 INTERACT_ACROSS_USERS 以应对 Android 17+ 跨 profile loopback（需 ADB 授予）。"
                        },
                        {
                            "id":  "open-source-splash",

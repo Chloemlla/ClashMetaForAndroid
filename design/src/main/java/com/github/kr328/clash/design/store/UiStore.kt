@@ -41,12 +41,6 @@ class UiStore(context: Context) {
         defaultValue = false,
     )
 
-    /** Once true, the local-subscription traffic switch is visible in App Settings. */
-    var revealLocalSubscriptionTrafficSetting: Boolean by store.boolean(
-        key = "reveal_local_subscription_traffic_setting",
-        defaultValue = false,
-    )
-
     var proxyExcludeNotSelectable by store.boolean(
         key = "proxy_exclude_not_selectable",
         defaultValue = false,

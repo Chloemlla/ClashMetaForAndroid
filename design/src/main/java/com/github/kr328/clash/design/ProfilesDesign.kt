@@ -27,6 +27,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         data class Update(val profile: Profile) : Request()
         data class Edit(val profile: Profile) : Request()
         data class Duplicate(val profile: Profile) : Request()
+        data class ResetLocalTraffic(val profile: Profile) : Request()
         data class Delete(val profile: Profile) : Request()
     }
 
@@ -133,6 +134,19 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         requests.trySend(Request.Duplicate(profile))
 
         dialog.dismiss()
+    }
+
+    fun requestResetLocalTraffic(dialog: Dialog, profile: Profile) {
+        dialog.dismiss()
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.reset_local_traffic)
+            .setMessage(context.getString(R.string.reset_local_traffic_confirmation, profile.name))
+            .setPositiveButton(R.string.ok) { _, _ ->
+                requests.trySend(Request.ResetLocalTraffic(profile))
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     fun requestDelete(dialog: Dialog, profile: Profile) {

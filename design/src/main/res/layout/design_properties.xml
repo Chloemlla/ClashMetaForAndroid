@@ -99,6 +99,15 @@
                     app:title="@string/auto_update" />
 
                 <com.github.kr328.clash.design.view.ActionLabel
+                    android:id="@+id/traffic_billing_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical"
+                    android:onClick="@{() -> self.inputTrafficBilling()}"
+                    app:icon="@drawable/ic_baseline_domain"
+                    app:text="@string/subscription_traffic_billing" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/properties_element_margin_vertical"

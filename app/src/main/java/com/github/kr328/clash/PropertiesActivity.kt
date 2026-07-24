@@ -7,6 +7,7 @@ import com.github.kr328.clash.design.PropertiesDesign
 import com.github.kr328.clash.design.model.Profile
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.toDesignProfile
 import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.coroutineScope
@@ -18,16 +19,19 @@ import com.github.kr328.clash.design.R
 class PropertiesActivity : BaseActivity<PropertiesDesign>() {
     private var canceled: Boolean = false
     private lateinit var original: Profile
+    private lateinit var serviceStore: ServiceStore
 
     override suspend fun main() {
         setResult(RESULT_CANCELED)
 
         val uuid = intent.uuid ?: return finish()
         val design = PropertiesDesign(this)
+        serviceStore = ServiceStore(this)
 
         original = withProfile { queryByUUID(uuid) }?.toDesignProfile() ?: return finish()
 
         design.profile = original
+        design.localTrafficBilling = serviceStore.localSubscriptionTraffic
 
         setContentDesign(design)
 
@@ -64,6 +68,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         PropertiesDesign.Request.Commit -> {
                             design.verifyAndCommit()
                         }
+                        is PropertiesDesign.Request.SetLocalTrafficBilling -> {
+                            serviceStore.localSubscriptionTraffic = it.enabled
+                        }
                     }
                 }
             }
@@ -94,6 +101,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                 try {
                     withProcessing { updateStatus ->
                         withProfile {
+                            // Persist billing mode before apply so import uses the selected strategy.
+                            serviceStore.localSubscriptionTraffic = localTrafficBilling
+
                             patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
 
                             coroutineScope {
@@ -116,3 +126,4 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         }
     }
 }
+

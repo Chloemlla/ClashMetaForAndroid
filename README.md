@@ -24,8 +24,9 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 ### Requirement
 
 - Android 8.0+ (minimum; aligned with Lumen Crash SDK)
-- Android 8.0+ (recommend)
+- Android 8.0+ (recommend); **target / compile SDK 36** (Android 16) with Android 17 runtime readiness
 - `armeabi-v7a` , `arm64-v8a`, `x86` or `x86_64` Architecture
+- Edge-to-edge layouts required when running on Android 16+ with this target
 
 ### Build
 
@@ -139,9 +140,9 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 | 模块 | 相对上游的增量要点 |
 |------|-------------------|
-| **`:app`** | 首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限 UX |
-| **`:design`** | 渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 无障碍与 48dp 触控 |
-| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 |
+| **`:app`** | 首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限 UX · 沉浸式本次更新说明 |
+| **`:design`** | 渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 活跃连接管理 · undraw 动态色空状态 · 无障碍与 48dp 触控 |
+| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen） |
 | **`:core`** | 保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力 |
 | **`:common`** | 应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径 |
 | **`:sdk`** | `ClashRuntime` 同 App 嵌入门面（Profile / VPN / 代理组）；非跨应用遥控；见 [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) |
@@ -225,6 +226,37 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | Commit | Summary |
 |--------|---------|
 | *(this)* | `feat(ux): home live speed and selected proxy summary` — 状态卡实时速率、代理卡当前节点、a11y 描述 |
+
+#### Track K · 本地订阅流量双模式
+| Commit | Summary |
+|--------|---------|
+| `47644c0` / `6706a6e` | 默认从 0 本地计已用；上游 userinfo 双模式；进度条仍取订阅 total/expire |
+| *(this)* | 导入/编辑与应用设置常显切换；配置菜单重置本地流量；×100 虚高解码修复 + 旧数据自动迁移 |
+
+#### Track L · 伙伴应用 VPN 自动适配
+| Commit | Summary |
+|--------|---------|
+| `f848db8` / `de0e6f3` / `a3235ef` | PiliPlus → NexAI / Project-Lumen；网络设置开关；StatusProvider `partnerStatus` |
+
+#### Track M · 活跃连接管理
+| Commit | Summary |
+|--------|---------|
+| `88f95ab` / `8876a46` | 主页查看使用 · 连接列表 · 关闭单条/全部 |
+
+#### Track N · undraw 动态色空状态
+| Commit | Summary |
+|--------|---------|
+| `614dded` | 连接/配置空状态主题色插画；日志空状态同步 |
+
+#### Track O · 沉浸式本次更新说明
+| Commit | Summary |
+|--------|---------|
+| `1767bab` | 新构建首次启动展示亮点 / 模块说明 / 近期提交 |
+
+#### Track P · Android 16 / 17 平台适配
+| Commit | Summary |
+|--------|---------|
+| *(this)* | `targetSdk`/`compileSdk` → **36**（Android 16）；强制 edge-to-edge + displayCutout insets；predictive back (`enableOnBackInvokedCallback`)；receiver 默认 NOT_EXPORTED；清单已声明 `INTERACT_ACROSS_USERS`（Android 17+ 跨 profile loopback，需 ADB 授予） |
 
 > [!TIP]
 > 详细机制见 **[§11 Runtime / Service SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**；逐步嵌入见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。
@@ -394,9 +426,11 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 安全        外部 VPN 控制默认拒绝 · 签名 fail-fast · keystore 出库 · 备份收紧 · 网络安全配置
 稳定        日志增量通知修复 · 有界日志解析 · 写盘轮转 · Access Control 退出超时 · 全局协程异常隔离
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
-体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态
+体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态 · 活跃连接管理 · undraw 动态色空状态 · 沉浸式更新说明
+订阅流量    默认从 0 本地计已用 · 导入/设置可切换上游 userinfo · 进度条仍用订阅总量 · 菜单可重置本地流量 · 旧版 ×100 虚高自动迁移
+伙伴集成    VPN 自动适配 PiliPlus / NexAI / Project-Lumen · StatusProvider 导出 partner 状态
 迁移        Alpha → Meta 同签名自动导入配置/节点/设置 · 低 API zip 解压 · 迁移权限 i18n
-SDK         :sdk ClashRuntime 嵌入门面 · Components 可配置 · 同 App 内嵌（非跨 App 遥控）
+SDK         :sdk ClashRuntime 嵌入门面 · Components 可配置 · 同 App 内嵌（非跨 App 遥控） · resetLocalTraffic
 架构        design/service 边界收紧 · 展示层模型与适配器
 供应链      Geo 固定校验 · 构建后打 tag · SHA256SUMS · 统一 CI 签名 secrets · Meta latest + Alpha pre-release 并行
 质量        单元测试 · Lint 全量报告 · 失败日志透明 · 仓库策略脚本

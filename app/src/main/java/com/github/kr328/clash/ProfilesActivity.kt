@@ -84,6 +84,13 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
 
                             startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                         }
+                        is ProfilesDesign.Request.ResetLocalTraffic -> {
+                            withProfile {
+                                resetLocalTraffic(it.profile.uuid)
+                            }
+                            design.showToast(R.string.reset_local_traffic_done, ToastDuration.Short)
+                            design.fetch()
+                        }
                     }
                 }
                 if (activityStarted) {

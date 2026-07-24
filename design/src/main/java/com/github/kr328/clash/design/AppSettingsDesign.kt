@@ -1,21 +1,17 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
-import android.os.SystemClock
 import android.view.View
-import android.widget.TextView
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.model.ServiceSettings
 import com.github.kr328.clash.design.preference.*
 import com.github.kr328.clash.design.store.UiStore
-import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.applyFrom
 import com.github.kr328.clash.design.util.bindAppBarElevation
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.root
-import kotlinx.coroutines.launch
 
 class AppSettingsDesign(
     context: Context,
@@ -41,8 +37,6 @@ class AppSettingsDesign(
         binding.activityBarLayout.applyFrom(context)
 
         binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
-
-        lateinit var localTrafficPreference: SwitchPreference
 
         val screen = preferenceScreen(context) {
             category(R.string.behavior)
@@ -105,8 +99,7 @@ class AppSettingsDesign(
                 enabled = !running
             }
 
-            // Hidden by default; reveal via multi-tap on the settings title.
-            localTrafficPreference = switch(
+            switch(
                 value = srvStore::localSubscriptionTraffic,
                 icon = R.drawable.ic_baseline_domain,
                 title = R.string.local_subscription_traffic_title,
@@ -115,52 +108,5 @@ class AppSettingsDesign(
         }
 
         binding.content.addView(screen.root)
-
-        val revealed = uiStore.revealLocalSubscriptionTrafficSetting
-        localTrafficPreference.view.visibility = if (revealed) View.VISIBLE else View.GONE
-
-        installHiddenUnlock(uiStore, localTrafficPreference)
-    }
-
-    private fun installHiddenUnlock(
-        uiStore: UiStore,
-        localTrafficPreference: SwitchPreference,
-    ) {
-        val titleView = binding.activityBarLayout
-            .findViewById<TextView>(R.id.activity_bar_title_view)
-            ?: return
-
-        var tapCount = 0
-        var lastTapAt = 0L
-
-        titleView.isClickable = true
-        titleView.setOnClickListener {
-            val now = SystemClock.elapsedRealtime()
-            if (now - lastTapAt > 1_500L) {
-                tapCount = 0
-            }
-            lastTapAt = now
-            tapCount += 1
-
-            if (tapCount < 7) {
-                return@setOnClickListener
-            }
-
-            tapCount = 0
-            if (uiStore.revealLocalSubscriptionTrafficSetting &&
-                localTrafficPreference.view.visibility == View.VISIBLE
-            ) {
-                return@setOnClickListener
-            }
-
-            uiStore.revealLocalSubscriptionTrafficSetting = true
-            localTrafficPreference.view.visibility = View.VISIBLE
-            launch {
-                showToast(
-                    R.string.local_subscription_traffic_unlocked,
-                    ToastDuration.Short,
-                )
-            }
-        }
     }
 }

@@ -119,7 +119,10 @@ subprojects {
             }
 
             minSdk = 21
-            targetSdk = 35
+            // Android 16 (API 36). Android 17 (API 37) runtime behaviors are handled
+            // via edge-to-edge, predictive back, FGS specialUse, and INTERACT_ACROSS_USERS.
+            // Keep compile/target aligned; AGP 8.8 ships platform-36 tooling.
+            targetSdk = 36
 
             versionName = "2.11.32"
             versionCode = 211032
@@ -157,7 +160,9 @@ subprojects {
 
         ndkVersion = "29.0.14206865"
 
-        compileSdkVersion(defaultConfig.targetSdk!!)
+        // compileSdk must cover targetSdk; pin explicitly so library modules
+            // cannot silently lag when target is bumped for platform work.
+            compileSdkVersion(36)
 
         if (isApp) {
             packagingOptions {

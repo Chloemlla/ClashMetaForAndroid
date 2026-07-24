@@ -22,7 +22,6 @@ import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.store.UiStore
 import com.github.kr328.clash.design.ui.DayNight
 import com.github.kr328.clash.design.util.resolveThemedBoolean
-import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.remote.Broadcasts
 import com.github.kr328.clash.remote.Remote
@@ -253,14 +252,22 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         }
 
         window.isAllowForceDarkCompat = false
+        // Android 15+ edge-to-edge; Android 16 (targetSdk 36) removes the opt-out.
+        // Draw under system bars and let designs pad via WindowInsets (Surface.insets).
         window.isSystemBarsTranslucentCompat = true
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         @Suppress("DEPRECATION")
-        window.statusBarColor = resolveThemedColor(android.R.attr.statusBarColor)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
-        window.navigationBarColor = resolveThemedColor(android.R.attr.navigationBarColor)
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        if (Build.VERSION.SDK_INT >= 29) {
+            @Suppress("DEPRECATION")
+            window.isStatusBarContrastEnforced = false
+            @Suppress("DEPRECATION")
+            window.isNavigationBarContrastEnforced = false
+        }
 
         if (Build.VERSION.SDK_INT >= 23) {
             window.isLightStatusBarsCompat = resolveThemedBoolean(android.R.attr.windowLightStatusBar)

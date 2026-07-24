@@ -6,9 +6,11 @@ import androidx.core.view.WindowInsetsCompat
 import com.github.kr328.clash.design.ui.Insets
 
 fun View.setOnInsertsChangedListener(adaptLandscape: Boolean = true, listener: (Insets) -> Unit) {
-    setOnApplyWindowInsetsListener { v, ins ->
-        val compat = WindowInsetsCompat.toWindowInsetsCompat(ins)
-        val insets = compat.getInsets(WindowInsetsCompat.Type.systemBars())
+    ViewCompat.setOnApplyWindowInsetsListener(this) { v, compat ->
+        // Include display cutout so edge-to-edge layouts clear notches / camera holes
+        // on Android 15–17 devices (mandatory edge-to-edge when targeting API 36+).
+        val typeMask = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        val insets = compat.getInsets(typeMask)
 
         val rInsets = if (ViewCompat.getLayoutDirection(v) == ViewCompat.LAYOUT_DIRECTION_LTR) {
             Insets(
@@ -28,8 +30,8 @@ fun View.setOnInsertsChangedListener(adaptLandscape: Boolean = true, listener: (
 
         listener(if (adaptLandscape) rInsets.landscape(v.context) else rInsets)
 
-        compat.toWindowInsets()!!
+        compat
     }
 
-    requestApplyInsets()
+    ViewCompat.requestApplyInsets(this)
 }

@@ -65,15 +65,15 @@ dependencies {
     testImplementation(libs.test.junit)
 }
 
-// Keep AndroidX activity/core on the AGP 8.8 / compileSdk 35-compatible line even when
+// Keep AndroidX activity/core on the AGP 8.8-compatible line even when
 // lumen-crash transitively asks for newer AARs (activity 1.13 / core 1.18 / navigationevent).
+// compileSdk is 36; core 1.16 still valid. Lift only after AGP/lumen-crash allow it.
 configurations.configureEach {
     resolutionStrategy {
         force(
             "androidx.activity:activity:1.9.0",
             "androidx.activity:activity-ktx:1.9.0",
             "androidx.activity:activity-compose:1.9.0",
-            // 1.17+ AAR metadata requires AGP 8.9.1 + compileSdk 36; keep 1.16 for AGP 8.8 / SDK 35.
             "androidx.core:core:1.16.0",
             "androidx.core:core-ktx:1.16.0",
         )

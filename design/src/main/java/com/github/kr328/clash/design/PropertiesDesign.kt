@@ -21,6 +21,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     sealed class Request {
         object Commit : Request()
         object BrowseFiles : Request()
+        data class SetLocalTrafficBilling(val enabled: Boolean) : Request()
     }
 
     private val binding = DesignPropertiesBinding
@@ -33,6 +34,13 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         get() = binding.profile!!
         set(value) {
             binding.profile = value
+        }
+
+    var localTrafficBilling: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            refreshTrafficBillingLabel()
         }
 
     val progressing: Boolean
@@ -84,6 +92,8 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         binding.tips.text = context.getHtml(R.string.tips_properties)
 
         binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
+
+        refreshTrafficBillingLabel()
     }
 
     fun inputName() {
@@ -158,12 +168,63 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         }
     }
 
+    fun inputTrafficBilling() {
+        launch {
+            val options = arrayOf(
+                context.getString(R.string.subscription_traffic_billing_local),
+                context.getString(R.string.subscription_traffic_billing_upstream),
+            )
+            val selected = if (localTrafficBilling) 0 else 1
+
+            val choice = withContext(Dispatchers.Main) {
+                suspendCancellableCoroutine { ctx ->
+                    val dialog = MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.subscription_traffic_billing)
+                        .setSingleChoiceItems(options, selected) { d, which ->
+                            d.dismiss()
+                            ctx.resume(which)
+                        }
+                        .setNegativeButton(R.string.cancel) { _, _ -> }
+                        .setOnDismissListener {
+                            if (!ctx.isCompleted) ctx.resume(null)
+                        }
+                        .show()
+
+                    ctx.invokeOnCancellation { dialog.dismiss() }
+                }
+            } ?: return@launch
+
+            val enabled = choice == 0
+            if (enabled == localTrafficBilling) return@launch
+
+            localTrafficBilling = enabled
+            requests.trySend(Request.SetLocalTrafficBilling(enabled))
+        }
+    }
+
     fun requestCommit() {
         requests.trySend(Request.Commit)
     }
 
     fun requestBrowseFiles() {
         requests.trySend(Request.BrowseFiles)
+    }
+
+    private fun refreshTrafficBillingLabel() {
+        val modeText = if (localTrafficBilling) {
+            context.getString(R.string.subscription_traffic_billing_local)
+        } else {
+            context.getString(R.string.subscription_traffic_billing_upstream)
+        }
+        val summary = if (localTrafficBilling) {
+            context.getText(R.string.subscription_traffic_billing_local_summary)
+        } else {
+            context.getText(R.string.subscription_traffic_billing_upstream_summary)
+        }
+
+        binding.trafficBillingView.text =
+            context.getString(R.string.subscription_traffic_billing) + " · " + modeText
+        binding.trafficBillingView.subtext = summary
     }
 
     private fun ModelProgressBarConfigure.applyFrom(status: FetchStatus) {

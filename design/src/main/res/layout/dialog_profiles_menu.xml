@@ -50,6 +50,15 @@
         <com.github.kr328.clash.design.view.LargeActionLabel
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:onClick="@{() -> master.requestResetLocalTraffic(self, profile)}"
+            android:padding="@dimen/bottom_sheet_menu_items_padding"
+            android:visibility="@{profile.imported ? View.VISIBLE : View.GONE}"
+            app:icon="@drawable/ic_baseline_domain"
+            app:text="@string/reset_local_traffic" />
+
+        <com.github.kr328.clash.design.view.LargeActionLabel
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:onClick="@{() -> master.requestDelete(self, profile)}"
             android:padding="@dimen/bottom_sheet_menu_items_padding"
             android:theme="@style/ThemeOverlay.ControlColorError"

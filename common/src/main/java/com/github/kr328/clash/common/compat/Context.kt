@@ -21,16 +21,28 @@ fun Context.getDrawableCompat(@DrawableRes id: Int): Drawable? {
     return ContextCompat.getDrawable(this, id)
 }
 
+/**
+ * Register a receiver with explicit export flags on API 33+.
+ *
+ * Default is **not exported** (safe for same-app / permission-protected
+ * receivers). Pass [exported] = true only for system or cross-app broadcasts
+ * that intentionally accept external senders.
+ */
 @SuppressLint("UnspecifiedRegisterReceiverFlag")
 fun Context.registerReceiverCompat(
     receiver: BroadcastReceiver,
     filter: IntentFilter,
     permission: String? = null,
-    handler: Handler? = null
+    handler: Handler? = null,
+    exported: Boolean = false,
 ) =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-        registerReceiver(receiver, filter, permission, handler,
-            if (permission == null) Context.RECEIVER_EXPORTED else Context.RECEIVER_NOT_EXPORTED
+        registerReceiver(
+            receiver,
+            filter,
+            permission,
+            handler,
+            if (exported) Context.RECEIVER_EXPORTED else Context.RECEIVER_NOT_EXPORTED,
         )
     else
         registerReceiver(receiver, filter, permission, handler)

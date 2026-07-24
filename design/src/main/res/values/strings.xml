@@ -159,6 +159,9 @@
     <!-- Legacy aliases kept so older translations still resolve if referenced. -->
     <string name="piliplus_auto_adapt">@string/partner_app_auto_adapt</string>
     <string name="piliplus_auto_adapt_summary">@string/partner_app_auto_adapt_summary</string>
+    <string name="reset_local_traffic">Reset local traffic</string>
+    <string name="reset_local_traffic_confirmation">Reset local used traffic for “%1$s” to 0 B? Subscription quota is unchanged.</string>
+    <string name="reset_local_traffic_done">Local traffic reset</string>
     <string name="allow_ipv6">Allow Ipv6</string>
     <string name="allow_ipv6_summary">Allows ipv6 traffic via VpnService</string>
     <string name="system_proxy">System Proxy</string>
@@ -278,6 +281,11 @@
     <string name="local_subscription_traffic_title">Local subscription traffic</string>
     <string name="local_subscription_traffic_summary">Bill used traffic from 0 GB locally; progress bar still uses the subscription total/quota</string>
     <string name="local_subscription_traffic_unlocked">Advanced traffic option unlocked</string>
+    <string name="subscription_traffic_billing">Traffic billing (all profiles)</string>
+    <string name="subscription_traffic_billing_local">From 0 (local)</string>
+    <string name="subscription_traffic_billing_upstream">From subscription info</string>
+    <string name="subscription_traffic_billing_local_summary">Global: start used traffic at 0 B on this device for every profile; quota still follows the subscription total</string>
+    <string name="subscription_traffic_billing_upstream_summary">Global: use upload/download/total from subscription-userinfo headers for every profile</string>
 
     <string name="follow_system_android_10">Follow System (Android 10+)</string>
     <string name="always_dark">Always Dark</string>
@@ -469,9 +477,9 @@
 
     <string name="open_source_fork_modules">Module-level improvements (Chloemlla/main)</string>
     <string name="open_source_fork_modules_intro"><![CDATA[Relative to upstream <strong>MetaCubeX/CMFA</strong>, this fork’s first-install splash summarizes production deltas by Android module. Full inventory: README → Branch Improvements.]]></string>
-    <string name="open_source_mod_app">First-install open-source gate · Alpha→Meta same-signature migration · LumenCrash host install/report · cold-start order and flash-exit guards · notification permission UX</string>
-    <string name="open_source_mod_design">Progressive proxy delay + animation · proxy search · live up/down speed and selected node on home · empty-profile / home setup CTAs · clipboard subscription import · accessibility and 48dp touch targets</string>
-    <string name="open_source_mod_service">Live Update status notification (promoted ongoing) · POST_NOTIFICATIONS guards · sharedpref-only backup · Access Control stop timeout · external VPN control denied by default</string>
+    <string name="open_source_mod_app">First-install open-source gate · Alpha→Meta same-signature migration · LumenCrash host install/report · cold-start order and flash-exit guards · notification permission UX · immersive update-notes gate · Android 16 (API 36) target + edge-to-edge</string>
+    <string name="open_source_mod_design">Progressive proxy delay + animation · proxy search · live up/down speed and selected node on home · empty-profile / home setup CTAs · clipboard subscription import · active connections manage · undraw dynamic-color empty states · accessibility and 48dp touch targets</string>
+    <string name="open_source_mod_service">Live Update status notification (promoted ongoing) · POST_NOTIFICATIONS guards · sharedpref-only backup · Access Control stop timeout · external VPN control denied by default · local-from-0 subscription traffic + dual billing · partner auto-adapt (PiliPlus/NexAI/Project-Lumen/Zhihu++)</string>
     <string name="open_source_mod_core">Mihomo bridge retained · subscription-userinfo / Go-side fetch and related kernel sync from upstream kept current</string>
     <string name="open_source_mod_common">App-wide CoroutineExceptionHandler · Components / Intent security boundary · internal-only control paths for shortcuts</string>
     <string name="open_source_mod_sdk">:sdk ClashRuntime embed facade — same-app Profile / VPN / proxy-group control without the stock UI (not cross-app remote control)</string>

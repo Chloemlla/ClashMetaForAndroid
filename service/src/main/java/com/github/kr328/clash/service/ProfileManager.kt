@@ -155,6 +155,11 @@ class ProfileManager(private val context: Context) : IProfileManager,
         ProfileProcessor.delete(context, uuid)
     }
 
+    override suspend fun resetLocalTraffic(uuid: UUID) {
+        localTraffic.reset(uuid)
+        context.sendProfileChanged(uuid)
+    }
+
     override suspend fun queryByUUID(uuid: UUID): Profile? {
         return resolveProfile(uuid)
     }

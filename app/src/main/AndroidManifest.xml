@@ -31,6 +31,7 @@
         android:allowBackup="true"
         android:banner="@mipmap/ic_banner"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/full_backup_content"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/application_name"
@@ -42,7 +43,7 @@
         android:theme="@style/BootstrapTheme"
         tools:replace="android:extractNativeLibs"
         tools:ignore="GoogleAppIndexingWarning"
-        tools:targetApi="N">
+        tools:targetApi="36">
         <meta-data
             android:name="releaseName"
             android:value="@string/release_name" />

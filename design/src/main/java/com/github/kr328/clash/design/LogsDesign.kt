@@ -5,6 +5,7 @@ import android.view.View
 import com.github.kr328.clash.design.adapter.LogFileAdapter
 import com.github.kr328.clash.design.databinding.DesignLogsBinding
 import com.github.kr328.clash.design.model.LogFile
+import com.github.kr328.clash.design.svg.UndrawIllustration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +62,8 @@ class LogsDesign(context: Context) : Design<LogsDesign.Request>(context) {
         binding.self = this
 
         binding.activityBarLayout.applyFrom(context)
+
+        binding.emptyIllustration.illustration = UndrawIllustration.Coder
 
         binding.recyclerList.applyLinearAdapter(context, adapter)
     }

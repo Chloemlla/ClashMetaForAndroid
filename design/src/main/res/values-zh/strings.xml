@@ -83,6 +83,11 @@
     <string name="local_subscription_traffic_title">本地订阅流量</string>
     <string name="local_subscription_traffic_summary">启用后已用流量从 0 GB 本地计费，进度条终点仍取订阅总量</string>
     <string name="local_subscription_traffic_unlocked">已解锁高级流量选项</string>
+    <string name="subscription_traffic_billing">流量计费方式（全局）</string>
+    <string name="subscription_traffic_billing_local">从 0 本地计费</string>
+    <string name="subscription_traffic_billing_upstream">从订阅信息计费</string>
+    <string name="subscription_traffic_billing_local_summary">全局：所有配置本机已用流量从 0 B 起算，总量进度仍取订阅配额</string>
+    <string name="subscription_traffic_billing_upstream_summary">全局：所有配置使用订阅返回的 subscription-userinfo 上传/下载/总量</string>
     <string name="allow_clash_auto_restart">允许 Clash 自动重启</string>
     <string name="auto_restart">自动重启</string>
     <string name="stopped">已停止</string>
@@ -258,6 +263,9 @@
     <string name="partner_app_auto_adapt_summary">同时安装 PiliPlus / NexAI / Project-Lumen / 知乎++ 时自动保证其走 VPN 访问控制，无需手动勾选。修改后需重启 VPN 生效。</string>
     <string name="piliplus_auto_adapt">@string/partner_app_auto_adapt</string>
     <string name="piliplus_auto_adapt_summary">@string/partner_app_auto_adapt_summary</string>
+    <string name="reset_local_traffic">重置本地流量</string>
+    <string name="reset_local_traffic_confirmation">将“%1$s”的本地已用流量重置为 0 B？订阅总量配额不受影响。</string>
+    <string name="reset_local_traffic_done">本地流量已重置</string>
     <string name="allow_ipv6">允许 Ipv6</string>
     <string name="allow_ipv6_summary">通过 VpnService 代理 Ipv6 流量</string>
     <string name="clash_meta_wiki">Clash Meta Wiki</string>
@@ -404,9 +412,9 @@
 
     <string name="open_source_fork_modules">模块级改进（Chloemlla/main）</string>
     <string name="open_source_fork_modules_intro"><![CDATA[相对上游 <strong>MetaCubeX/CMFA</strong>，本分支在<strong>首装开屏页</strong>按 Android 模块概括生产向增量。完整清单见 README → Branch Improvements / 本分支改进。]]></string>
-    <string name="open_source_mod_app">首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限说明</string>
-    <string name="open_source_mod_design">渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 无障碍与 48dp 触控</string>
-    <string name="open_source_mod_service">Live Update 状态通知（promoted ongoing）· POST_NOTIFICATIONS 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝</string>
+    <string name="open_source_mod_app">首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限说明 · 沉浸式本次更新说明 · Android 16（API 36）target + edge-to-edge</string>
+    <string name="open_source_mod_design">渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 活跃连接管理 · undraw 动态色空状态 · 无障碍与 48dp 触控</string>
+    <string name="open_source_mod_service">Live Update 状态通知（promoted ongoing）· POST_NOTIFICATIONS 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen/知乎++）</string>
     <string name="open_source_mod_core">保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力</string>
     <string name="open_source_mod_common">应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径</string>
     <string name="open_source_mod_sdk">:sdk ClashRuntime 同 App 嵌入门面 — Profile / VPN / 代理组控制，无需 stock UI（非跨应用遥控）</string>

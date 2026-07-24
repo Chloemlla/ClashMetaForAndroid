@@ -93,7 +93,8 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
 
     private fun decodeTraffic(total: Long): Pair<Long, Long> {
         val upload = scaleTrafficBytes(total ushr 32)
-        val download = scaleTrafficBytes(total and 0xFFFFFFFF)
+        // Mask must be a Long literal: bare 0xFFFFFFFF is Int -1 and keeps all bits.
+        val download = scaleTrafficBytes(total and 0xFFFFFFFFL)
         return upload to download
     }
 }

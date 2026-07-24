@@ -7,12 +7,13 @@ fun Traffic.trafficUpload(): String {
 }
 
 fun Traffic.trafficDownload(): String {
-    return trafficString(scaleTraffic(this and 0xFFFFFFFF))
+    // Mask must be a Long literal: bare 0xFFFFFFFF is Int -1 and keeps all bits.
+    return trafficString(scaleTraffic(this and 0xFFFFFFFFL))
 }
 
 fun Traffic.trafficTotal(): String {
     val upload = scaleTraffic(this ushr 32)
-    val download = scaleTraffic(this and 0xFFFFFFFF)
+    val download = scaleTraffic(this and 0xFFFFFFFFL)
 
     return trafficString(upload + download)
 }
