@@ -271,9 +271,10 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             "172.31.*",
             "192.168.*"
         )
+        // Partner clients (e.g. Zhihu++) must keep zhihu/zhimg on the proxy path.
+        // Historical blacklist forced those hosts "direct", which with allowBypass
+        // let apps leave the VPN and never re-enter Clash.
         private val HTTP_PROXY_BLACK_LIST: List<String> = listOf(
-            "*zhihu.com",
-            "*zhimg.com",
             "*jd.com",
             "100ime-iat-api.xfyun.cn",
             "*360buyimg.com",
