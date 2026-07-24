@@ -1,8 +1,8 @@
 {
     "schemaVersion":  1,
     "identity":  {
-                     "commitHash":  "d1c0fb1",
-                     "buildTime":  "2026-07-24T05:25:22Z",
+                     "commitHash":  "33489df",
+                     "buildTime":  "2026-07-24T05:26:02Z",
                      "versionName":  "2.11.32",
                      "versionCode":  211032
                  },
@@ -44,6 +44,16 @@
                        }
                    ],
     "commits":  [
+                    {
+                        "hash":  "33489df",
+                        "subject":  "docs(ui): finalize update_notes identity for undraw branch HEAD",
+                        "type":  "docs"
+                    },
+                    {
+                        "hash":  "6c99eb2",
+                        "subject":  "docs(ui): keep update_notes identity aligned with HEAD",
+                        "type":  "docs"
+                    },
                     {
                         "hash":  "d1c0fb1",
                         "subject":  "docs(ui): sync update_notes identity to HEAD after notes commit",
@@ -182,16 +192,6 @@
                     {
                         "hash":  "ad87437",
                         "subject":  "fix(app): complete lumen-crash host integration",
-                        "type":  "fix"
-                    },
-                    {
-                        "hash":  "fcd077b",
-                        "subject":  "Resolve lumen-crash version in build workflows",
-                        "type":  "chore"
-                    },
-                    {
-                        "hash":  "5ce30a6",
-                        "subject":  "fix(app): install LumenCrash before any other host startup work",
                         "type":  "fix"
                     }
                 ],
