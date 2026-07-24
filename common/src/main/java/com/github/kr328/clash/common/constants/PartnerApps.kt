@@ -26,9 +26,14 @@ object PartnerApps {
         "com.chloemlla.projectlumen.dev",
     )
 
+    val zhihuPlusPackages: Set<String> = setOf(
+        "com.github.zly2006.zhplus",
+        "com.github.zly2006.zhplus.lite",
+    )
+
     /** All partner applicationIds (release + common suffixes). */
     val allPackages: Set<String> =
-        piliPlusPackages + nexAiPackages + projectLumenPackages
+        piliPlusPackages + nexAiPackages + projectLumenPackages + zhihuPlusPackages
 
     fun isPiliPlusPackage(packageName: String): Boolean =
         packageName in piliPlusPackages

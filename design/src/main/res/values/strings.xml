@@ -154,8 +154,11 @@
     <string name="block_loopback_summary">Block loopback connections</string>
     <string name="allow_bypass">Allow Bypass</string>
     <string name="allow_bypass_summary">Allows all apps to bypass this VPN connection</string>
-    <string name="piliplus_auto_adapt">Partner Apps Auto Adapt</string>
-    <string name="piliplus_auto_adapt_summary">Automatically keep partner apps (PiliPlus, NexAI, Project-Lumen) in VPN access control when installed. Restart VPN after changing.</string>
+    <string name="partner_app_auto_adapt">Partner Apps Auto Adapt</string>
+    <string name="partner_app_auto_adapt_summary">Automatically keep partner apps (PiliPlus, NexAI, Project-Lumen, Zhihu++) in VPN access control when installed. Restart VPN after changing.</string>
+    <!-- Legacy aliases kept so older translations still resolve if referenced. -->
+    <string name="piliplus_auto_adapt">@string/partner_app_auto_adapt</string>
+    <string name="piliplus_auto_adapt_summary">@string/partner_app_auto_adapt_summary</string>
     <string name="allow_ipv6">Allow Ipv6</string>
     <string name="allow_ipv6_summary">Allows ipv6 traffic via VpnService</string>
     <string name="system_proxy">System Proxy</string>

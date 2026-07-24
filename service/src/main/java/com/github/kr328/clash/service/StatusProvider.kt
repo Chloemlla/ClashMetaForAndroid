@@ -29,10 +29,11 @@ class StatusProvider : ContentProvider() {
                     return null
                 }
                 val ctx = context
-                val autoAdapt = ctx?.let { ServiceStore(it).piliPlusAutoAdapt } ?: true
+                val autoAdapt = ctx?.let { ServiceStore(it).partnerAppAutoAdapt } ?: true
                 Bundle().apply {
                     putBoolean("running", serviceRunning)
                     putBoolean("vpnRunning", vpnRunning)
+                    // Keep legacy key for older partner clients.
                     putBoolean("piliPlusAutoAdapt", autoAdapt)
                     putBoolean("partnerAppAutoAdapt", autoAdapt)
                     putString("name", currentProfile)

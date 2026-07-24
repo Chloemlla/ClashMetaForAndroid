@@ -78,9 +78,9 @@ class NetworkSettingsDesign(
             )
 
             switch(
-                value = srvStore::piliPlusAutoAdapt,
-                title = R.string.piliplus_auto_adapt,
-                summary = R.string.piliplus_auto_adapt_summary,
+                value = srvStore::partnerAppAutoAdapt,
+                title = R.string.partner_app_auto_adapt,
+                summary = R.string.partner_app_auto_adapt_summary,
                 configure = vpnDependencies::add,
             )
 

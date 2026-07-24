@@ -12,7 +12,7 @@ interface ServiceSettings {
     var dnsHijacking: Boolean
     var systemProxy: Boolean
     var allowBypass: Boolean
-    var piliPlusAutoAdapt: Boolean
+    var partnerAppAutoAdapt: Boolean
     var allowIpv6: Boolean
     var tunStackMode: String
     var dynamicNotification: Boolean

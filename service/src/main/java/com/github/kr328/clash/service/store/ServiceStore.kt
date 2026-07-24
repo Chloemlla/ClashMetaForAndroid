@@ -54,10 +54,13 @@ class ServiceStore(context: Context) {
     )
 
     /**
-     * When true (default), installed PiliPlus packages are auto-kept in VPN
-     * access control (allow on AcceptSelected / never deny on DenySelected).
+     * When true (default), installed partner packages (PiliPlus / NexAI /
+     * Project-Lumen / Zhihu++) are auto-kept in VPN access control (allow on
+     * AcceptSelected / never deny on DenySelected).
+     *
+     * Preference key kept as `pili_plus_auto_adapt` for upgrade compatibility.
      */
-    var piliPlusAutoAdapt by store.boolean(
+    var partnerAppAutoAdapt by store.boolean(
         key = "pili_plus_auto_adapt",
         defaultValue = true
     )

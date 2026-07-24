@@ -38,10 +38,10 @@ class ServiceSettingsAdapter(
             store.allowBypass = value
         }
 
-    override var piliPlusAutoAdapt: Boolean
-        get() = store.piliPlusAutoAdapt
+    override var partnerAppAutoAdapt: Boolean
+        get() = store.partnerAppAutoAdapt
         set(value) {
-            store.piliPlusAutoAdapt = value
+            store.partnerAppAutoAdapt = value
         }
 
     override var allowIpv6: Boolean

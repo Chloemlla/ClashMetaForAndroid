@@ -159,13 +159,13 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control (optional auto-include for installed partner apps (PiliPlus/NexAI/Project-Lumen))
-            val partnerPackages = if (store.piliPlusAutoAdapt) {
+            // Access Control (optional auto-include for installed partner apps (PiliPlus/NexAI/Project-Lumen/Zhihu++))
+            val partnerPackages = if (store.partnerAppAutoAdapt) {
                 PartnerApps.installedPartnerPackages(self)
             } else {
                 emptySet()
             }
-            val partnerDenyExclude = if (store.piliPlusAutoAdapt) {
+            val partnerDenyExclude = if (store.partnerAppAutoAdapt) {
                 PartnerApps.allPackages
             } else {
                 emptySet()
