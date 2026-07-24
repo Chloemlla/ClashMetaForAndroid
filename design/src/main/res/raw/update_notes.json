@@ -8,6 +8,11 @@
   },
   "highlights": [
     {
+      "id": "undraw-empty-states",
+      "title": "动态色空状态插画（unDraw）",
+      "body": "连接列表与配置列表空状态展示主题色 undraw 插画；亮/暗与 Material 动态取色自动跟随，开源鸣谢含 unDraw。"
+    },
+    {
       "id": "connections-viewer",
       "title": "活跃连接（连接列表）",
       "body": "主页可查看并管理当前活跃连接（主机/SNI、进程、流量、规则与链路；支持关闭单条/全部）。"
@@ -197,7 +202,7 @@
     },
     {
       "module": ":design",
-      "summary": "配置列表流量进度条 · 隐蔽设置开关 · 模块级首装说明卡片"
+      "summary": "unDraw 动态色空状态插画 · 配置列表流量进度条 · 模块级首装说明卡片"
     },
     {
       "module": ":service",

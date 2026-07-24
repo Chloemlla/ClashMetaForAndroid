@@ -462,6 +462,7 @@
     <string name="open_source_dep_gvisor">Userspace network stack option integrated by the core.</string>
     <string name="open_source_dep_meta_rules">Bundled geoip / geosite / ASN rule assets used by the core.</string>
     <string name="open_source_dep_lumen_crash">Crash capture and local crash-report surface for this fork.</string>
+    <string name="open_source_dep_undraw">Open-source illustrations used for empty states; filled with Material dynamic colors.</string>
 
     <string name="open_source_fork_modules">Module-level improvements (Chloemlla/main)</string>
     <string name="open_source_fork_modules_intro"><![CDATA[Relative to upstream <strong>MetaCubeX/CMFA</strong>, this fork’s first-install splash summarizes production deltas by Android module. Full inventory: README → Branch Improvements.]]></string>

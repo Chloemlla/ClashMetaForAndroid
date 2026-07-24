@@ -114,6 +114,13 @@ data class OpenSourceDependency(
                 license = "Apache-2.0",
                 url = "https://github.com/Chloemlla/Project-Lumen",
             ),
+            OpenSourceDependency(
+                name = "unDraw",
+                author = "Katerina Limpitsouni",
+                descriptionRes = R.string.open_source_dep_undraw,
+                license = "unDraw License",
+                url = "https://undraw.co/",
+            ),
         )
     }
 }

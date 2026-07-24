@@ -12,6 +12,7 @@ import com.github.kr328.clash.design.databinding.DesignProfilesBinding
 import com.github.kr328.clash.design.databinding.DialogProfilesMenuBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.model.Profile
+import com.github.kr328.clash.design.svg.UndrawIllustration
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -72,6 +73,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         binding.self = this
 
         binding.activityBarLayout.applyFrom(context)
+        binding.emptyIllustration.illustration = UndrawIllustration.VideoFiles
 
         binding.mainList.recyclerList.also {
             it.bindAppBarElevation(binding.activityBarLayout)
