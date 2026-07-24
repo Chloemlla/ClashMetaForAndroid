@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "identity": {
-    "commitHash": "a1babcd",
-    "buildTime": "2026-07-24T04:55:58Z",
+    "commitHash": "52d374b",
+    "buildTime": "2026-07-24T04:57:06Z",
     "versionName": "2.11.32",
     "versionCode": 211032
   },
@@ -39,6 +39,11 @@
     }
   ],
   "commits": [
+    {
+      "hash": "52d374b",
+      "subject": "docs(ui): refresh update notes for active connections manage",
+      "type": "docs"
+    },
     {
       "hash": "a1babcd",
       "subject": "feat(connections): rename to active connections and support close",
@@ -183,11 +188,6 @@
       "hash": "f1d348e",
       "subject": "ci(debug): sign Alpha arm64 APK with release keystore secrets",
       "type": "ci"
-    },
-    {
-      "hash": "6e5b63c",
-      "subject": "fix(design): resolve About repositoryUrl databinding clash",
-      "type": "fix"
     }
   ],
   "modules": [
