@@ -1,9 +1,11 @@
 package com.github.kr328.clash.service.clash.module
 
 import android.app.Service
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.DashboardSummary
+import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.service.StatusProvider
 import com.github.kr328.clash.service.model.WidgetState
 import com.github.kr328.clash.service.store.TrafficHistoryStore
@@ -18,7 +20,7 @@ import java.util.concurrent.TimeUnit
  * Decoupled from [DynamicNotificationModule] so history keeps a stable ≥2s cadence
  * regardless of screen interactive state. Skip-if-unchanged rates+totals to save CPU.
  *
- * Failures in dashboard summary lookup must not kill the VPN runtime.
+ * Sample failures are isolated: never let a lookup exception tear down the Clash runtime.
  */
 class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
     private val buffer = TrafficHistoryStore.buffer
@@ -29,61 +31,100 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
     private var lastDownTotal: Long = Long.MIN_VALUE
 
     override suspend fun run() = coroutineScope {
+        // Process-local buffer may survive a prior runtime in the same process;
+        // reset so min-interval gate / history do not leak across restarts.
+        buffer.clear()
+        lastUpRate = Long.MIN_VALUE
+        lastDownRate = Long.MIN_VALUE
+        lastUpTotal = Long.MIN_VALUE
+        lastDownTotal = Long.MIN_VALUE
+
         val ticker = ticker(SAMPLE_INTERVAL_MS)
 
-        while (true) {
-            select<Unit> {
-                ticker.onReceive { nowMs ->
-                    sample(nowMs)
+        try {
+            while (true) {
+                select<Unit> {
+                    ticker.onReceive { nowMs ->
+                        sample(nowMs)
+                    }
                 }
             }
+        } finally {
+            // Service/module teardown: avoid leaving in-process consumers with running=true.
+            publishStoppedSnapshot()
         }
     }
 
     private fun sample(nowMs: Long) {
-        val (upRate, downRate) = splitTrafficBytes(Clash.queryTrafficNow())
-        val (upTotal, downTotal) = splitTrafficBytes(Clash.queryTrafficTotal())
+        try {
+            val (upRate, downRate) = splitTrafficBytes(Clash.queryTrafficNow())
+            val (upTotal, downTotal) = splitTrafficBytes(Clash.queryTrafficTotal())
 
-        val trafficChanged =
-            upRate != lastUpRate ||
-                downRate != lastDownRate ||
-                upTotal != lastUpTotal ||
-                downTotal != lastDownTotal
+            val trafficChanged =
+                upRate != lastUpRate ||
+                    downRate != lastDownRate ||
+                    upTotal != lastUpTotal ||
+                    downTotal != lastDownTotal
 
-        if (trafficChanged) {
-            lastUpRate = upRate
-            lastDownRate = downRate
-            lastUpTotal = upTotal
-            lastDownTotal = downTotal
+            if (trafficChanged) {
+                lastUpRate = upRate
+                lastDownRate = downRate
+                lastUpTotal = upTotal
+                lastDownTotal = downTotal
 
-            buffer.tryAppend(
-                TrafficHistorySample(
-                    epochMs = nowMs,
+                buffer.tryAppend(
+                    TrafficHistorySample(
+                        epochMs = nowMs,
+                        upRateBytesPerSec = upRate,
+                        downRateBytesPerSec = downRate,
+                        upTotalBytes = upTotal,
+                        downTotalBytes = downTotal,
+                    ),
+                )
+            }
+
+            val summary = runCatching {
+                Clash.queryDashboardSummary(preferred = "", excludeNotSelectable = true)
+            }.getOrElse { DashboardSummary() }
+
+            WidgetStateStore.update(
+                WidgetState(
+                    running = StatusProvider.serviceRunning,
+                    profileName = StatusProvider.currentProfile,
+                    mode = summary.mode.name,
+                    selectedNode = summary.selectedNow,
                     upRateBytesPerSec = upRate,
                     downRateBytesPerSec = downRate,
                     upTotalBytes = upTotal,
                     downTotalBytes = downTotal,
+                    updatedAtEpochMs = nowMs,
                 ),
             )
+        } catch (e: Exception) {
+            // Keep sampling on the next tick; do not fail the module coroutine / VPN runtime.
+            Log.w("TrafficHistoryModule: sample failed: ${e.message}", e)
         }
+    }
 
-        val summary = runCatching {
-            Clash.queryDashboardSummary(preferred = "", excludeNotSelectable = true)
-        }.getOrElse { DashboardSummary() }
-
-        WidgetStateStore.update(
-            WidgetState(
-                running = StatusProvider.serviceRunning,
-                profileName = StatusProvider.currentProfile,
-                mode = summary.mode.name,
-                selectedNode = summary.selectedNow,
-                upRateBytesPerSec = upRate,
-                downRateBytesPerSec = downRate,
-                upTotalBytes = upTotal,
-                downTotalBytes = downTotal,
-                updatedAtEpochMs = nowMs,
-            ),
-        )
+    private fun publishStoppedSnapshot() {
+        try {
+            val previous = WidgetStateStore.current()
+            WidgetStateStore.update(
+                WidgetState(
+                    running = false,
+                    profileName = StatusProvider.currentProfile,
+                    mode = previous?.mode ?: TunnelState.Mode.Rule.name,
+                    selectedNode = previous?.selectedNode.orEmpty(),
+                    upRateBytesPerSec = 0L,
+                    downRateBytesPerSec = 0L,
+                    upTotalBytes = previous?.upTotalBytes ?: 0L,
+                    downTotalBytes = previous?.downTotalBytes ?: 0L,
+                    updatedAtEpochMs = System.currentTimeMillis(),
+                ),
+            )
+        } catch (e: Exception) {
+            Log.w("TrafficHistoryModule: stopped snapshot failed: ${e.message}", e)
+        }
     }
 
     companion object {

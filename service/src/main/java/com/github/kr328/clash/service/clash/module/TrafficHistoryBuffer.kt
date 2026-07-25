@@ -34,6 +34,7 @@ class TrafficHistoryBuffer(
     private var size: Int = 0
     private var lastAcceptedMs: Long = Long.MIN_VALUE / 2
 
+    @Synchronized
     fun shouldAccept(nowMs: Long, minIntervalMs: Long = this.minIntervalMs): Boolean {
         if (size == 0) return true
         return nowMs - lastAcceptedMs >= minIntervalMs
