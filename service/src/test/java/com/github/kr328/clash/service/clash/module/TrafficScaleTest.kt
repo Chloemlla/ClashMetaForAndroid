@@ -37,4 +37,21 @@ class TrafficScaleTest {
         val packed = (2L shl 30) or 1234L
         assertEquals(1234L * 1024L * 1024L / 100L, scaleTrafficBytes(packed))
     }
+
+    @Test
+    fun splitTrafficBytes_highUploadLowDownload() {
+        val uploadHalf = 512L
+        val downloadHalf = 256L
+        val packed = (uploadHalf shl 32) or downloadHalf
+        assertEquals(uploadHalf to downloadHalf, splitTrafficBytes(packed))
+    }
+
+    @Test
+    fun splitTrafficBytes_usesLongMaskNotIntSignExtend() {
+        // Low half all ones must not pull high bits into download when masked as Long.
+        val packed = (1L shl 32) or 0xFFFFFFFFL
+        val (upload, download) = splitTrafficBytes(packed)
+        assertEquals(1L, upload)
+        assertEquals(scaleTrafficBytes(0xFFFFFFFFL), download)
+    }
 }

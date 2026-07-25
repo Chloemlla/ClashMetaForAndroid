@@ -21,3 +21,17 @@ internal fun scaleTrafficBytes(value: Long): Long {
         else -> 0L
     }
 }
+
+/**
+ * Split a Clash packed upload/download [Long] into raw byte counts.
+ *
+ * Layout matches core traffic samples: high 32 bits = upload, low 32 bits = download.
+ * Uses a Long mask so bare Int `0xFFFFFFFF` sign-extension cannot keep all bits.
+ *
+ * @return Pair(uploadBytes, downloadBytes)
+ */
+internal fun splitTrafficBytes(packed: Long): Pair<Long, Long> {
+    val upload = scaleTrafficBytes(packed ushr 32)
+    val download = scaleTrafficBytes(packed and 0xFFFFFFFFL)
+    return upload to download
+}

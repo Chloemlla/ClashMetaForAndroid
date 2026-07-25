@@ -41,6 +41,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             install(StaticNotificationModule(self))
 
         install(LocalTrafficAccountingModule(self))
+        install(TrafficHistoryModule(self))
 
         install(AppListCacheModule(self))
         install(TimeZoneModule(self))

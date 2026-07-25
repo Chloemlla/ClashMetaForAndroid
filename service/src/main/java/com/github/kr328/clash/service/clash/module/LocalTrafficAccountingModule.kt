@@ -60,7 +60,7 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
     }
 
     private fun captureBaseline() {
-        val (upload, download) = decodeTraffic(Clash.queryTrafficTotal())
+        val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
         lastUploadBytes = upload
         lastDownloadBytes = download
     }
@@ -72,7 +72,7 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
             return
         }
         val uuid = trackedProfile ?: return
-        val (upload, download) = decodeTraffic(Clash.queryTrafficTotal())
+        val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
 
         // Core counters reset on profile reload / tunnel restart.
         if (upload < lastUploadBytes || download < lastDownloadBytes) {
@@ -89,13 +89,6 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
 
         lastUploadBytes = upload
         lastDownloadBytes = download
-    }
-
-    private fun decodeTraffic(total: Long): Pair<Long, Long> {
-        val upload = scaleTrafficBytes(total ushr 32)
-        // Mask must be a Long literal: bare 0xFFFFFFFF is Int -1 and keeps all bits.
-        val download = scaleTrafficBytes(total and 0xFFFFFFFFL)
-        return upload to download
     }
 }
 

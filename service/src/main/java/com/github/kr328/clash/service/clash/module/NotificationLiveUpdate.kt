@@ -58,8 +58,7 @@ internal fun Context.liveTotalContent(upload: String, download: String): String 
  * Prefers the busier direction so the chip tracks meaningful activity.
  */
 internal fun Context.liveSpeedChipText(now: Traffic): String {
-    val upBytes = scaleTrafficBytes(now ushr 32)
-    val downBytes = scaleTrafficBytes(now and 0xFFFFFFFFL)
+    val (upBytes, downBytes) = splitTrafficBytes(now)
     val dominant = max(upBytes, downBytes)
     if (dominant <= 0L) {
         return getString(R.string.clash_live_chip_idle)

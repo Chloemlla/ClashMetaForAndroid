@@ -33,6 +33,7 @@ class ClashService : BaseService() {
             install(StaticNotificationModule(self))
 
         install(LocalTrafficAccountingModule(self))
+        install(TrafficHistoryModule(self))
 
         install(AppListCacheModule(self))
         install(TimeZoneModule(self))
