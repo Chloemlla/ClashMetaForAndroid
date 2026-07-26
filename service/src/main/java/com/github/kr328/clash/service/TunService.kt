@@ -160,14 +160,18 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control (optional auto-include for installed partner apps (PiliPlus/NexAI/Project-Lumen/Zhihu++))
+            // Access Control (optional auto-include for installed partner apps: hardcoded
+            // PiliPlus/NexAI/Project-Lumen/Zhihu++ plus any signature-verified discovered
+            // partner — see PartnerApps KDoc for the merge rule).
             val partnerPackages = if (store.partnerAppAutoAdapt) {
                 PartnerApps.installedPartnerPackages(self)
             } else {
                 emptySet()
             }
             val partnerDenyExclude = if (store.partnerAppAutoAdapt) {
-                PartnerApps.allPackages
+                // Static hardcode names (even if not installed) plus the merged installed set,
+                // so discovered (meta-data + signature verified) partners are excluded too.
+                PartnerApps.allPackages + partnerPackages
             } else {
                 emptySet()
             }

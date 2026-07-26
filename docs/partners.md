@@ -1,0 +1,78 @@
+# Partner Registry and `partnerStatus`
+
+> Module: `:common` (`PartnerApps`), `:service` (`StatusProvider`, `TunService`)
+> Security boundary: **read-only status + VPN access-control auto-include only**. Partners
+> can never start/stop/toggle the VPN through this surface (see `SECURITY.md`, audit
+> contract **F-12**).
+
+## 1. Who is a partner
+
+`PartnerApps` (`common/src/main/java/com/github/kr328/clash/common/constants/PartnerApps.kt`)
+recognizes a package as a partner using:
+
+```
+isPartner = hardcode ∪ (meta-data present ∧ sharesSignatureWith(any installed hardcode partner OR self))
+```
+
+- **Hardcode allowlist** (`PartnerApps.hardcodePackages`): the PiliPlus / NexAI /
+  Project-Lumen / Zhihu++ applicationIds and their common `.debug` / `.dev` / `.lite`
+  suffixes. This remains the trust root and always works, with or without
+  discovery.
+- **Meta-data discovery**: any other installed app may declare the following in its
+  `AndroidManifest.xml` (inside `<application>`, not `<activity>`) to opt into
+  discovery:
+
+  ```xml
+  <meta-data android:name="com.github.kr328.clash.partner" android:value="true" />
+  ```
+
+  The flag alone is **never trusted**. A package is only accepted as a discovered
+  partner when it also shares a signing certificate with a package already on the
+  hardcode allowlist that is installed on the device, or with this app (CMFA) itself
+  (same-signer / same-suite builds). This keeps discovery strictly additive: it can
+  only widen *who* reaches the existing read-only surface, never *what* a partner can
+  do.
+
+`PartnerApps.installedPartnerPackages(context)` returns the merged set (installed
+hardcode ∪ verified discovered) and is what `TunService` uses for VPN access-control
+auto-include (`ServiceStore.partnerAppAutoAdapt`). `PartnerApps.isPartnerPackage(context,
+packageName)` is the equivalent single-package check used by `StatusProvider` to gate
+callers.
+
+## 2. `partnerStatus` (StatusProvider)
+
+Authority: `${applicationId}.status`, method `partnerStatus`. Callable by CMFA itself or
+by a recognized partner (see §1); all other callers get `null`.
+
+| Key | Type | Notes |
+|---|---|---|
+| `apiVersion` | int | Currently `1`; bump when fields are added/removed. |
+| `running` | boolean | Clash core running. |
+| `vpnRunning` | boolean | VPN tunnel active. |
+| `partnerAppAutoAdapt` | boolean | Whether partner auto-include is enabled (`piliPlusAutoAdapt` kept as a legacy alias). |
+| `name` | string? | Current profile name. |
+| `package` | string | CMFA's own applicationId. |
+| `mode` | string? | Present only once a `WidgetState` snapshot exists; current tunnel mode. |
+| `selectedNode` | string? | Present only once a `WidgetState` snapshot exists; the selected proxy/group. |
+| `upTotal` / `downTotal` | long | Present only once a `WidgetState` snapshot exists; cumulative byte totals. |
+
+`partnerStatus` **never** includes subscription URLs, `ageSecretKey`, full configuration,
+or any control method. There is no `start`/`stop`/`toggle` method on this provider for
+partners; `InternalControlActivity` (which does start/stop) stays `exported=false` (F-12).
+
+## 3. Self-only `widgetState`
+
+`widgetState` remains restricted to CMFA itself (`isSelfCaller()`), independent of
+partner recognition, since it backs in-app/home-screen widgets rather than
+cross-app status.
+
+## 4. Adding a new partner
+
+- Prefer adding the applicationId (and its `.debug`/`.dev` suffixes) to the relevant
+  set in `PartnerApps.kt` when CMFA controls the release process end-to-end.
+- Use meta-data discovery instead when the partner app is built and signed
+  independently but shares CMFA's signing certificate (or a hardcode partner's), so no
+  code change is required on every partner release.
+- Never add a new exported method, deep link, or provider column that would let a
+  partner (or a spoofed meta-data-only package) request VPN start/stop, read the
+  subscription URL, or read `ageSecretKey`.
