@@ -137,6 +137,7 @@
     <string name="behavior">Behavior</string>
     <string name="network">Network</string>
     <string name="interface_">Interface</string>
+    <string name="privacy">Privacy</string>
     <string name="override">Override</string>
 
     <string name="auto_restart">Auto Restart</string>
@@ -246,6 +247,13 @@
     <string name="select_all">Select All</string>
     <string name="select_invert">Select Invert</string>
     <string name="select_none">Select None</string>
+    <string name="select_browsers_partners">Select Browsers &amp; Partners</string>
+    <string name="only_selected">Only Selected</string>
+    <string name="only_partners">Only Partners</string>
+    <string name="battery_settings">Battery Optimization Settings</string>
+    <string name="access_control_battery_hint">May be restricted by battery optimization</string>
+    <string name="access_control_battery_settings_unavailable">Battery settings unavailable on this device</string>
+    <string name="access_control_preset_selected">Selected %1$d browsers &amp; partners</string>
     <string name="import_from_clipboard">Import from Clipboard</string>
     <string name="export_to_clipboard">Export to Clipboard</string>
 
@@ -415,6 +423,16 @@
     <string name="hide_app_icon_desc">You can dial *#*#252746382#*#* to open this App</string>
     <string name="hide_from_recents_title">Hide from Recents</string>
     <string name="hide_from_recents_desc">Hide app from the Recent apps screen</string>
+    <string name="app_lock_title">App lock</string>
+    <string name="app_lock_desc">Require biometric or device credential after cold start and after 60s in the background</string>
+    <string name="app_lock_prompt_title">Unlock Clash Meta</string>
+    <string name="app_lock_prompt_subtitle">Confirm your identity to open the app</string>
+    <string name="secure_screen_title">Secure screen</string>
+    <string name="secure_screen_desc">Block screenshots and hide the app preview in Recents</string>
+    <string name="reveal_sensitive_field">Show sensitive value</string>
+    <string name="hide_sensitive_field">Hide sensitive value</string>
+    <string name="sensitive_content_copied">Sensitive content copied</string>
+    <string name="sensitive_content_revealed">Sensitive content revealed. Avoid sharing screenshots.</string>
     <string name="import_from_qr_no_permission">Camera access is restricted. Please enable it in Settings.</string>
     <string name="import_from_qr_exception">An unhandled system exception occurred.</string>
 

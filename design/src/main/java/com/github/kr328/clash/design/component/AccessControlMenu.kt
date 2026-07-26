@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
+import com.github.kr328.clash.design.AccessControlDesign
 import com.github.kr328.clash.design.AccessControlDesign.Request
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.AppInfoSort
@@ -15,6 +16,7 @@ class AccessControlMenu(
     menuView: View,
     private val uiStore: UiStore,
     private val requests: Channel<Request>,
+    private val design: AccessControlDesign,
 ) : PopupMenu.OnMenuItemClickListener {
     private val menu = PopupMenu(context, menuView)
 
@@ -33,6 +35,20 @@ class AccessControlMenu(
                 requests.trySend(Request.SelectNone)
             R.id.select_invert ->
                 requests.trySend(Request.SelectInvert)
+            R.id.select_browsers_partners ->
+                requests.trySend(Request.SelectBrowsersAndPartners)
+            R.id.only_selected -> {
+                design.onlySelectedFilter = item.isChecked
+
+                requests.trySend(Request.ReloadApps)
+            }
+            R.id.only_partners -> {
+                design.onlyPartnersFilter = item.isChecked
+
+                requests.trySend(Request.ReloadApps)
+            }
+            R.id.battery_settings ->
+                requests.trySend(Request.OpenBatterySettings)
             R.id.system_apps -> {
                 uiStore.accessControlSystemApp = !item.isChecked
 
@@ -91,6 +107,8 @@ class AccessControlMenu(
 
         menu.menu.findItem(R.id.system_apps).isChecked = !uiStore.accessControlSystemApp
         menu.menu.findItem(R.id.reverse).isChecked = uiStore.accessControlReverse
+        menu.menu.findItem(R.id.only_selected).isChecked = design.onlySelectedFilter
+        menu.menu.findItem(R.id.only_partners).isChecked = design.onlyPartnersFilter
 
         menu.setOnMenuItemClickListener(this)
     }

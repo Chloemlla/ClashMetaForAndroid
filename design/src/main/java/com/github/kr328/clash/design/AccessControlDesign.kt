@@ -24,8 +24,10 @@ class AccessControlDesign(
         SelectAll,
         SelectNone,
         SelectInvert,
+        SelectBrowsersAndPartners,
         Import,
         Export,
+        OpenBatterySettings,
     }
 
     private val binding = DesignAccessControlBinding
@@ -34,11 +36,17 @@ class AccessControlDesign(
     private val adapter = AppAdapter(context, selected)
 
     private val menu: AccessControlMenu by lazy {
-        AccessControlMenu(context, binding.menuView, uiStore, requests)
+        AccessControlMenu(context, binding.menuView, uiStore, requests, this)
     }
 
     val apps: List<AppInfo>
         get() = adapter.apps
+
+    /** Display-only filter: when true, [ReloadApps] only keeps already-selected packages. */
+    var onlySelectedFilter: Boolean = false
+
+    /** Display-only filter: when true, [ReloadApps] only keeps registered partner packages. */
+    var onlyPartnersFilter: Boolean = false
 
     override val root: View
         get() = binding.root

@@ -9,6 +9,9 @@
     <item
         android:id="@+id/select_invert"
         android:title="@string/select_invert" />
+    <item
+        android:id="@+id/select_browsers_partners"
+        android:title="@string/select_browsers_partners" />
 
     <item android:title="@string/filter">
         <menu>
@@ -16,6 +19,14 @@
                 android:id="@+id/system_apps"
                 android:checkable="true"
                 android:title="@string/system_apps" />
+            <item
+                android:id="@+id/only_selected"
+                android:checkable="true"
+                android:title="@string/only_selected" />
+            <item
+                android:id="@+id/only_partners"
+                android:checkable="true"
+                android:title="@string/only_partners" />
         </menu>
     </item>
 
@@ -51,6 +62,9 @@
             <item
                 android:id="@+id/export_to_clipboard"
                 android:title="@string/export_to_clipboard" />
+            <item
+                android:id="@+id/battery_settings"
+                android:title="@string/battery_settings" />
         </menu>
     </item>
 </menu>
