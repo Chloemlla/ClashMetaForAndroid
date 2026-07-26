@@ -17,6 +17,7 @@ import com.github.kr328.clash.design.util.QrBitmap
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
