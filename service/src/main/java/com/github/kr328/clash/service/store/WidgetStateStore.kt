@@ -1,18 +1,18 @@
 package com.github.kr328.clash.service.store
 
+import com.github.kr328.clash.common.util.packageName
 import com.github.kr328.clash.service.model.WidgetState
 
 /**
- * In-memory latest [WidgetState] for same-process consumers.
+ * In-memory latest [WidgetState] for same-process consumers (and StatusProvider bridge).
  *
  * [update] is a no-op when [WidgetState.sameAs] the current snapshot.
- * Reserved self-broadcast action constant is for M2 AppWidget observers only;
- * this milestone does not register receivers.
+ * Publishers may send [ACTION_WIDGET_STATE_CHANGED] only after [update] returns true.
  */
 object WidgetStateStore {
-    /** Reserved for M2 non-exported widget refresh observers. */
-    const val ACTION_WIDGET_STATE_CHANGED =
-        "com.github.kr328.clash.intent.action.WIDGET_STATE_CHANGED"
+    /** Same-app self-broadcast action (package-prefixed like other Intents). */
+    val ACTION_WIDGET_STATE_CHANGED: String
+        get() = "$packageName.intent.action.WIDGET_STATE_CHANGED"
 
     @Volatile
     private var latest: WidgetState? = null

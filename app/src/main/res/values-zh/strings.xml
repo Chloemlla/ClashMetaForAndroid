@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_status_label">Clash 状态</string>
+    <string name="widget_control_label">Clash 控制</string>
+    <string name="widget_status_description">显示 VPN 运行状态、当前配置与速率</string>
+    <string name="widget_control_description">一键开关 VPN，并打开代理或配置页</string>
+    <string name="widget_action_toggle">开关</string>
+    <string name="widget_action_start">启动</string>
+    <string name="widget_action_stop">停止</string>
+</resources>

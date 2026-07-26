@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_status_label">Clash status</string>
+    <string name="widget_control_label">Clash control</string>
+    <string name="widget_status_description">Shows VPN running state, active profile, and traffic rates</string>
+    <string name="widget_control_description">Toggle VPN and open proxies or profiles</string>
+    <string name="widget_action_toggle">Toggle</string>
+    <string name="widget_action_start">Start</string>
+    <string name="widget_action_stop">Stop</string>
+</resources>

@@ -9,6 +9,7 @@ import android.os.Bundle
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.constants.PartnerApps
 import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.service.store.WidgetStateStore
 
 class StatusProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
@@ -40,17 +41,44 @@ class StatusProvider : ContentProvider() {
                     putString("package", context?.packageName)
                 }
             }
+            // Self-only read surface for home widgets (no control, no secrets).
+            METHOD_WIDGET_STATE -> {
+                if (!isSelfCaller()) {
+                    return null
+                }
+                val state = WidgetStateStore.current()
+                Bundle().apply {
+                    putBoolean(KEY_RUNNING, serviceRunning)
+                    putString(KEY_NAME, currentProfile)
+                    if (state != null) {
+                        putBoolean(KEY_HAS_DETAIL, true)
+                        putString(KEY_MODE, state.mode)
+                        putString(KEY_SELECTED_NODE, state.selectedNode)
+                        putLong(KEY_UP_RATE, state.upRateBytesPerSec)
+                        putLong(KEY_DOWN_RATE, state.downRateBytesPerSec)
+                    } else {
+                        putBoolean(KEY_HAS_DETAIL, false)
+                    }
+                }
+            }
             else -> super.call(method, arg, extras)
         }
     }
 
-    private fun isSelfOrPartnerCaller(): Boolean {
+    private fun isSelfCaller(): Boolean {
         val ctx = context ?: return false
         val packages = ctx.packageManager.getPackagesForUid(Binder.getCallingUid())
             ?: return false
-        if (packages.any { it == ctx.packageName }) {
+        return packages.any { it == ctx.packageName }
+    }
+
+    private fun isSelfOrPartnerCaller(): Boolean {
+        if (isSelfCaller()) {
             return true
         }
+        val ctx = context ?: return false
+        val packages = ctx.packageManager.getPackagesForUid(Binder.getCallingUid())
+            ?: return false
         return packages.any { PartnerApps.isPartnerPackage(it) }
     }
 
@@ -92,6 +120,16 @@ class StatusProvider : ContentProvider() {
     companion object {
         const val METHOD_CURRENT_PROFILE = "currentProfile"
         const val METHOD_PARTNER_STATUS = "partnerStatus"
+        /** Read-only widget snapshot; self-app only (not partners). */
+        const val METHOD_WIDGET_STATE = "widgetState"
+
+        const val KEY_RUNNING = "running"
+        const val KEY_NAME = "name"
+        const val KEY_HAS_DETAIL = "hasDetail"
+        const val KEY_MODE = "mode"
+        const val KEY_SELECTED_NODE = "selectedNode"
+        const val KEY_UP_RATE = "upRate"
+        const val KEY_DOWN_RATE = "downRate"
 
         private const val CLASH_SERVICE_RUNNING_FILE = "service_running.lock"
 

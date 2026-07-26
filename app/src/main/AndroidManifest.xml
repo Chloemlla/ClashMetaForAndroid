@@ -248,6 +248,42 @@
             </intent-filter>
         </receiver>
 
+        <!-- Home-screen widgets (exported required for AppWidgetHost; actions stay internal). -->
+        <receiver
+            android:name=".widget.ClashStatusWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_status_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clash_status_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.ClashControlWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_control_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clash_control_widget_info" />
+        </receiver>
+        <!-- Self-broadcast refresh path; not exported (F-12 / no third-party poke). -->
+        <receiver
+            android:name=".widget.WidgetRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="${applicationId}.intent.action.CLASH_STARTED" />
+                <action android:name="${applicationId}.intent.action.CLASH_STOPPED" />
+                <action android:name="${applicationId}.intent.action.PROFILE_LOADED" />
+                <action android:name="${applicationId}.intent.action.CLASH_RECREATED" />
+                <action android:name="${applicationId}.intent.action.WIDGET_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

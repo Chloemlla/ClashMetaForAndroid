@@ -1,6 +1,7 @@
 package com.github.kr328.clash.service.clash.module
 
 import android.app.Service
+import android.content.Intent
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
@@ -10,6 +11,7 @@ import com.github.kr328.clash.service.StatusProvider
 import com.github.kr328.clash.service.model.WidgetState
 import com.github.kr328.clash.service.store.TrafficHistoryStore
 import com.github.kr328.clash.service.store.WidgetStateStore
+import com.github.kr328.clash.service.util.sendBroadcastSelf
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
 import java.util.concurrent.TimeUnit
@@ -87,7 +89,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                 Clash.queryDashboardSummary(preferred = "", excludeNotSelectable = true)
             }.getOrElse { DashboardSummary() }
 
-            WidgetStateStore.update(
+            publishWidgetState(
                 WidgetState(
                     running = StatusProvider.serviceRunning,
                     profileName = StatusProvider.currentProfile,
@@ -109,7 +111,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
     private fun publishStoppedSnapshot() {
         try {
             val previous = WidgetStateStore.current()
-            WidgetStateStore.update(
+            publishWidgetState(
                 WidgetState(
                     running = false,
                     profileName = StatusProvider.currentProfile,
@@ -125,6 +127,17 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
         } catch (e: Exception) {
             Log.w("TrafficHistoryModule: stopped snapshot failed: ${e.message}", e)
         }
+    }
+
+    /**
+     * Store + notify same-app AppWidget observers when content actually changes.
+     * Uses package-targeted self-broadcast (no third-party delivery).
+     */
+    private fun publishWidgetState(state: WidgetState) {
+        if (!WidgetStateStore.update(state)) {
+            return
+        }
+        service.sendBroadcastSelf(Intent(WidgetStateStore.ACTION_WIDGET_STATE_CHANGED))
     }
 
     companion object {
