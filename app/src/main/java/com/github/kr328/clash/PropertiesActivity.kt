@@ -10,6 +10,7 @@ import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.toDesignProfile
 import com.github.kr328.clash.util.withProfile
+import com.github.kr328.clash.util.ProfileQrExport
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -67,6 +68,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         }
                         PropertiesDesign.Request.Commit -> {
                             design.verifyAndCommit()
+                        }
+                        PropertiesDesign.Request.ExportQr -> {
+                            ProfileQrExport.show(design, design.profile)
                         }
                         is PropertiesDesign.Request.SetLocalTrafficBilling -> {
                             serviceStore.localSubscriptionTraffic = it.enabled

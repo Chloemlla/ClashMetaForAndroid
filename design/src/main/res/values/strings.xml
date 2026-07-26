@@ -281,6 +281,15 @@
     <string name="local_subscription_traffic_title">Local subscription traffic</string>
     <string name="local_subscription_traffic_summary">Bill used traffic from 0 GB locally; progress bar still uses the subscription total/quota</string>
     <string name="local_subscription_traffic_unlocked">Advanced traffic option unlocked</string>
+    <string name="subscription_expiry_reminders_title">Subscription expiry reminders</string>
+    <string name="subscription_expiry_reminders_summary">Notify when a URL profile is expiring soon or already expired</string>
+    <string name="export_qr">Export QR</string>
+    <string name="export_qr_summary">Show a QR code for this subscription URL so another device can scan and import it</string>
+    <string name="export_qr_privacy_warning">Sharing this QR reveals the subscription URL. Only share with people you trust.</string>
+    <string name="export_qr_share_image">Share image</string>
+    <string name="export_qr_unavailable">QR export is only available for URL profiles with an http(s) subscription source</string>
+    <string name="export_qr_failed">Unable to create QR code</string>
+    <string name="share">Share</string>
     <string name="subscription_traffic_billing">Traffic billing (all profiles)</string>
     <string name="subscription_traffic_billing_local">From 0 (local)</string>
     <string name="subscription_traffic_billing_upstream">From subscription info</string>
@@ -470,6 +479,7 @@
     <string name="open_source_dep_kaidl">AIDL/KSP code generation for inter-process interfaces.</string>
     <string name="open_source_dep_rikkax">Cross-process preference access helpers.</string>
     <string name="open_source_dep_quickie">Bundled QR scanner used when importing profiles.</string>
+    <string name="open_source_dep_zxing">QR code encoder used when exporting subscription profiles.</string>
     <string name="open_source_dep_gvisor">Userspace network stack option integrated by the core.</string>
     <string name="open_source_dep_meta_rules">Bundled geoip / geosite / ASN rule assets used by the core.</string>
     <string name="open_source_dep_lumen_crash">Crash capture and local crash-report surface for this fork.</string>

@@ -94,6 +94,13 @@ data class OpenSourceDependency(
                 url = "https://github.com/G00fY2/quickie",
             ),
             OpenSourceDependency(
+                name = "ZXing",
+                author = "Google",
+                descriptionRes = R.string.open_source_dep_zxing,
+                license = "Apache-2.0",
+                url = "https://github.com/zxing/zxing",
+            ),
+            OpenSourceDependency(
                 name = "gVisor (via core)",
                 author = "Google",
                 descriptionRes = R.string.open_source_dep_gvisor,

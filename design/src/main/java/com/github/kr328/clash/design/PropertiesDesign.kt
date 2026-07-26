@@ -21,6 +21,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     sealed class Request {
         object Commit : Request()
         object BrowseFiles : Request()
+        object ExportQr : Request()
         data class SetLocalTrafficBilling(val enabled: Boolean) : Request()
     }
 
@@ -208,6 +209,10 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     fun requestBrowseFiles() {
         requests.trySend(Request.BrowseFiles)
+    }
+
+    fun requestExportQr() {
+        requests.trySend(Request.ExportQr)
     }
 
     private fun refreshTrafficBillingLabel() {

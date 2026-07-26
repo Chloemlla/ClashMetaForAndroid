@@ -17,4 +17,5 @@ interface ServiceSettings {
     var tunStackMode: String
     var dynamicNotification: Boolean
     var localSubscriptionTraffic: Boolean
+    var subscriptionExpiryReminders: Boolean
 }

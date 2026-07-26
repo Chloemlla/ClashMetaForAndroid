@@ -89,4 +89,22 @@ class ServiceStore(context: Context) {
         key = "local_subscription_traffic",
         defaultValue = true
     )
+
+    /**
+     * When true (default), post a local notification once when a URL profile's
+     * expire is within 3 days or already past due.
+     */
+    var subscriptionExpiryReminders by store.boolean(
+        key = "subscription_expiry_reminders",
+        defaultValue = true
+    )
+
+    /**
+     * Keys already notified for subscription expiry (`uuid|bucket|expireMs`).
+     * Prevents spam loops across worker runs.
+     */
+    var subscriptionExpiryNotifiedKeys by store.stringSet(
+        key = "subscription_expiry_notified_keys",
+        defaultValue = emptySet()
+    )
 }

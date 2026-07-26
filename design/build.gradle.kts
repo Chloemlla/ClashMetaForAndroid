@@ -17,6 +17,8 @@ dependencies {
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.viewpager)
     implementation(libs.google.material)
+    // Encode-only QR for profile export (scanner stays on app via quickie).
+    implementation(libs.zxing.core)
 
     // undraw dynamic-color illustrations (Compose ImageVector islands in ViewBinding empty states)
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

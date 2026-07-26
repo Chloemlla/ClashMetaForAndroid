@@ -17,6 +17,7 @@ import com.github.kr328.clash.common.id.UndefinedIds
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.data.ImportedDao
+import com.github.kr328.clash.service.util.SubscriptionExpiryNotifier
 import com.github.kr328.clash.service.util.notifyIfAllowed
 import com.github.kr328.clash.service.util.sendProfileUpdateCompleted
 import com.github.kr328.clash.service.util.sendProfileUpdateFailed
@@ -83,6 +84,10 @@ class ProfileWorker : BaseService() {
                 val job = launch {
                     ProfileReceiver.rescheduleAll(service)
 
+                    runCatching {
+                        SubscriptionExpiryNotifier.checkAll(service)
+                    }
+
                     delay(TimeUnit.SECONDS.toMillis(30))
                 }
 
@@ -104,6 +109,10 @@ class ProfileWorker : BaseService() {
             completed(imported.uuid, imported.name)
 
             ProfileReceiver.scheduleNext(this, imported)
+
+            runCatching {
+                SubscriptionExpiryNotifier.checkProfile(this, imported.uuid)
+            }
         } catch (e: Exception) {
             failed(imported.uuid, imported.name, e.message ?: "Unknown")
         }

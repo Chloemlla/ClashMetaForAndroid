@@ -1,17 +1,16 @@
 package com.github.kr328.clash
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import com.chloemlla.lumen.crash.CrashBreadcrumbs
 import com.chloemlla.lumen.crash.LumenCrash
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.ProfilesDesign
+import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile as ServiceProfile
+import com.github.kr328.clash.service.util.SubscriptionExpiryNotifier
+import com.github.kr328.clash.util.ProfileQrExport
 import com.github.kr328.clash.util.toDesignProfile
 import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.Dispatchers
@@ -19,9 +18,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
-import com.github.kr328.clash.design.R
 
 class ProfilesActivity : BaseActivity<ProfilesDesign>() {
     override suspend fun main() {
@@ -84,6 +82,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
 
                             startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                         }
+                        is ProfilesDesign.Request.ExportQr -> {
+                            ProfileQrExport.show(design, it.profile)
+                        }
                         is ProfilesDesign.Request.ResetLocalTraffic -> {
                             withProfile {
                                 resetLocalTraffic(it.profile.uuid)
@@ -105,6 +106,11 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
     private suspend fun ProfilesDesign.fetch() {
         withProfile {
             patchProfiles(queryAll().map { it.toDesignProfile() })
+        }
+        launch {
+            runCatching {
+                SubscriptionExpiryNotifier.checkAll(this@ProfilesActivity)
+            }
         }
     }
 

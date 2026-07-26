@@ -25,4 +25,9 @@
     <string name="profile_updating">配置更新中</string>
     <string name="profile_service_status">配置文件服务状态</string>
     <string name="profile_process_result">配置文件处理结果</string>
+    <string name="subscription_expiry_channel">订阅到期</string>
+    <string name="subscription_expired_title">订阅已过期</string>
+    <string name="subscription_expiring_title">订阅即将到期</string>
+    <string name="format_subscription_expired">%1$s 已过期</string>
+    <string name="format_subscription_expiring">%1$s 将在 3 天内到期</string>
 </resources>

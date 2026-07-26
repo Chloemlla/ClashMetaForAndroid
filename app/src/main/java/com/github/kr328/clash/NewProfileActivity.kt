@@ -221,12 +221,20 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
     }
 
     private suspend fun createProfileByQrCode(url: String) {
+        val source = ClipboardUrl.extract(url) ?: url.trim()
+        if (!source.startsWith("http://", ignoreCase = true) &&
+            !source.startsWith("https://", ignoreCase = true)
+        ) {
+            design?.showExceptionToast(getString(R.string.invalid_url))
+            return
+        }
+
         withProfile {
             launchProperties(
                 create(
                     type = Profile.Type.Url,
                     name = getString(R.string.new_profile),
-                    source = url,
+                    source = source,
                 )
             )
         }

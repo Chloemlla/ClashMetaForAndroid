@@ -68,6 +68,12 @@ class ServiceSettingsAdapter(
             store.localSubscriptionTraffic = value
         }
 
+    override var subscriptionExpiryReminders: Boolean
+        get() = store.subscriptionExpiryReminders
+        set(value) {
+            store.subscriptionExpiryReminders = value
+        }
+
     private fun ServiceAccessControlMode.toDesignMode(): AccessControlMode = when (this) {
         ServiceAccessControlMode.AcceptAll -> AccessControlMode.AcceptAll
         ServiceAccessControlMode.AcceptSelected -> AccessControlMode.AcceptSelected

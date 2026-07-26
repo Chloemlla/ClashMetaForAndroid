@@ -105,6 +105,13 @@ class AppSettingsDesign(
                 title = R.string.local_subscription_traffic_title,
                 summary = R.string.local_subscription_traffic_summary,
             )
+
+            switch(
+                value = srvStore::subscriptionExpiryReminders,
+                icon = R.drawable.ic_outline_update,
+                title = R.string.subscription_expiry_reminders_title,
+                summary = R.string.subscription_expiry_reminders_summary,
+            )
         }
 
         binding.content.addView(screen.root)

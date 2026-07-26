@@ -108,6 +108,16 @@
                     app:text="@string/subscription_traffic_billing" />
 
                 <com.github.kr328.clash.design.view.ActionLabel
+                    android:id="@+id/export_qr_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical"
+                    android:onClick="@{() -> self.requestExportQr()}"
+                    app:icon="@drawable/ic_baseline_publish"
+                    app:subtext="@string/export_qr_summary"
+                    app:text="@string/export_qr" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/properties_element_margin_vertical"

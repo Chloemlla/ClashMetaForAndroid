@@ -29,4 +29,9 @@
     <string name="provider_files">Provider Files</string>
     <string name="profile_updater">Profile Updater</string>
     <string name="profile_updating">Profile Updating</string>
+    <string name="subscription_expiry_channel">Subscription expiry</string>
+    <string name="subscription_expired_title">Subscription expired</string>
+    <string name="subscription_expiring_title">Subscription expiring soon</string>
+    <string name="format_subscription_expired">%1$s has expired</string>
+    <string name="format_subscription_expiring">%1$s expires within 3 days</string>
 </resources>

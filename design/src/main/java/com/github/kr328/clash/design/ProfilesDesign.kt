@@ -27,6 +27,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         data class Update(val profile: Profile) : Request()
         data class Edit(val profile: Profile) : Request()
         data class Duplicate(val profile: Profile) : Request()
+        data class ExportQr(val profile: Profile) : Request()
         data class ResetLocalTraffic(val profile: Profile) : Request()
         data class Delete(val profile: Profile) : Request()
     }
@@ -132,6 +133,12 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
 
     fun requestDuplicate(dialog: Dialog, profile: Profile) {
         requests.trySend(Request.Duplicate(profile))
+
+        dialog.dismiss()
+    }
+
+    fun requestExportQr(dialog: Dialog, profile: Profile) {
+        requests.trySend(Request.ExportQr(profile))
 
         dialog.dismiss()
     }
