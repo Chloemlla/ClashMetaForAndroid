@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.biometric)
     implementation("androidx.activity:activity-compose:1.9.0")
 
     // lumen-crash publishes Compose Material3 as api deps without resolved versions in its POM.

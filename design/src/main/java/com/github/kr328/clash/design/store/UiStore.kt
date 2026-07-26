@@ -41,6 +41,27 @@ class UiStore(context: Context) {
         defaultValue = false,
     )
 
+    /** Optional app lock (biometric / device credential). Default OFF. */
+    var appLockEnabled: Boolean by store.boolean(
+        key = "app_lock_enabled",
+        defaultValue = false,
+    )
+
+    /** When true, activities apply FLAG_SECURE to block screenshots/recents previews. Default OFF. */
+    var secureScreen: Boolean by store.boolean(
+        key = "secure_screen",
+        defaultValue = false,
+    )
+
+    /**
+     * Epoch millis of the last successful unlock. Used with the background timeout gate.
+     * Safe under sharedpref-only backup (F-17): no secrets, only a timestamp + flags.
+     */
+    var lastUnlockedAt: Long by store.long(
+        key = "last_unlocked_at",
+        defaultValue = 0L,
+    )
+
     var proxyExcludeNotSelectable by store.boolean(
         key = "proxy_exclude_not_selectable",
         defaultValue = false,

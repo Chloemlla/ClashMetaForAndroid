@@ -88,6 +88,34 @@ class AppSettingsDesign(
                 }
             }
 
+            category(R.string.privacy)
+
+            switch(
+                value = uiStore::appLockEnabled,
+                icon = R.drawable.ic_baseline_vpn_lock,
+                title = R.string.app_lock_title,
+                summary = R.string.app_lock_desc,
+            ) {
+                listener = OnChangedListener {
+                    // Toggling off must drop any stale unlock timestamp so re-enabling later
+                    // requires a fresh authentication rather than reusing an old lastUnlockedAt.
+                    if (!uiStore.appLockEnabled) {
+                        uiStore.lastUnlockedAt = 0L
+                    }
+                }
+            }
+
+            switch(
+                value = uiStore::secureScreen,
+                icon = R.drawable.ic_baseline_hide,
+                title = R.string.secure_screen_title,
+                summary = R.string.secure_screen_desc,
+            ) {
+                listener = OnChangedListener {
+                    requests.trySend(Request.ReCreateAllActivities)
+                }
+            }
+
             category(R.string.service)
 
             switch(

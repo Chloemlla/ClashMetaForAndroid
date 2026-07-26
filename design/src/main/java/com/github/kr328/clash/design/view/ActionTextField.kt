@@ -66,6 +66,10 @@ class ActionTextField @JvmOverloads constructor(
         binding.actionView.setOnClickListener(l)
     }
 
+    override fun setOnLongClickListener(l: OnLongClickListener?) {
+        binding.actionView.setOnLongClickListener(l)
+    }
+
     init {
         context.theme.obtainStyledAttributes(
             attributeSet,

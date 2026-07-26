@@ -5,11 +5,14 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import androidx.core.view.WindowCompat
+import com.github.kr328.clash.util.AppLockController
+import com.github.kr328.clash.util.AppLockGate
 import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.common.compat.isAllowForceDarkCompat
 import com.github.kr328.clash.common.compat.isLightNavigationBarCompat
@@ -77,6 +80,15 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     private val nextRequestKey = AtomicInteger(0)
     private var dayNight: DayNight = DayNight.Day
 
+    // Set true after the first onStart() following onCreate(); the cold-start gate already
+    // ran in onCreate's launch{} before main(), so onStart must not immediately re-prompt.
+    private var initialStartHandled = false
+
+    // Guards against onCreate's cold-start gate and onStart's resume gate both firing a
+    // BiometricPrompt concurrently (onStart runs synchronously right after onCreate returns,
+    // while the cold-start authenticate() call may still be suspended awaiting a result).
+    private var unlockGateInProgress = false
+
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             if (!onBackPressedCompat()) {
@@ -134,6 +146,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         }
 
         applyDayNight()
+        applySecureScreen()
 
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
 
@@ -143,6 +156,14 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         }
 
         launch {
+            // Cold-start gate: when app lock is on, this must resolve before any Design
+            // (Profiles/Logs/Properties/etc.) is attached to the window. On failure/cancel
+            // we finish() rather than falling through to main() so content never leaks.
+            if (!ensureUnlocked()) {
+                finish()
+                return@launch
+            }
+
             main()
         }
     }
@@ -153,6 +174,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         activityStarted = true
         Remote.broadcasts.addObserver(this)
         events.trySend(Event.ActivityStart)
+        maybeGateOnResume()
     }
 
     override fun onStop() {
@@ -278,6 +300,57 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         }
 
         this.dayNight = dayNight
+    }
+
+    private fun applySecureScreen() {
+        if (uiStore.secureScreen) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    /**
+     * Cold-start gate: called from onCreate's launch{} before main(). Returns true when the
+     * activity may proceed (lock disabled, already-fresh unlock, or successful authentication).
+     */
+    private suspend fun ensureUnlocked(): Boolean {
+        initialStartHandled = true
+
+        if (!AppLockController.isUnlockRequired(uiStore)) {
+            return true
+        }
+
+        if (unlockGateInProgress) return false
+        unlockGateInProgress = true
+        try {
+            return AppLockController.authenticate(this, uiStore)
+        } finally {
+            unlockGateInProgress = false
+        }
+    }
+
+    /**
+     * Return-from-background gate: after the initial cold start, re-check the timeout every
+     * time the activity becomes visible again. On failure/cancel, finish() rather than
+     * leaving stale Design content on screen (Profiles/Logs must not leak).
+     */
+    private fun maybeGateOnResume() {
+        if (!initialStartHandled) return
+        if (unlockGateInProgress) return
+        if (!AppLockController.isUnlockRequired(uiStore)) return
+
+        unlockGateInProgress = true
+        launch {
+            try {
+                val unlocked = AppLockController.authenticate(this@BaseActivity, uiStore)
+                if (!unlocked) {
+                    finish()
+                }
+            } finally {
+                unlockGateInProgress = false
+            }
+        }
     }
 
     enum class Event {

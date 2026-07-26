@@ -8,6 +8,7 @@ import com.github.kr328.clash.design.dialog.ModelProgressBarConfigure
 import com.github.kr328.clash.design.dialog.requestModelTextInput
 import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.design.model.Profile
+import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,9 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         get() = binding.profile!!
         set(value) {
             binding.profile = value
+            // displaySource / displayAgeSecretKey read profile through `self`, which
+            // data-binding does not automatically re-evaluate on a plain `profile` set.
+            binding.invalidateAll()
         }
 
     var localTrafficBilling: Boolean = true
@@ -43,6 +47,16 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             field = value
             refreshTrafficBillingLabel()
         }
+
+    // R3: subscription URL and age secret key default masked; long-press to reveal.
+    private var urlRevealed: Boolean = false
+    private var ageSecretKeyRevealed: Boolean = false
+
+    val displaySource: String
+        get() = SensitiveFieldMask.display(profile.source, revealed = urlRevealed, urlStyle = true)
+
+    val displayAgeSecretKey: String
+        get() = SensitiveFieldMask.display(profile.ageSecretKey, revealed = ageSecretKeyRevealed, urlStyle = false)
 
     val progressing: Boolean
         get() = binding.processing
@@ -213,6 +227,30 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     fun requestExportQr() {
         requests.trySend(Request.ExportQr)
+    }
+
+    /** Long-press / eye-icon reveal for the masked subscription URL (R3). */
+    fun toggleUrlReveal(): Boolean {
+        urlRevealed = !urlRevealed
+        binding.invalidateAll()
+
+        if (urlRevealed) {
+            launch { showToast(R.string.sensitive_content_revealed, ToastDuration.Short) }
+        }
+
+        return true
+    }
+
+    /** Long-press / eye-icon reveal for the masked age secret key (R3). */
+    fun toggleAgeSecretKeyReveal(): Boolean {
+        ageSecretKeyRevealed = !ageSecretKeyRevealed
+        binding.invalidateAll()
+
+        if (ageSecretKeyRevealed) {
+            launch { showToast(R.string.sensitive_content_revealed, ToastDuration.Short) }
+        }
+
+        return true
     }
 
     private fun refreshTrafficBillingLabel() {
