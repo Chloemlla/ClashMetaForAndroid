@@ -79,6 +79,8 @@
     <dimen name="proxy_text_size_grid3">11sp</dimen>
     <dimen name="proxy_card_radius">5dp</dimen>
     <dimen name="proxy_card_offset">0dp</dimen>
+    <!-- sw600dp dual-pane host (M4 R1): fixed width of the group-list rail. -->
+    <dimen name="proxy_group_list_pane_width">320dp</dimen>
 
     <!-- Properties Design -->
     <dimen name="properties_element_margin_vertical">2.5dp</dimen>

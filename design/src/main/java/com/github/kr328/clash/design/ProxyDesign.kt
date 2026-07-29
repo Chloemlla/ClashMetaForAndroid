@@ -8,10 +8,12 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.core.widget.addTextChangedListener
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.widget.ViewPager2
 import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.adapter.ProxyAdapter
+import com.github.kr328.clash.design.adapter.ProxyGroupListAdapter
 import com.github.kr328.clash.design.adapter.ProxyPageAdapter
 import com.github.kr328.clash.design.component.ProxyMenu
 import com.github.kr328.clash.design.component.ProxyViewConfig
@@ -155,6 +157,10 @@ class ProxyDesign(
             binding.elevationView.visibility = View.GONE
             binding.pagesView.visibility = View.GONE
             binding.urlTestFloatView.visibility = View.GONE
+
+            // sw600dp dual-pane host only: hide the group-list rail too (no-op on phone,
+            // where these fields are null because the wide layout is not inflated).
+            binding.groupListPane?.visibility = View.GONE
         } else {
             binding.urlTestFloatView.supportImageTintList = ColorStateList.valueOf(
                 context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimary)

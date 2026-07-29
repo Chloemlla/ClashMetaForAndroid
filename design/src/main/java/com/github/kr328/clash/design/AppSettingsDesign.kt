@@ -107,7 +107,7 @@ class AppSettingsDesign(
 
             switch(
                 value = uiStore::secureScreen,
-                icon = R.drawable.ic_baseline_hide,
+                icon = R.drawable.ic_baseline_visibility_off,
                 title = R.string.secure_screen_title,
                 summary = R.string.secure_screen_desc,
             ) {

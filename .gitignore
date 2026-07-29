@@ -76,3 +76,8 @@ lint/
 outputs/
 local-maven/
 tmp/
+.trellis/
+.agents/skills/
+.claude/
+.codex/
+Install-CodexClaudeTrellis.ps1
