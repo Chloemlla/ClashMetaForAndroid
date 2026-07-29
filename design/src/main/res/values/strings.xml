@@ -1,4 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="PluralsCandidate">
+    <string name="audit_title">ADB audit report</string>
+    <string name="audit_select_report">Import a report produced by the Windows ADB bridge.</string>
+    <string name="audit_import_action">Choose JSONL or ZIP</string>
+    <string name="audit_importing">Validating audit report…</string>
+    <string name="audit_import_failed">Import failed: %s</string>
+    <string name="audit_report_summary">Package %1$s · %2$d evidence files · %3$d capability gaps</string>
     <string name="launch_name_meta">Clash Meta</string>
     <string name="launch_name_alpha">Clash Meta Alpha</string>
     <string name="application_name_meta">Clash Meta for Android</string>
