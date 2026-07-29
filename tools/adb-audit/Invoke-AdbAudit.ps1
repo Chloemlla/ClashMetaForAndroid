@@ -4,8 +4,12 @@ param(
     [string]$AdbPath = 'C:\adb\adb.exe',
     [Parameter(Mandatory = $true)][string]$OutputDirectory,
     [string]$PcapPath,
+    [string]$PcapMetadataPath,
     [string]$MitmLogPath,
+    [string]$MitmJsonPath,
     [string]$FridaLogPath,
+    [string]$FridaJsonPath,
+    [string]$ExternalArtifactDirectory,
     [switch]$KeepDirectory
 )
 
@@ -43,6 +47,20 @@ function Add-Record([string]$Source, [string]$Kind, [string]$Data) {
     $records.Add([ordered]@{ sessionId = $sessionId; timestamp = [DateTime]::UtcNow.ToString('o'); source = $Source; kind = $Kind; packageName = $PackageName; redacted = $false; data = $Data })
 }
 
+function Import-ExternalArtifact([string]$Path, [string]$Source, [string]$Kind) {
+    if (-not $Path) { return $false }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        $limitations.Add("$Kind artifact not found: $Path")
+        return $false
+    }
+    $safeName = [IO.Path]::GetFileName($Path)
+    $destination = Join-Path $artifactDir "$Source-$safeName"
+    Copy-Item -LiteralPath $Path -Destination $destination -Force
+    $size = (Get-Item -LiteralPath $destination).Length
+    Add-Record $Source 'external-artifact' ([ordered]@{ file = "artifacts/$Source-$safeName"; kind = $Kind; bytes = $size } | ConvertTo-Json -Compress)
+    return $true
+}
+
 $devices = Invoke-Adb @('devices','-l')
 if ($devices.ExitCode -ne 0) { throw $devices.Error }
 $device = ($devices.Output -split "`r?`n" | Where-Object { $_ -match '^\S+\s+device\s' } | Select-Object -First 1)
@@ -71,10 +89,19 @@ if ($rootCheck.Output -notmatch 'uid=0') { $limitations.Add('Root/tcpdump access
 $limitations.Add('DNS names and HTTPS parameters require an explicit PCAPdroid or mitmproxy artifact; ADB snapshots do not expose plaintext.')
 $limitations.Add('Runtime hook data requires an explicitly supplied Frida log; no injection is performed by this script.')
 
-foreach ($item in @(@{Path=$PcapPath; Name='capture.pcapng'; Kind='pcap'}, @{Path=$MitmLogPath; Name='mitm.log'; Kind='mitmproxy'}, @{Path=$FridaLogPath; Name='frida.log'; Kind='frida'})) {
-    if ($item.Path) {
-        if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) { $limitations.Add("$($item.Kind) artifact not found: $($item.Path)"); continue }
-        Copy-Item -LiteralPath $item.Path -Destination (Join-Path $artifactDir $item.Name) -Force
+$pcapAvailable = (Import-ExternalArtifact $PcapPath 'pcapdroid' 'pcap')
+$pcapMetadataAvailable = (Import-ExternalArtifact $PcapMetadataPath 'pcapdroid' 'metadata')
+$mitmAvailable = (Import-ExternalArtifact $MitmLogPath 'mitmproxy' 'log')
+$mitmJsonAvailable = (Import-ExternalArtifact $MitmJsonPath 'mitmproxy' 'json')
+$fridaAvailable = (Import-ExternalArtifact $FridaLogPath 'frida' 'log')
+$fridaJsonAvailable = (Import-ExternalArtifact $FridaJsonPath 'frida' 'json')
+if ($ExternalArtifactDirectory) {
+    if (-not (Test-Path -LiteralPath $ExternalArtifactDirectory -PathType Container)) {
+        $limitations.Add("external artifact directory not found: $ExternalArtifactDirectory")
+    } else {
+        Get-ChildItem -LiteralPath $ExternalArtifactDirectory -File | ForEach-Object {
+            [void](Import-ExternalArtifact $_.FullName 'external' $_.Extension.TrimStart('.'))
+        }
     }
 }
 
@@ -82,7 +109,15 @@ $manifest = [ordered]@{
     protocol = 'cmfa-adb-audit'; version = 1; sessionId = $sessionId; packageName = $PackageName
     device = $device; startedAt = $started.ToString('o'); finishedAt = [DateTime]::UtcNow.ToString('o')
     redaction = [ordered]@{ applied = $false; note = 'Raw ADB output may contain sensitive values. Review before sharing.' }
-    capabilities = [ordered]@{ adb = $true; root = ($rootCheck.Output -match 'uid=0'); dns = $false; httpsParameters = $false; runtimeHooks = [bool]$FridaLogPath }
+    capabilities = [ordered]@{
+        adb = $true; root = ($rootCheck.Output -match 'uid=0')
+        pcapdroid = ($pcapAvailable -or $pcapMetadataAvailable)
+        dns = ($pcapMetadataAvailable -or $pcapAvailable)
+        mitmproxy = ($mitmAvailable -or $mitmJsonAvailable)
+        httpsParameters = ($mitmAvailable -or $mitmJsonAvailable)
+        frida = ($fridaAvailable -or $fridaJsonAvailable)
+        runtimeHooks = ($fridaAvailable -or $fridaJsonAvailable)
+    }
     limitations = @($limitations)
     artifactHashes = [ordered]@{}
 }
