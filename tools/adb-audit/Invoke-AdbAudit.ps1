@@ -10,6 +10,8 @@ param(
     [string]$FridaLogPath,
     [string]$FridaJsonPath,
     [string]$ExternalArtifactDirectory,
+    [Parameter(Mandatory = $true)][switch]$ConfirmAuthorizedUse,
+    [string]$AuthorizationReference,
     [switch]$KeepDirectory
 )
 
@@ -17,6 +19,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ($PackageName -notmatch '^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$') { throw 'PackageName is not a valid Android package name.' }
 if (-not (Test-Path -LiteralPath $AdbPath -PathType Leaf)) { throw "adb executable not found: $AdbPath" }
+if (-not $ConfirmAuthorizedUse) { throw 'ConfirmAuthorizedUse is required before collecting device evidence.' }
 
 $root = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $root | Out-Null
@@ -86,8 +89,6 @@ Collect 'files' @('find','/sdcard/Android/data',$PackageName,'-maxdepth','3','-t
 
 $rootCheck = Invoke-Adb @('-s',$serial,'shell','id')
 if ($rootCheck.Output -notmatch 'uid=0') { $limitations.Add('Root/tcpdump access unavailable; private files and packet payloads are not complete.') }
-$limitations.Add('DNS names and HTTPS parameters require an explicit PCAPdroid or mitmproxy artifact; ADB snapshots do not expose plaintext.')
-$limitations.Add('Runtime hook data requires an explicitly supplied Frida log; no injection is performed by this script.')
 
 $pcapAvailable = (Import-ExternalArtifact $PcapPath 'pcapdroid' 'pcap')
 $pcapMetadataAvailable = (Import-ExternalArtifact $PcapMetadataPath 'pcapdroid' 'metadata')
@@ -104,11 +105,26 @@ if ($ExternalArtifactDirectory) {
         }
     }
 }
+if (-not ($pcapAvailable -or $pcapMetadataAvailable)) {
+    $limitations.Add('DNS evidence requires an explicit PCAPdroid artifact; ADB snapshots do not expose complete DNS activity.')
+}
+if (-not ($mitmAvailable -or $mitmJsonAvailable)) {
+    $limitations.Add('HTTPS parameters require an explicitly supplied mitmproxy artifact; ADB snapshots do not expose plaintext.')
+}
+if (-not ($fridaAvailable -or $fridaJsonAvailable)) {
+    $limitations.Add('Runtime hook data requires an explicitly supplied Frida log; no injection is performed by this script.')
+}
 
 $manifest = [ordered]@{
     protocol = 'cmfa-adb-audit'; version = 1; sessionId = $sessionId; packageName = $PackageName
     device = $device; startedAt = $started.ToString('o'); finishedAt = [DateTime]::UtcNow.ToString('o')
     redaction = [ordered]@{ applied = $false; note = 'Raw ADB output may contain sensitive values. Review before sharing.' }
+    authorization = [ordered]@{
+        confirmed = $true
+        confirmedAt = $started.ToString('o')
+        reference = $AuthorizationReference
+        scope = 'ADB metadata plus explicitly supplied external artifacts'
+    }
     capabilities = [ordered]@{
         adb = $true; root = ($rootCheck.Output -match 'uid=0')
         pcapdroid = ($pcapAvailable -or $pcapMetadataAvailable)

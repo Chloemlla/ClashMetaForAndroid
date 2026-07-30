@@ -5,6 +5,15 @@
     <string name="audit_importing">Validating audit report…</string>
     <string name="audit_import_failed">Import failed: %s</string>
     <string name="audit_report_summary">Package %1$s · %2$d evidence files · %3$d capability gaps</string>
+    <string name="audit_authorized_scope">Authorized capture only. This app records your consent and can request Android VPN metadata permission. It does not install certificates, bypass pinning, root the device, or inject processes.</string>
+    <string name="audit_authorize_vpn">Authorize VPN metadata capture</string>
+    <string name="audit_vpn_authorized">VPN permission authorized for this audit session.</string>
+    <string name="audit_vpn_not_authorized">VPN permission not authorized.</string>
+    <string name="audit_tool_guidance">For HTTPS parameters, configure mitmproxy and its CA manually on the test device. For PCAPdroid, start its per-app VPN capture manually. For Frida, run an approved script from the Windows workstation and import the exported log. Review scope and stop each tool when finished.</string>
+    <string name="audit_consent_title">Authorize network audit</string>
+    <string name="audit_consent_message">Android will show its VPN permission screen. Granting permission only records your approval for this audit workflow; this page does not install a certificate, start a capture, modify the system proxy, or inject another app.</string>
+    <string name="audit_open_vpn_settings">Open Android VPN settings</string>
+    <string name="audit_vpn_settings_unavailable">Android VPN settings are unavailable on this device.</string>
     <string name="launch_name_meta">Clash Meta</string>
     <string name="launch_name_alpha">Clash Meta Alpha</string>
     <string name="application_name_meta">Clash Meta for Android</string>
