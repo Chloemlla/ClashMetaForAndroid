@@ -49,8 +49,8 @@ class AppLockGateTest {
 
     @Test
     fun requiresUnlock_customTimeoutRespected() {
-        val lastUnlockedAt = 0L
-        val now = 5_000L
+        val lastUnlockedAt = 1_000L
+        val now = 6_000L
         assertFalse(
             AppLockGate.requiresUnlock(
                 enabled = true,
