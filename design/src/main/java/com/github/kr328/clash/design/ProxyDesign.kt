@@ -158,9 +158,9 @@ class ProxyDesign(
             binding.pagesView.visibility = View.GONE
             binding.urlTestFloatView.visibility = View.GONE
 
-            // sw600dp dual-pane host only: hide the group-list rail too (no-op on phone,
-            // where these fields are null because the wide layout is not inflated).
-            binding.groupListPane?.visibility = View.GONE
+            // sw600dp dual-pane host only: hide the group-list rail too. Data Binding
+            // does not expose IDs that exist only in a layout-qualified variant.
+            (binding.root.findViewById<View>(R.id.group_list_view)?.parent as? View)?.visibility = View.GONE
         } else {
             binding.urlTestFloatView.supportImageTintList = ColorStateList.valueOf(
                 context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimary)
