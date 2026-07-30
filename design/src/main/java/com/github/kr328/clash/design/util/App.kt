@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.constants.PartnerApps
@@ -71,6 +72,7 @@ fun resolveBrowserPackages(pm: PackageManager): Set<String> {
  * throws on this device, rather than crashing the caller.
  */
 fun queryIgnoringBatteryOptimizations(context: Context, packageName: String): Boolean? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
     val powerManager = context.getSystemService<PowerManager>() ?: return null
 
     return runCatching { powerManager.isIgnoringBatteryOptimizations(packageName) }.getOrNull()
