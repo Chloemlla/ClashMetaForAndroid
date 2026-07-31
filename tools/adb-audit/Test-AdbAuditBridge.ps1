@@ -80,7 +80,7 @@ printf 'Authorization: Bearer ci-secret https://example.test/?token=query-secret
         Remove-Item Env:CMFA_AUDIT_MULTIPLE_DEVICES -ErrorAction SilentlyContinue
     }
     Assert-True $multipleDevicesBlocked 'Ambiguous multi-device selection was not rejected.'
-    Assert-True ((Get-ChildItem -LiteralPath $multiDeviceOutput -Directory).Count -eq 0) 'An ambiguous device selection left an evidence directory behind.'
+    Assert-True (@(Get-ChildItem -LiteralPath $multiDeviceOutput -Directory).Count -eq 0) 'An ambiguous device selection left an evidence directory behind.'
 
     $failedOutput = Join-Path $testRoot 'failed-output'
     $missingPackageBlocked = $false
@@ -95,7 +95,7 @@ printf 'Authorization: Bearer ci-secret https://example.test/?token=query-secret
         $missingPackageBlocked = $_.Exception.Message -like '*not installed*'
     }
     Assert-True $missingPackageBlocked 'A missing target package was not rejected.'
-    Assert-True ((Get-ChildItem -LiteralPath $failedOutput -Directory).Count -eq 0) 'A failed session left a generated evidence directory behind.'
+    Assert-True (@(Get-ChildItem -LiteralPath $failedOutput -Directory).Count -eq 0) 'A failed session left a generated evidence directory behind.'
 
     New-Item -ItemType Directory -Path $outputDirectory | Out-Null
     $sentinel = Join-Path $outputDirectory 'keep-me.txt'
@@ -110,11 +110,11 @@ printf 'Authorization: Bearer ci-secret https://example.test/?token=query-secret
         -AuthorizationReference 'CI-FIXTURE'
 
     Assert-True (Test-Path -LiteralPath $zip -PathType Leaf) 'The bridge did not produce a ZIP archive.'
-    Assert-True ((Get-ChildItem -LiteralPath $outputDirectory -Directory).Count -eq 0) 'The generated session directory was not cleaned up.'
+    Assert-True (@(Get-ChildItem -LiteralPath $outputDirectory -Directory).Count -eq 0) 'The generated session directory was not cleaned up.'
     Assert-True (Test-Path -LiteralPath $sentinel -PathType Leaf) 'The bridge removed an existing file from the selected output directory.'
 
     Expand-Archive -LiteralPath $zip -DestinationPath $expandedDirectory
-    Assert-True ((Get-ChildItem -LiteralPath $expandedDirectory -File -Recurse).Count -eq 3) 'The ZIP contains files outside the strict report contract.'
+    Assert-True (@(Get-ChildItem -LiteralPath $expandedDirectory -File -Recurse).Count -eq 3) 'The ZIP contains files outside the strict report contract.'
     foreach ($requiredFile in @('manifest.json', 'records.jsonl', 'report.jsonl')) {
         Assert-True (Test-Path -LiteralPath (Join-Path $expandedDirectory $requiredFile) -PathType Leaf) "Required ZIP file is missing: $requiredFile"
     }
@@ -127,7 +127,7 @@ printf 'Authorization: Bearer ci-secret https://example.test/?token=query-secret
     Assert-True ($manifest.deviceInfo.serial -match '^sha256:[0-9a-f]{16}$') 'The default device serial was not pseudonymized.'
     Assert-True (-not $manifestText.Contains('fake-serial')) 'The default manifest exposed the raw ADB serial.'
     Assert-True ($manifest.capabilities.tcpdump -eq $false) 'Missing tcpdump was not recorded as a capability gap.'
-    Assert-True ($manifest.limitations.Count -ge 5) 'Expected capability gaps were not recorded.'
+    Assert-True (@($manifest.limitations).Count -ge 5) 'Expected capability gaps were not recorded.'
 
     $records = Get-Content -LiteralPath (Join-Path $expandedDirectory 'records.jsonl') -Raw -Encoding UTF8
     foreach ($secret in @('ci-secret', 'query-secret', '31.2304', 'fake-serial')) {
