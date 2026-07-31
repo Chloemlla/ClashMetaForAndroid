@@ -48,19 +48,22 @@ printf 'Authorization: Bearer ci-secret https://example.test/?token=query-secret
 
     $bridge = Join-Path $PSScriptRoot 'Invoke-AdbAudit.ps1'
 
-    $unredactedBlocked = $false
+    $unredactedError = $null
     try {
-        & $bridge `
+        $null = & $bridge `
             -PackageName com.example.target `
             -AdbPath $fakeAdb `
             -Serial fake-serial `
             -OutputDirectory (Join-Path $testRoot 'unredacted-output') `
             -ConfirmAuthorizedUse `
-            -RedactionMode None | Out-Null
+            -RedactionMode None
     } catch {
-        $unredactedBlocked = $_.Exception.Message -like '*ConfirmUnredactedExport*'
+        $unredactedError = $_
     }
-    Assert-True $unredactedBlocked 'Unredacted export was not gated by a second confirmation.'
+    Assert-True ($null -ne $unredactedError) 'Unredacted export did not require a second confirmation.'
+    Assert-True `
+        ($unredactedError.Exception.Message -like '*ConfirmUnredactedExport*') `
+        "Unexpected unredacted export error: $($unredactedError.Exception.Message)"
 
     $multipleDevicesBlocked = $false
     $multiDeviceOutput = Join-Path $testRoot 'multi-device-output'

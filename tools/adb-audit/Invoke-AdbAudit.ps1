@@ -58,6 +58,9 @@ if (-not $root.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase))
 }
 New-Item -ItemType Directory -Path $root | Out-Null
 trap {
+    # A bare throw outside catch creates ScriptHalted instead of rethrowing the
+    # trapped error. Snapshot the ErrorRecord before cleanup and rethrow it.
+    $trappedError = $_
     if ($root -and
         $outputPrefix -and
         -not $KeepDirectory -and
@@ -71,7 +74,7 @@ trap {
         (Test-Path -LiteralPath $zip -PathType Leaf)) {
         Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
     }
-    throw
+    throw $trappedError
 }
 $artifactDir = Join-Path $root 'artifacts'
 New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null

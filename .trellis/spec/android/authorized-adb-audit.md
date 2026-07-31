@@ -114,7 +114,7 @@ Limits enforced while producing/importing:
 
 - Successful companion runs delete only the generated session directory unless `KeepDirectory`; the ZIP remains.
 - Failed runs remove the generated session directory unless `KeepDirectory` and remove only a newly created partial ZIP. Existing files in `OutputDirectory`, including sentinels, remain untouched.
-- PowerShell script-scope cleanup traps also observe errors raised before their textual declaration. Initialize cleanup paths as the first executable setup, before StrictMode/version/module validation can throw; null-guard them before path operations, and preserve the original validation error instead of masking it with cleanup failure.
+- PowerShell script-scope cleanup traps also observe errors raised before their textual declaration. Initialize cleanup paths as the first executable setup, before StrictMode/version/module validation can throw; snapshot the trapped `$_` before cleanup and explicitly throw that `ErrorRecord` afterward. A bare `throw` inside `trap` creates `ScriptHalted` instead of preserving the original diagnostic.
 - Missing optional artifact paths add limitations; unsafe names, limit violations, package/device ambiguity, missing authorization, timeouts, or protocol violations fail closed.
 
 ## 4. Validation & Error Matrix
@@ -177,7 +177,7 @@ $root = $null # Too late for the validation error above.
 $outputPrefix = $null
 trap {
     if ($root.StartsWith($outputPrefix)) { Remove-Item $root -Recurse -Force }
-    throw
+    throw # Outside catch, this replaces the validation error with ScriptHalted.
 }
 ```
 
@@ -201,6 +201,7 @@ $zip = $null
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 trap {
+    $trappedError = $_
     if (-not $KeepDirectory -and $root -and $outputPrefix -and
         $root.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
         Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
@@ -209,7 +210,7 @@ trap {
         $zip.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
         Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
     }
-    throw
+    throw $trappedError
 }
 ```
 
