@@ -32,7 +32,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         original = withProfile { queryByUUID(uuid) }?.toDesignProfile() ?: return finish()
 
         design.profile = original
-        design.localTrafficBilling = serviceStore.localSubscriptionTraffic
+        design.localTrafficBilling = serviceStore.getLocalSubscriptionTraffic(uuid)
 
         setContentDesign(design)
 
@@ -73,7 +73,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                             ProfileQrExport.show(design, design.profile)
                         }
                         is PropertiesDesign.Request.SetLocalTrafficBilling -> {
-                            serviceStore.localSubscriptionTraffic = it.enabled
+                            serviceStore.setLocalSubscriptionTraffic(uuid, it.enabled)
                         }
                     }
                 }
@@ -106,7 +106,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                     withProcessing { updateStatus ->
                         withProfile {
                             // Persist billing mode before apply so import uses the selected strategy.
-                            serviceStore.localSubscriptionTraffic = localTrafficBilling
+                            serviceStore.setLocalSubscriptionTraffic(profile.uuid, localTrafficBilling)
 
                             patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
 
@@ -130,4 +130,3 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         }
     }
 }
-

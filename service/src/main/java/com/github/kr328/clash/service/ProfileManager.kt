@@ -73,7 +73,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
 
         // Local mode: used starts at 0 B, but keep subscription total/expire for the progress bar.
         // Upstream mode: inherit full userinfo counters.
-        val useLocal = store.localSubscriptionTraffic
+        val useLocal = store.getLocalSubscriptionTraffic(uuid)
         val pending = Pending(
             uuid = newUUID,
             name = imported.name,
@@ -90,6 +90,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
         cloneImportedFiles(uuid, newUUID)
 
         PendingDao().insert(pending)
+        store.setLocalSubscriptionTraffic(newUUID, useLocal)
 
         return newUUID
     }
@@ -219,7 +220,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
         val download: Long
         val total: Long
         val expire: Long
-        if (store.localSubscriptionTraffic) {
+        if (store.getLocalSubscriptionTraffic(uuid)) {
             // Local mode: used traffic from 0 B; quota/expiry from subscription-userinfo.
             upload = localTraffic.getUpload(uuid)
             download = localTraffic.getDownload(uuid)

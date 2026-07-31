@@ -91,8 +91,8 @@
     <string name="show_traffic">显示流量</string>
     <string name="show_traffic_summary">在通知中自动刷新流量</string>
 
-    <string name="local_subscription_traffic_title">本地订阅流量</string>
-    <string name="local_subscription_traffic_summary">启用后已用流量从 0 GB 本地计费，进度条终点仍取订阅总量</string>
+    <string name="local_subscription_traffic_title">默认流量计费方式</string>
+    <string name="local_subscription_traffic_summary">开启：本地从 0 B 计费；关闭：使用订阅信息。仅用于尚未保存独立选择的配置</string>
     <string name="local_subscription_traffic_unlocked">已解锁高级流量选项</string>
     <string name="subscription_expiry_reminders_title">订阅到期提醒</string>
     <string name="subscription_expiry_reminders_summary">当 URL 配置即将到期或已过期时发送本地通知</string>
@@ -103,11 +103,11 @@
     <string name="export_qr_unavailable">仅支持带有 http(s) 订阅源的 URL 配置导出二维码</string>
     <string name="export_qr_failed">无法生成二维码</string>
     <string name="share">分享</string>
-    <string name="subscription_traffic_billing">流量计费方式（全局）</string>
+    <string name="subscription_traffic_billing">流量计费方式（当前配置）</string>
     <string name="subscription_traffic_billing_local">从 0 本地计费</string>
     <string name="subscription_traffic_billing_upstream">从订阅信息计费</string>
-    <string name="subscription_traffic_billing_local_summary">全局：所有配置本机已用流量从 0 B 起算，总量进度仍取订阅配额</string>
-    <string name="subscription_traffic_billing_upstream_summary">全局：所有配置使用订阅返回的 subscription-userinfo 上传/下载/总量</string>
+    <string name="subscription_traffic_billing_local_summary">当前配置在本机的已用流量从 0 B 起算，总量进度仍取订阅配额</string>
+    <string name="subscription_traffic_billing_upstream_summary">当前配置使用订阅返回的 subscription-userinfo 上传/下载/总量</string>
     <string name="allow_clash_auto_restart">允许 Clash 自动重启</string>
     <string name="auto_restart">自动重启</string>
     <string name="stopped">已停止</string>

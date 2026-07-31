@@ -301,8 +301,8 @@
     <string name="show_traffic">Show Traffic</string>
     <string name="show_traffic_summary">Auto refresh traffic in notification</string>
 
-    <string name="local_subscription_traffic_title">Local subscription traffic</string>
-    <string name="local_subscription_traffic_summary">Bill used traffic from 0 GB locally; progress bar still uses the subscription total/quota</string>
+    <string name="local_subscription_traffic_title">Default traffic billing</string>
+    <string name="local_subscription_traffic_summary">On: local from 0 B; off: subscription info. Used only for profiles without a saved choice</string>
     <string name="local_subscription_traffic_unlocked">Advanced traffic option unlocked</string>
     <string name="subscription_expiry_reminders_title">Subscription expiry reminders</string>
     <string name="subscription_expiry_reminders_summary">Notify when a URL profile is expiring soon or already expired</string>
@@ -313,11 +313,11 @@
     <string name="export_qr_unavailable">QR export is only available for URL profiles with an http(s) subscription source</string>
     <string name="export_qr_failed">Unable to create QR code</string>
     <string name="share">Share</string>
-    <string name="subscription_traffic_billing">Traffic billing (all profiles)</string>
+    <string name="subscription_traffic_billing">Traffic billing (this profile)</string>
     <string name="subscription_traffic_billing_local">From 0 (local)</string>
     <string name="subscription_traffic_billing_upstream">From subscription info</string>
-    <string name="subscription_traffic_billing_local_summary">Global: start used traffic at 0 B on this device for every profile; quota still follows the subscription total</string>
-    <string name="subscription_traffic_billing_upstream_summary">Global: use upload/download/total from subscription-userinfo headers for every profile</string>
+    <string name="subscription_traffic_billing_local_summary">For this profile, start used traffic at 0 B on this device; quota still follows the subscription total</string>
+    <string name="subscription_traffic_billing_upstream_summary">For this profile, use upload/download/total from subscription-userinfo headers</string>
 
     <string name="follow_system_android_10">Follow System (Android 10+)</string>
     <string name="always_dark">Always Dark</string>

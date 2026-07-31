@@ -51,7 +51,8 @@ object ProfileProcessor {
 
                 val force = snapshot.type != Profile.Type.File
                 val subscriptionInfo = fetchProfile(context, snapshot.source, force, callback)
-                val useLocalTraffic = ServiceStore(context).localSubscriptionTraffic
+                val useLocalTraffic = ServiceStore(context)
+                    .getLocalSubscriptionTraffic(snapshot.uuid)
 
                 profileLock.withLock {
                     if (PendingDao().queryByUUID(snapshot.uuid) == snapshot) {
@@ -134,7 +135,8 @@ object ProfileProcessor {
                 Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
 
                 val subscriptionInfo = fetchProfile(context, snapshot.source, true, callback)
-                val useLocalTraffic = ServiceStore(context).localSubscriptionTraffic
+                val useLocalTraffic = ServiceStore(context)
+                    .getLocalSubscriptionTraffic(snapshot.uuid)
 
                 profileLock.withLock {
                     val imported = ImportedDao().queryByUUID(snapshot.uuid)
@@ -215,6 +217,12 @@ object ProfileProcessor {
                 pending.deleteRecursively()
                 imported.deleteRecursively()
 
+                val serviceStore = ServiceStore(context)
+                if (serviceStore.activeProfile == uuid) {
+                    serviceStore.activeProfile = null
+                }
+
+                serviceStore.clearLocalSubscriptionTraffic(uuid)
                 LocalSubscriptionTrafficStore(context).clear(uuid)
 
                 ImportedDao().remove(uuid)
@@ -229,6 +237,10 @@ object ProfileProcessor {
         return withContext(NonCancellable) {
             profileLock.withLock {
                 PendingDao().remove(uuid)
+
+                if (!ImportedDao().exists(uuid)) {
+                    ServiceStore(context).clearLocalSubscriptionTraffic(uuid)
+                }
 
                 context.pendingDir.resolve(uuid.toString()).deleteRecursively()
             }

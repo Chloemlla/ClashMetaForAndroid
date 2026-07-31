@@ -31,23 +31,20 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         }
         val ticker = ticker(TimeUnit.SECONDS.toMillis(2))
 
-        trackedProfile = serviceStore.activeProfile
-        captureBaseline()
+        trackProfile(serviceStore.activeProfile)
 
         try {
             while (true) {
                 select<Unit> {
                     profileChanged.onReceive {
                         flushDelta()
-                        trackedProfile = serviceStore.activeProfile
-                        captureBaseline()
+                        trackProfile(serviceStore.activeProfile)
                     }
                     ticker.onReceive {
                         val active = serviceStore.activeProfile
                         if (active != trackedProfile) {
                             flushDelta()
-                            trackedProfile = active
-                            captureBaseline()
+                            trackProfile(active)
                         } else {
                             flushDelta()
                         }
@@ -65,13 +62,22 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         lastDownloadBytes = download
     }
 
+    private fun trackProfile(uuid: UUID?) {
+        trackedProfile = uuid
+        if (uuid != null) {
+            serviceStore.getLocalSubscriptionTraffic(uuid)
+        }
+        captureBaseline()
+    }
+
     private fun flushDelta() {
-        if (!serviceStore.localSubscriptionTraffic) {
-            // Upstream userinfo mode: do not accumulate local counters.
+        val uuid = trackedProfile ?: return
+        val useLocalTraffic = serviceStore.getLocalSubscriptionTrafficIfPresent(uuid)
+        if (useLocalTraffic != true) {
+            // Upstream mode or a removed profile: do not accumulate local counters.
             captureBaseline()
             return
         }
-        val uuid = trackedProfile ?: return
         val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
 
         // Core counters reset on profile reload / tunnel restart.
@@ -91,5 +97,3 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         lastDownloadBytes = download
     }
 }
-
-

@@ -8,10 +8,21 @@ import com.github.kr328.clash.service.model.AccessControlMode
 import java.util.*
 
 class ServiceStore(context: Context) {
-    private val store = Store(
-        PreferenceProvider
-            .createSharedPreferencesFromContext(context)
-            .asStoreProvider()
+    private val preferences = PreferenceProvider.createSharedPreferencesFromContext(context)
+    private val store = Store(preferences.asStoreProvider())
+    private val subscriptionTrafficBilling = SubscriptionTrafficBillingPreference(
+        contains = { key -> preferences.contains(key) },
+        readBoolean = { key, defaultValue -> preferences.getBoolean(key, defaultValue) },
+        writeBoolean = { key, value ->
+            preferences.edit()
+                .putBoolean(key, value)
+                .apply()
+        },
+        remove = { key ->
+            preferences.edit()
+                .remove(key)
+                .apply()
+        },
     )
 
     var activeProfile: UUID? by store.typedString(
@@ -81,14 +92,33 @@ class ServiceStore(context: Context) {
     )
 
     /**
-     * When true (default), config-page traffic is billed from 0 B via
-     * LocalSubscriptionTrafficStore and upstream subscription-userinfo is ignored.
-     * When false, upload/download/total/expire come from subscription-userinfo.
+     * Default and legacy migration seed for profiles without a scoped choice.
+     * Profile/runtime callers must use [getLocalSubscriptionTraffic] instead.
      */
     var localSubscriptionTraffic by store.boolean(
         key = "local_subscription_traffic",
         defaultValue = true
     )
+
+    /**
+     * Returns the billing mode owned by [uuid]. Existing installs lazily copy the
+     * former global value into the profile-scoped key on first access.
+     */
+    fun getLocalSubscriptionTraffic(uuid: UUID): Boolean {
+        return subscriptionTrafficBilling.get(uuid, localSubscriptionTraffic)
+    }
+
+    internal fun getLocalSubscriptionTrafficIfPresent(uuid: UUID): Boolean? {
+        return subscriptionTrafficBilling.getIfPresent(uuid, localSubscriptionTraffic)
+    }
+
+    fun setLocalSubscriptionTraffic(uuid: UUID, enabled: Boolean) {
+        subscriptionTrafficBilling.set(uuid, enabled)
+    }
+
+    fun clearLocalSubscriptionTraffic(uuid: UUID) {
+        subscriptionTrafficBilling.clear(uuid)
+    }
 
     /**
      * When true (default), post a local notification once when a URL profile's
