@@ -19,6 +19,13 @@ param(
     [ValidateRange(5, 600)][int]$CommandTimeoutSeconds = 120
 )
 
+# Script-scope traps handle errors raised anywhere in this file, including guards
+# below. Make cleanup state the first executable setup so version/module failures
+# cannot be masked after StrictMode is enabled.
+$root = $null
+$outputPrefix = $null
+$zip = $null
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or newer is required.' }
@@ -50,14 +57,16 @@ if (-not $root.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase))
     throw 'Generated audit session path escaped the selected output directory.'
 }
 New-Item -ItemType Directory -Path $root | Out-Null
-$zip = $null
 trap {
-    if (-not $KeepDirectory -and
+    if ($root -and
+        $outputPrefix -and
+        -not $KeepDirectory -and
         $root.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase) -and
         (Test-Path -LiteralPath $root -PathType Container)) {
         Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
     }
     if ($zip -and
+        $outputPrefix -and
         $zip.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase) -and
         (Test-Path -LiteralPath $zip -PathType Leaf)) {
         Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue

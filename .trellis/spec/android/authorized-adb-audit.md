@@ -114,6 +114,7 @@ Limits enforced while producing/importing:
 
 - Successful companion runs delete only the generated session directory unless `KeepDirectory`; the ZIP remains.
 - Failed runs remove the generated session directory unless `KeepDirectory` and remove only a newly created partial ZIP. Existing files in `OutputDirectory`, including sentinels, remain untouched.
+- PowerShell script-scope cleanup traps also observe errors raised before their textual declaration. Initialize cleanup paths as the first executable setup, before StrictMode/version/module validation can throw; null-guard them before path operations, and preserve the original validation error instead of masking it with cleanup failure.
 - Missing optional artifact paths add limitations; unsafe names, limit violations, package/device ambiguity, missing authorization, timeouts, or protocol violations fail closed.
 
 ## 4. Validation & Error Matrix
@@ -154,7 +155,7 @@ Limits enforced while producing/importing:
 All actual tests, Gradle, lint, and build commands run only in GitHub Actions. The `ADB audit bridge tests` step in `build-debug.yaml`, `build-pre-release.yaml`, and `build-release.yaml` runs the Linux PowerShell fixture; JVM tests run through the workflow test runner.
 
 - PowerShell policy assertions: valid/invalid package forms, default secret/identifier/email/coordinate redaction, `None` preservation, and metadata control-character normalization.
-- Companion fixture assertions: second confirmation for unredacted output; ambiguous serial and missing package rejection; failure cleanup; preservation of a sentinel in the output parent; strict three-root-file ZIP; pseudonymized serial; authorization/redaction metadata; capability gaps; no fixture-secret leakage; start/finish records; standalone-report parity.
+- Companion fixture assertions: second confirmation for unredacted output with its original diagnostic preserved; ambiguous serial and missing package rejection; failure cleanup; preservation of a sentinel in the output parent; strict three-root-file ZIP; pseudonymized serial; authorization/redaction metadata; capability gaps; no fixture-secret leakage; start/finish records; standalone-report parity.
 - Android policy assertions: traversal/absolute/bidi/control rejection, flat artifact names, SHA-256 format, exact Boolean capability set, consent/redaction consistency, UTC/session ordering, safe metadata, and all size/count constants.
 - Android importer assertions: valid ZIP and standalone JSONL round trips; duplicate/unexpected/nested entries; session/package/redaction mismatch; report mismatch; missing/extra/bad artifact hashes; every size/count boundary; artifact-bearing JSONL rejection; and deletion of only the failed import target.
 - UI assertions/review: system picker is used; import runs off the main thread; redaction/auth/device/evidence/gaps are rendered; VPN consent never starts capture or changes device security settings.
@@ -167,6 +168,19 @@ All actual tests, Gradle, lint, and build commands run only in GitHub Actions. T
 & $AdbPath "-s $Serial shell dumpsys package $PackageName"
 ```
 
+```powershell
+Set-StrictMode -Version Latest
+if (-not (Test-Path -LiteralPath $AdbPath -PathType Leaf)) {
+    throw "adb executable not found: $AdbPath"
+}
+$root = $null # Too late for the validation error above.
+$outputPrefix = $null
+trap {
+    if ($root.StartsWith($outputPrefix)) { Remove-Item $root -Recurse -Force }
+    throw
+}
+```
+
 ```kotlin
 File(target, zipEntry.name).outputStream()
 ```
@@ -177,6 +191,26 @@ These forms permit ambiguous shell parsing or archive path escape and omit the e
 
 ```powershell
 Invoke-Adb @('-s', $serial, 'shell', 'dumpsys', 'package', $PackageName)
+```
+
+```powershell
+# First executable setup in the script body, before StrictMode or validation.
+$root = $null
+$outputPrefix = $null
+$zip = $null
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+trap {
+    if (-not $KeepDirectory -and $root -and $outputPrefix -and
+        $root.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if ($zip -and $outputPrefix -and
+        $zip.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+    }
+    throw
+}
 ```
 
 ```kotlin
