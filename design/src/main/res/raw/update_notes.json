@@ -1,235 +1,255 @@
 {
-    "schemaVersion": 1,
-    "identity": {
-        "commitHash": "d1c0fb1",
-        "buildTime": "2026-07-24T05:25:22Z",
-        "versionName": "2.11.32",
-        "versionCode": 211032
+  "schemaVersion": 1,
+  "identity": {
+    "commitHash": "7cccc5c",
+    "buildTime": "2026-07-31T13:01:56Z",
+    "versionName": "2.11.32",
+    "versionCode": 211032
+  },
+  "highlights": [
+    {
+      "id": "observability-dashboard",
+      "title": "本地可观测面板",
+      "body": "主页新增近期上下行流量趋势；活跃连接可按应用、主机或出站链路聚合并搜索排序；实时与历史日志支持本地关键词过滤。"
     },
-    "highlights": [
-        {
-            "id": "observability-dashboard",
-            "title": "本地可观测面板",
-            "body": "主页新增近期上下行流量趋势；活跃连接可按应用、主机或出站链路聚合并搜索排序；实时与历史日志支持本地关键词过滤。"
-        },
-        {
-            "id": "safe-profile-file-workflow",
-            "title": "配置文件安全编辑与导出",
-            "body": "文件页支持通过临时 YAML 副本调用外部编辑器，回写前进行内核校验并在失败时保留原配置；同时新增只读结构概览，以及经过敏感信息提醒的手动原始配置导出。"
-        },
-        {
-            "id": "profile-traffic-billing",
-            "title": "配置独立流量计费",
-            "body": "每个配置可独立选择本地从 0 计费或使用订阅信息；切换配置后，列表显示与运行时计费均使用该配置自己的选择，应用设置只作为未保存选择时的默认值。"
-        },
-        {
-            "id": "large-screen-proxy",
-            "title": "平板代理双栏",
-            "body": "代理页面在平板和大屏设备上同时显示代理组列表与当前组详情；手机保持原有单栏，搜索、排序和渐进测速继续可用。"
-        },
-        {
-            "id": "scene-automation",
-            "title": "可控的场景自动化",
-            "body": "新增按网络类型和时间匹配的场景，可切换模式或已导入配置；自动场景与节点故障转移均默认关闭，且不会自动启动或停止 VPN。"
-        },
-        {
-            "id": "authorized-adb-audit",
-            "title": "授权设备审计报告",
-            "body": "Windows ADB 桥接工具可在明确授权后采集设备侧证据，默认脱敏文本并记录能力缺口；应用内可导入并校验 JSONL 或 ZIP 报告及附件哈希。"
-        },
-        {
-            "id": "undraw-empty-states",
-            "title": "主题色空状态插画（unDraw）",
-            "body": "连接列表、配置列表与日志空状态展示 unDraw 插画；默认使用 Clash 品牌色，Android 12 及以上可在应用设置中选择跟随壁纸配色，亮暗模式继续跟随应用设置。"
-        },
-        {
-            "id": "connections-viewer",
-            "title": "活跃连接（连接列表）",
-            "body": "主页可查看并管理当前活跃连接（主机/SNI、进程、流量、规则与链路；支持关闭单条/全部）。"
-        },
-        {
-            "id": "update-notes-gate",
-            "title": "沉浸式本次更新说明",
-            "body": "新构建（versionCode + commit hash）首次启动展示亮点、模块说明与近期提交/合并；身份含 Build Time。"
-        },
-        {
-            "id": "partner-auto-adapt",
-            "title": "伙伴应用 VPN 自动适配",
-            "body": "网络设置可开关：已安装的 PiliPlus / NexAI / Project-Lumen / 知乎++ 自动纳入访问控制；StatusProvider 导出 partner 状态供伙伴查询。"
-        },
-        {
-            "id": "android-16-17",
-            "title": "Android 16 / 17 平台适配",
-            "body": "target/compile SDK 36（Android 16）；强制 edge-to-edge 与刘海安全区；系统返回 predictive back；动态广播默认 NOT_EXPORTED；清单声明 INTERACT_ACROSS_USERS 以应对 Android 17+ 跨 profile loopback（需 ADB 授予）。"
-        },
-        {
-            "id": "open-source-splash",
-            "title": "开源声明与模块改进开屏",
-            "body": "首次安装展示 GPL-3.0、第三方鸣谢，以及按 :app/:design/:service/:core 等模块整理的本分支改进说明。"
-        },
-        {
-            "id": "lumen-crash",
-            "title": "LumenCrash 崩溃捕获",
-            "body": "冷启动优先安装 LumenCrash；报告分享与宿主启动路径 fail-soft，避免闪退。"
-        },
-        {
-            "id": "release-signing",
-            "title": "可安装签名发布包",
-            "body": "CI 使用密钥库签名并校验 testOnly，降低 INSTALL -15 / 侧载安装失败。"
-        }
-    ],
-    "commits": [
-        {
-            "hash": "d1c0fb1",
-            "subject": "docs(ui): sync update_notes identity to HEAD after notes commit",
-            "type": "docs"
-        },
-        {
-            "hash": "c7547a4",
-            "subject": "docs(ui): refresh update_notes for undraw empty-state illustrations",
-            "type": "docs"
-        },
-        {
-            "hash": "8deeee9",
-            "subject": "feat(design): undraw dynamic-color empty-state illustrations",
-            "type": "feat"
-        },
-        {
-            "hash": "8876a46",
-            "subject": "feat(connections): rename to active connections and support close (#7)",
-            "type": "feat"
-        },
-        {
-            "hash": "a3235ef",
-            "subject": "feat(vpn): extend partner auto-adapt to NexAI and Project-Lumen",
-            "type": "feat"
-        },
-        {
-            "hash": "e3ec98e",
-            "subject": "docs(ci): Trellis workflow map and Actions reliability audit",
-            "type": "docs"
-        },
-        {
-            "hash": "f50e5b5",
-            "subject": "fix(ci): harden Actions patches and main-only release publish",
-            "type": "fix"
-        },
-        {
-            "hash": "9918430",
-            "subject": "docs(ci): expand gh failure forensics for last 3 failures",
-            "type": "docs"
-        },
-        {
-            "hash": "b651595",
-            "subject": "fix(ci): repair AAPT update_notes_title and codify gh auto-repair in Trellis",
-            "type": "fix"
-        },
-        {
-            "hash": "de0e6f3",
-            "subject": "feat(settings): add PiliPlus VPN auto-adapt toggle",
-            "type": "feat"
-        },
-        {
-            "hash": "b5f6dbe",
-            "subject": "chore(docs): refresh update_notes.json for HEAD identity",
-            "type": "chore"
-        },
-        {
-            "hash": "1767bab",
-            "subject": "feat(app): immersive update notes gate (Trellis android/update-notes)",
-            "type": "feat"
-        },
-        {
-            "hash": "f848db8",
-            "subject": "feat(vpn): auto-include PiliPlus partners and export partner status",
-            "type": "feat"
-        },
-        {
-            "hash": "88f95ab",
-            "subject": "feat(ui): add live connections viewer (查看使用)",
-            "type": "feat"
-        },
-        {
-            "hash": "b0ca643",
-            "subject": "docs(ui): rewrite fork deltas as module-level first-install splash",
-            "type": "docs"
-        },
-        {
-            "hash": "f763fb2",
-            "subject": "fix(app): stop cold-start flash-exit and restore LumenCrash capture",
-            "type": "fix"
-        },
-        {
-            "hash": "07b824c",
-            "subject": "fix(app): stop cold-start flash-exit and restore LumenCrash capture",
-            "type": "fix"
-        },
-        {
-            "hash": "c87f400",
-            "subject": "fix(build): make sideload APKs installable (INSTALL -15)",
-            "type": "fix"
-        },
-        {
-            "hash": "fe22dbb",
-            "subject": "fix(app): prevent cold-start crash from LumenCrash and dashboard fetch",
-            "type": "fix"
-        },
-        {
-            "hash": "e286f32",
-            "subject": "fix(ci): restore trailing newline in lumen-crash version resolver",
-            "type": "fix"
-        },
-        {
-            "hash": "1096b75",
-            "subject": "fix(ci): make lumen-crash version resolver parse API JSON safely",
-            "type": "fix"
-        },
-        {
-            "hash": "1d25e64",
-            "subject": "fix(ci): resolve lumen-crash version via stdin JSON parse",
-            "type": "fix"
-        },
-        {
-            "hash": "f0184a9",
-            "subject": "fix(ci): make lumen-crash version resolver parse API JSON safely",
-            "type": "fix"
-        },
-        {
-            "hash": "ad87437",
-            "subject": "fix(app): complete lumen-crash host integration",
-            "type": "fix"
-        },
-        {
-            "hash": "fcd077b",
-            "subject": "Resolve lumen-crash version in build workflows",
-            "type": "chore"
-        },
-        {
-            "hash": "5ce30a6",
-            "subject": "fix(app): install LumenCrash before any other host startup work",
-            "type": "fix"
-        }
-    ],
-    "modules": [
-        {
-            "module": ":app",
-            "summary": "开源/更新开屏门闸 · 授权 ADB 审计报告导入 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
-        },
-        {
-            "module": ":design",
-            "summary": "主页流量趋势 · 连接聚合与日志过滤 · 平板代理双栏 · unDraw 可选壁纸配色插画"
-        },
-        {
-            "module": ":service",
-            "summary": "Live Update 状态通知 · 场景与节点故障转移 · 配置独立流量计费 · 伙伴应用自动适配 · 外部控制加固"
-        },
-        {
-            "module": ":core",
-            "summary": "mihomo 桥接与 subscription-userinfo 解析保留"
-        },
-        {
-            "module": "CI / release",
-            "summary": "main 推送 Meta latest + Alpha 预发布 · 签名与 SHA256SUMS"
-        }
-    ]
+    {
+      "id": "safe-profile-file-workflow",
+      "title": "配置文件安全编辑与导出",
+      "body": "文件页支持通过临时 YAML 副本调用外部编辑器，回写前进行内核校验并在失败时保留原配置；同时新增只读结构概览，以及经过敏感信息提醒的手动原始配置导出。"
+    },
+    {
+      "id": "profile-traffic-billing",
+      "title": "配置独立流量计费",
+      "body": "每个配置可独立选择本地从 0 计费或使用订阅信息；切换配置后，列表显示与运行时计费均使用该配置自己的选择，应用设置只作为未保存选择时的默认值。"
+    },
+    {
+      "id": "large-screen-proxy",
+      "title": "平板代理双栏",
+      "body": "代理页面在平板和大屏设备上同时显示代理组列表与当前组详情；手机保持原有单栏，搜索、排序和渐进测速继续可用。"
+    },
+    {
+      "id": "scene-automation",
+      "title": "可控的场景自动化",
+      "body": "新增按网络类型和时间匹配的场景，可切换模式或已导入配置；自动场景与节点故障转移均默认关闭，且不会自动启动或停止 VPN。"
+    },
+    {
+      "id": "authorized-adb-audit",
+      "title": "授权设备审计报告",
+      "body": "Windows ADB 桥接工具可在明确授权后采集设备侧证据，默认脱敏文本并记录能力缺口；应用内可导入并校验 JSONL 或 ZIP 报告及附件哈希。"
+    },
+    {
+      "id": "undraw-empty-states",
+      "title": "主题色空状态插画（unDraw）",
+      "body": "连接列表、配置列表与日志空状态展示 unDraw 插画；默认使用 Clash 品牌色，Android 12 及以上可在应用设置中选择跟随壁纸配色，亮暗模式继续跟随应用设置。"
+    },
+    {
+      "id": "connections-viewer",
+      "title": "活跃连接（连接列表）",
+      "body": "主页可查看并管理当前活跃连接（主机/SNI、进程、流量、规则与链路；支持关闭单条/全部）。"
+    },
+    {
+      "id": "update-notes-gate",
+      "title": "沉浸式本次更新说明",
+      "body": "新构建（versionCode + commit hash）首次启动展示亮点、模块说明与近期提交/合并；身份含 Build Time。"
+    },
+    {
+      "id": "partner-auto-adapt",
+      "title": "伙伴应用 VPN 自动适配",
+      "body": "网络设置可开关：已安装的 PiliPlus / NexAI / Project-Lumen / 知乎++ 自动纳入访问控制；StatusProvider 导出 partner 状态供伙伴查询。"
+    },
+    {
+      "id": "android-16-17",
+      "title": "Android 16 / 17 平台适配",
+      "body": "target/compile SDK 36（Android 16）；强制 edge-to-edge 与刘海安全区；系统返回 predictive back；动态广播默认 NOT_EXPORTED；清单声明 INTERACT_ACROSS_USERS 以应对 Android 17+ 跨 profile loopback（需 ADB 授予）。"
+    },
+    {
+      "id": "open-source-splash",
+      "title": "开源声明与模块改进开屏",
+      "body": "首次安装展示 GPL-3.0、第三方鸣谢，以及按 :app/:design/:service/:core 等模块整理的本分支改进说明。"
+    },
+    {
+      "id": "lumen-crash",
+      "title": "LumenCrash 崩溃捕获",
+      "body": "冷启动优先安装 LumenCrash；报告分享与宿主启动路径 fail-soft，避免闪退。"
+    },
+    {
+      "id": "release-signing",
+      "title": "可安装签名发布包",
+      "body": "CI 使用密钥库签名并校验 testOnly，降低 INSTALL -15 / 侧载安装失败。"
+    }
+  ],
+  "commits": [
+    {
+      "hash": "7cccc5c9",
+      "subject": "feat: complete remaining Trellis roadmap and audit tasks",
+      "type": "feat"
+    },
+    {
+      "hash": "f053f1e3",
+      "subject": "docs(spec): document profile-scoped preferences",
+      "type": "docs"
+    },
+    {
+      "hash": "07be2bd3",
+      "subject": "fix(service): scope subscription billing by profile",
+      "type": "fix"
+    },
+    {
+      "hash": "8590490a",
+      "subject": "fix(design): guard battery optimization API level",
+      "type": "fix"
+    },
+    {
+      "hash": "3b02c8fd",
+      "subject": "fix(test): use valid app lock unlock timestamp",
+      "type": "fix"
+    },
+    {
+      "hash": "7b1ca800",
+      "subject": "fix(design): resolve wide proxy binding in CI",
+      "type": "fix"
+    },
+    {
+      "hash": "9d9aad0f",
+      "subject": "feat: add consent-gated network audit workflow",
+      "type": "feat"
+    },
+    {
+      "hash": "cc826e47",
+      "subject": "feat: expand external capture artifact adapters",
+      "type": "feat"
+    },
+    {
+      "hash": "f6621297",
+      "subject": "docs: document branch improvements and sync workspace changes",
+      "type": "docs"
+    },
+    {
+      "hash": "4d9ff0bd",
+      "subject": "feat: add external ADB audit bridge and report import",
+      "type": "feat"
+    },
+    {
+      "hash": "dbe47461",
+      "subject": "feat(security): optional app lock and sensitive field masking",
+      "type": "feat"
+    },
+    {
+      "hash": "66b705ec",
+      "subject": "feat(ui): access control browsers+partners preset and filters",
+      "type": "feat"
+    },
+    {
+      "hash": "c96d62c8",
+      "subject": "feat(partners): merge signature-verified partner registry v1",
+      "type": "feat"
+    },
+    {
+      "hash": "687cb6ea",
+      "subject": "fix(app): import launch for profile QR share error path",
+      "type": "fix"
+    },
+    {
+      "hash": "316d039c",
+      "subject": "feat(profiles): export subscription QR and expiry reminders",
+      "type": "feat"
+    },
+    {
+      "hash": "a349ee4f",
+      "subject": "feat(ui): add home screen status and control widgets",
+      "type": "feat"
+    },
+    {
+      "hash": "59b5bf23",
+      "subject": "fix(service): harden traffic history sampling isolation",
+      "type": "fix"
+    },
+    {
+      "hash": "6a8a78d1",
+      "subject": "feat(service): add traffic history ring buffer and WidgetState contract",
+      "type": "feat"
+    },
+    {
+      "hash": "a6748d99",
+      "subject": "fix(vpn): stop bypassing zhihu domains from system HTTP proxy",
+      "type": "fix"
+    },
+    {
+      "hash": "af656ed6",
+      "subject": "fix(ui,ci): drop local-traffic intros and silence setup-go cache warning",
+      "type": "fix"
+    },
+    {
+      "hash": "98e08760",
+      "subject": "fix(vpn): update Zhihu++ partner package to com.chloemlla.zhplus",
+      "type": "fix"
+    },
+    {
+      "hash": "eea23a61",
+      "subject": "fix(design): move light system-bar attrs out of base themes",
+      "type": "fix"
+    },
+    {
+      "hash": "7f713591",
+      "subject": "fix: recover JNI goroutine panics and harden profile write order",
+      "type": "fix"
+    },
+    {
+      "hash": "0ccd0821",
+      "subject": "Update target SDK to 36 and fix traffic bitmask",
+      "type": "chore"
+    },
+    {
+      "hash": "3367258b",
+      "subject": "feat(vpn): extend partner auto-adapt to Zhihu++",
+      "type": "feat"
+    },
+    {
+      "hash": "614dded3",
+      "subject": "feat(ui): undraw dynamic-color empty-state illustrations (#8)",
+      "type": "feat"
+    },
+    {
+      "hash": "8876a461",
+      "subject": "feat(connections): rename to active connections and support close (#7)",
+      "type": "feat"
+    },
+    {
+      "hash": "a3235ef8",
+      "subject": "feat(vpn): extend partner auto-adapt to NexAI and Project-Lumen",
+      "type": "feat"
+    },
+    {
+      "hash": "e3ec98e3",
+      "subject": "docs(ci): Trellis workflow map and Actions reliability audit",
+      "type": "docs"
+    },
+    {
+      "hash": "f50e5b5d",
+      "subject": "fix(ci): harden Actions patches and main-only release publish",
+      "type": "fix"
+    }
+  ],
+  "modules": [
+    {
+      "module": ":app",
+      "summary": "开源/更新开屏门闸 · 授权 ADB 审计报告导入 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
+    },
+    {
+      "module": ":design",
+      "summary": "主页流量趋势 · 连接聚合与日志过滤 · 平板代理双栏 · unDraw 可选壁纸配色插画"
+    },
+    {
+      "module": ":service",
+      "summary": "Live Update 状态通知 · 场景与节点故障转移 · 配置独立流量计费 · 伙伴应用自动适配 · 外部控制加固"
+    },
+    {
+      "module": ":core",
+      "summary": "mihomo 桥接与 subscription-userinfo 解析保留"
+    },
+    {
+      "module": "CI / release",
+      "summary": "main 推送 Meta latest + Alpha 预发布 · 签名与 SHA256SUMS"
+    }
+  ]
 }
