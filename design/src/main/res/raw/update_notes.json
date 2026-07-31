@@ -8,9 +8,39 @@
     },
     "highlights": [
         {
+            "id": "observability-dashboard",
+            "title": "本地可观测面板",
+            "body": "主页新增近期上下行流量趋势；活跃连接可按应用、主机或出站链路聚合并搜索排序；实时与历史日志支持本地关键词过滤。"
+        },
+        {
+            "id": "safe-profile-file-workflow",
+            "title": "配置文件安全编辑与导出",
+            "body": "文件页支持通过临时 YAML 副本调用外部编辑器，回写前进行内核校验并在失败时保留原配置；同时新增只读结构概览，以及经过敏感信息提醒的手动原始配置导出。"
+        },
+        {
+            "id": "profile-traffic-billing",
+            "title": "配置独立流量计费",
+            "body": "每个配置可独立选择本地从 0 计费或使用订阅信息；切换配置后，列表显示与运行时计费均使用该配置自己的选择，应用设置只作为未保存选择时的默认值。"
+        },
+        {
+            "id": "large-screen-proxy",
+            "title": "平板代理双栏",
+            "body": "代理页面在平板和大屏设备上同时显示代理组列表与当前组详情；手机保持原有单栏，搜索、排序和渐进测速继续可用。"
+        },
+        {
+            "id": "scene-automation",
+            "title": "可控的场景自动化",
+            "body": "新增按网络类型和时间匹配的场景，可切换模式或已导入配置；自动场景与节点故障转移均默认关闭，且不会自动启动或停止 VPN。"
+        },
+        {
+            "id": "authorized-adb-audit",
+            "title": "授权设备审计报告",
+            "body": "Windows ADB 桥接工具可在明确授权后采集设备侧证据，默认脱敏文本并记录能力缺口；应用内可导入并校验 JSONL 或 ZIP 报告及附件哈希。"
+        },
+        {
             "id": "undraw-empty-states",
-            "title": "动态色空状态插画（unDraw）",
-            "body": "连接列表、配置列表与日志空状态展示主题色 undraw 插画；亮/暗与 Material 动态取色自动跟随，开源鸣谢含 unDraw。"
+            "title": "主题色空状态插画（unDraw）",
+            "body": "连接列表、配置列表与日志空状态展示 unDraw 插画；默认使用 Clash 品牌色，Android 12 及以上可在应用设置中选择跟随壁纸配色，亮暗模式继续跟随应用设置。"
         },
         {
             "id": "connections-viewer",
@@ -183,15 +213,15 @@
     "modules": [
         {
             "module": ":app",
-            "summary": "开源/更新开屏门闸 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
+            "summary": "开源/更新开屏门闸 · 授权 ADB 审计报告导入 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
         },
         {
             "module": ":design",
-            "summary": "unDraw 动态色空状态插画 · 配置列表流量进度条 · 模块级首装说明卡片"
+            "summary": "主页流量趋势 · 连接聚合与日志过滤 · 平板代理双栏 · unDraw 可选壁纸配色插画"
         },
         {
             "module": ":service",
-            "summary": "Live Update 状态通知 · 伙伴应用自动适配 · 外部控制加固"
+            "summary": "Live Update 状态通知 · 场景与节点故障转移 · 配置独立流量计费 · 伙伴应用自动适配 · 外部控制加固"
         },
         {
             "module": ":core",

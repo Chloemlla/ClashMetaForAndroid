@@ -6,7 +6,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 /**
- * Master-list adapter for the sw600dp Proxy dual-pane host (M4 R1).
+ * Master-list adapter for the large-screen Proxy list-detail layout.
  *
  * This is a pure navigation aid over the existing [ProxyPageAdapter] / `ViewPager2` pages —
  * clicking a row only moves the ViewPager2's current item, it does not duplicate any of the
@@ -17,7 +17,19 @@ class ProxyGroupListAdapter(
     private val groupNames: List<String>,
     private val onGroupClicked: (index: Int) -> Unit,
 ) : RecyclerView.Adapter<ProxyGroupListAdapter.Holder>() {
-    class Holder(val text: TextView) : RecyclerView.ViewHolder(text)
+    class Holder(
+        val text: TextView,
+        onGroupClicked: (index: Int) -> Unit,
+    ) : RecyclerView.ViewHolder(text) {
+        init {
+            text.setOnClickListener {
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onGroupClicked(position)
+                }
+            }
+        }
+    }
 
     private var selectedIndex: Int = -1
 
@@ -38,15 +50,14 @@ class ProxyGroupListAdapter(
             false,
         ) as TextView
 
-        return Holder(view)
+        return Holder(view, onGroupClicked)
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
+        val selected = position == selectedIndex
         holder.text.text = groupNames[position]
-        holder.text.isActivated = position == selectedIndex
-        holder.text.setOnClickListener {
-            onGroupClicked(position)
-        }
+        holder.text.isActivated = selected
+        holder.text.isSelected = selected
     }
 
     override fun getItemCount(): Int = groupNames.size

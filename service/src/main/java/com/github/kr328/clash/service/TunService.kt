@@ -34,6 +34,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         val tun = install(TunModule(self))
         val config = install(ConfigurationModule(self))
         val network = install(NetworkObserveModule(self))
+        val scenes = install(SceneModule(self, network::currentSceneSnapshot))
 
         if (store.dynamicNotification)
             install(DynamicNotificationModule(self))
@@ -61,6 +62,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                         true
                     }
                     network.onEvent { n ->
+                        scenes.requestEvaluation()
+
                         if (Build.VERSION.SDK_INT in 22..28) @TargetApi(22) {
                             setUnderlyingNetworks(n?.let { arrayOf(it) })
                         }

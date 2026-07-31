@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.core.model.TunnelState
@@ -63,6 +64,19 @@ class ProxyDesign(
 
     private val adapter: ProxyPageAdapter
         get() = binding.pagesView.adapter!! as ProxyPageAdapter
+
+    private val groupListView: RecyclerView? =
+        binding.root.findViewById<RecyclerView>(R.id.group_list_view)
+
+    private val groupListAdapter: ProxyGroupListAdapter? =
+        groupListView?.let { list ->
+            ProxyGroupListAdapter(groupNames) { index ->
+                binding.pagesView.setCurrentItem(index, true)
+            }.also { navigationAdapter ->
+                list.layoutManager = LinearLayoutManager(context)
+                list.adapter = navigationAdapter
+            }
+        }
 
     private var horizontalScrolling = false
     private val verticalBottomScrolled: Boolean
@@ -158,9 +172,8 @@ class ProxyDesign(
             binding.pagesView.visibility = View.GONE
             binding.urlTestFloatView.visibility = View.GONE
 
-            // sw600dp dual-pane host only: hide the group-list rail too. Data Binding
-            // does not expose IDs that exist only in a layout-qualified variant.
-            (binding.root.findViewById<View>(R.id.group_list_view)?.parent as? View)?.visibility = View.GONE
+            // The group rail only exists in the large-screen layout variant.
+            (groupListView?.parent as? View)?.visibility = View.GONE
         } else {
             binding.urlTestFloatView.supportImageTintList = ColorStateList.valueOf(
                 context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimary)
@@ -229,6 +242,7 @@ class ProxyDesign(
 
                     override fun onPageSelected(position: Int) {
                         uiStore.proxyLastGroup = groupNames[position]
+                        syncGroupListSelection(position)
                         syncKeywordField()
                         updateSearchButtonStatus()
                         updateUrlTestButtonStatus()
@@ -245,6 +259,7 @@ class ProxyDesign(
             binding.pagesView.post {
                 if (initialPosition > 0)
                     binding.pagesView.setCurrentItem(initialPosition, false)
+                syncGroupListSelection(binding.pagesView.currentItem)
                 syncKeywordField()
                 updateSearchButtonStatus()
             }
@@ -332,7 +347,21 @@ class ProxyDesign(
         return binding.pagesView.adapter == null
     }
 
-    
+    private fun syncGroupListSelection(position: Int) {
+        groupListAdapter?.setSelected(position)
+
+        val list = groupListView ?: return
+        list.post {
+            val layoutManager = list.layoutManager as? LinearLayoutManager ?: return@post
+            val first = layoutManager.findFirstVisibleItemPosition()
+            val last = layoutManager.findLastVisibleItemPosition()
+
+            if (first == RecyclerView.NO_POSITION || position !in first..last) {
+                list.scrollToPosition(position)
+            }
+        }
+    }
+
     private fun updateListTopInset() {
         if (groupNamesEmpty()) return
         val extra = if (binding.searchBar.visibility == View.VISIBLE) {
@@ -342,11 +371,10 @@ class ProxyDesign(
         }
         adapter.setExtraTopInset(extra)
     }
+
     private fun hideKeyboard() {
         val imm = context.getSystemService<InputMethodManager>() ?: return
         imm.hideSoftInputFromWindow(binding.keywordView.windowToken, 0)
         binding.keywordView.clearFocus()
     }
 }
-
-

@@ -26,6 +26,7 @@ class ClashService : BaseService() {
         val close = install(CloseModule(self))
         val config = install(ConfigurationModule(self))
         val network = install(NetworkObserveModule(self))
+        val scenes = install(SceneModule(self, network::currentSceneSnapshot))
 
         if (store.dynamicNotification)
             install(DynamicNotificationModule(self))
@@ -51,6 +52,8 @@ class ClashService : BaseService() {
                         true
                     }
                     network.onEvent {
+                        scenes.requestEvaluation()
+
                         false
                     }
                 }

@@ -36,6 +36,11 @@ class LogMessageAdapter(
         }
     }
 
+    fun replaceMessages(updated: List<LogMessage>) {
+        messages = updated
+        notifyDataSetChanged()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         return Holder(
             AdapterLogMessageBinding

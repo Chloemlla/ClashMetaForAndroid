@@ -1,5 +1,7 @@
 package com.github.kr328.clash.service.clash.module
 
+import com.github.kr328.clash.core.util.decodeTrafficBytes
+
 /**
  * Decode Clash packed traffic samples into raw byte counts.
  *
@@ -11,15 +13,7 @@ package com.github.kr328.clash.service.clash.module
  * and unit-test without Android notification machinery.
  */
 internal fun scaleTrafficBytes(value: Long): Long {
-    val type = (value ushr 30) and 0x3
-    val data = value and 0x3FFFFFFF
-    return when (type) {
-        0L -> data
-        1L -> data * 1024L / 100L
-        2L -> data * 1024L * 1024L / 100L
-        3L -> data * 1024L * 1024L * 1024L / 100L
-        else -> 0L
-    }
+    return decodeTrafficBytes(value)
 }
 
 /**

@@ -9,6 +9,7 @@ import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.IConnectionsObserver
 import com.github.kr328.clash.service.remote.ILogObserver
+import com.github.kr328.clash.service.scene.NodeFailoverController
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.sendOverrideChanged
 import kotlinx.coroutines.*
@@ -17,6 +18,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 class ClashManager(private val context: Context) : IClashManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
     private val store = ServiceStore(context)
+    private val failover = NodeFailoverController(context)
     private var logReceiver: ReceiveChannel<LogMessage>? = null
     private var connectionsReceiver: ReceiveChannel<com.github.kr328.clash.core.model.ConnectionSnapshot>? = null
 
@@ -94,7 +96,25 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override suspend fun healthCheck(group: String) {
-        return Clash.healthCheck(group).await()
+        try {
+            Clash.healthCheck(group).await()
+            evaluateFailover(group, completedSuccessfully = true)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            evaluateFailover(group, completedSuccessfully = false)
+            throw e
+        }
+    }
+
+    private suspend fun evaluateFailover(group: String, completedSuccessfully: Boolean) {
+        try {
+            failover.onHealthCheckCompleted(group, completedSuccessfully)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("Node failover evaluation failed for group=$group", e)
+        }
     }
 
     override suspend fun updateProvider(type: Provider.Type, name: String) {

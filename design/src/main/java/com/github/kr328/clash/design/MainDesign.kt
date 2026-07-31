@@ -7,8 +7,10 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.core.util.trafficDownload
+import com.github.kr328.clash.core.util.trafficDownloadBytes
 import com.github.kr328.clash.core.util.trafficTotal
 import com.github.kr328.clash.core.util.trafficUpload
+import com.github.kr328.clash.core.util.trafficUploadBytes
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.util.layoutInflater
@@ -52,6 +54,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             } else {
                 binding.statusSubtext = context.getString(R.string.tap_to_start)
                 binding.proxySummary = ""
+                binding.trafficSparkline.clear()
+                binding.trafficSparkline.contentDescription =
+                    context.getString(R.string.a11y_traffic_trend_empty)
             }
             refreshStatusAccessibility()
         }
@@ -69,11 +74,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     suspend fun setTrafficSummary(total: Long, now: Long = 0L) {
         withContext(Dispatchers.Main) {
+            val upload = now.trafficUpload()
+            val download = now.trafficDownload()
             binding.statusSubtext = context.getString(
                 R.string.format_traffic_forwarded_with_speed,
                 total.trafficTotal(),
-                now.trafficUpload(),
-                now.trafficDownload(),
+                upload,
+                download,
+            )
+            binding.trafficSparkline.append(
+                uploadBytesPerSecond = now.trafficUploadBytes(),
+                downloadBytesPerSecond = now.trafficDownloadBytes(),
+            )
+            binding.trafficSparkline.contentDescription = context.getString(
+                R.string.a11y_traffic_trend,
+                upload,
+                download,
             )
             refreshStatusAccessibility()
         }
@@ -139,6 +155,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.clashStarting = false
         binding.statusSubtext = context.getString(R.string.tap_to_start)
         binding.proxySummary = ""
+        binding.trafficSparkline.contentDescription =
+            context.getString(R.string.a11y_traffic_trend_empty)
 
         binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)

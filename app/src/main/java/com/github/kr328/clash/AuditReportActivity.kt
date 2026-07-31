@@ -24,13 +24,35 @@ class AuditReportActivity : BaseActivity<AuditReportDesign>() {
         launch {
             design?.updateReport(getString(R.string.audit_importing))
             runCatching {
-                contentResolver.openInputStream(uri)?.use { input ->
-                    withContext(Dispatchers.IO) { AuditReportImporter.import(this@AuditReportActivity, input) }
-                } ?: error("Unable to open report")
+                withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        AuditReportImporter.import(this@AuditReportActivity, input)
+                    } ?: error("Unable to open report")
+                }
             }.onSuccess { summary ->
                 val gaps = summary.limitations.joinToString(separator = "\n") { "- $it" }
+                val evidence = summary.evidenceFiles.joinToString(separator = "\n") { "- $it" }
                 design?.updateReport(buildString {
                     append(getString(R.string.audit_report_summary, summary.packageName, summary.evidenceFiles.size, summary.limitations.size))
+                    append("\n").append(getString(R.string.audit_session_id, summary.sessionId))
+                    summary.deviceLabel?.let { device ->
+                        append("\n").append(getString(R.string.audit_device_summary, device))
+                    }
+                    append("\n").append(
+                        getString(
+                            if (summary.redactionApplied) {
+                                R.string.audit_report_redacted
+                            } else {
+                                R.string.audit_report_unredacted
+                            },
+                        ),
+                    )
+                    summary.authorizationReference?.let { reference ->
+                        append("\n").append(getString(R.string.audit_authorization_reference, reference))
+                    }
+                    if (evidence.isNotBlank()) {
+                        append("\n\n").append(getString(R.string.audit_evidence_files)).append("\n").append(evidence)
+                    }
                     if (gaps.isNotBlank()) append("\n\n").append(gaps)
                 })
             }.onFailure {
@@ -50,7 +72,13 @@ class AuditReportActivity : BaseActivity<AuditReportDesign>() {
                         .onFailure { reportDesign.updateAuthorization(false, settingsUnavailable = true) }
                 }
                 AuditReportDesign.Request.ImportReport -> picker.launch(
-                    arrayOf("application/zip", "application/jsonl", "application/json", "text/plain"),
+                    arrayOf(
+                        "application/zip",
+                        "application/x-zip-compressed",
+                        "application/jsonl",
+                        "application/json",
+                        "text/plain",
+                    ),
                 )
             }
         }

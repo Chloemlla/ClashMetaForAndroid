@@ -34,4 +34,11 @@
     <string name="subscription_expiring_title">Subscription expiring soon</string>
     <string name="format_subscription_expired">%1$s has expired</string>
     <string name="format_subscription_expiring">%1$s expires within 3 days</string>
+    <string name="automation_notification_channel">Scenes and failover</string>
+    <string name="service_scene_home_direct">Home direct</string>
+    <string name="service_scene_away_proxy">Away proxy</string>
+    <string name="format_scene_applied">Applied scene: %1$s</string>
+    <string name="scene_applied_summary">Network and time conditions matched this scene.</string>
+    <string name="proxy_failover_applied">Proxy switched after repeated failures</string>
+    <string name="format_proxy_failover">%1$s: %2$s → %3$s</string>
 </resources>

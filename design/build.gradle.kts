@@ -16,8 +16,7 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.viewpager)
-    // sw600dp Proxy dual-pane host (M4 R1); androidx SlidingPaneLayout wraps the existing
-    // ViewPager2/TabLayout content unchanged and only adds an additive group-list rail.
+    // The large-screen Proxy layout keeps the existing pager detail and adds a group rail.
     implementation(libs.androidx.slidingpanelayout)
     implementation(libs.google.material)
     // Encode-only QR for profile export (scanner stays on app via quickie).

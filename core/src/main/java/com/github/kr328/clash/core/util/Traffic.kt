@@ -11,6 +11,16 @@ fun Traffic.trafficDownload(): String {
     return trafficString(scaleTraffic(this and 0xFFFFFFFFL))
 }
 
+/** Decode the packed upload half into raw bytes per second / total bytes. */
+fun Traffic.trafficUploadBytes(): Long {
+    return decodeTrafficBytes(this ushr 32)
+}
+
+/** Decode the packed download half into raw bytes per second / total bytes. */
+fun Traffic.trafficDownloadBytes(): Long {
+    return decodeTrafficBytes(this and 0xFFFFFFFFL)
+}
+
 fun Traffic.trafficTotal(): String {
     val upload = scaleTraffic(this ushr 32)
     val download = scaleTraffic(this and 0xFFFFFFFFL)
@@ -51,5 +61,19 @@ private fun scaleTraffic(value: Long): Long {
         2L -> data * 1024 * 1024
         3L -> data * 1024 * 1024 * 1024
         else -> throw IllegalArgumentException("invalid value type")
+    }
+}
+
+/** Decode one packed 32-bit traffic value into raw bytes. */
+fun decodeTrafficBytes(value: Long): Long {
+    val type = (value ushr 30) and 0x3
+    val data = value and 0x3FFFFFFF
+
+    return when (type) {
+        0L -> data
+        1L -> data * 1024L / 100L
+        2L -> data * 1024L * 1024L / 100L
+        3L -> data * 1024L * 1024L * 1024L / 100L
+        else -> 0L
     }
 }

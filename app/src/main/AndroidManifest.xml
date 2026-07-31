@@ -175,6 +175,11 @@
             android:exported="false"
             android:label="@string/network" />
         <activity
+            android:name=".AutomationSettingsActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/scenes" />
+        <activity
             android:name=".AppSettingsActivity"
             android:configChanges="uiMode"
             android:exported="false"

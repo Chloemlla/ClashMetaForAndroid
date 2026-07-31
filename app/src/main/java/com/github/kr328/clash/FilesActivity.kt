@@ -2,14 +2,8 @@
 
 package com.github.kr328.clash
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-import com.github.kr328.clash.common.util.grantPermissions
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.design.FilesDesign
@@ -31,9 +25,16 @@ class FilesActivity : BaseActivity<FilesDesign>() {
 
         val design = FilesDesign(this)
         val client = FilesClient(this)
+        design.configurationEditable = profile.type == Profile.Type.File
+        val fileActions = ProfileFileActions(
+            activity = this,
+            uuid = uuid,
+            root = root,
+            configurationEditable = design.configurationEditable,
+            client = client,
+            design = design,
+        )
         val stack = Stack<String>()
-
-        design.configurationEditable = profile.type != Profile.Type.Url
 
         setContentDesign(design)
 
@@ -65,13 +66,7 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                                 stack.push(it.file.id)
                             }
                             is FilesDesign.Request.OpenFile -> {
-                                startActivityForResult(
-                                    ActivityResultContracts.StartActivityForResult(),
-                                    Intent(Intent.ACTION_VIEW).setDataAndType(
-                                        client.buildDocumentUri(it.file.id),
-                                        "text/plain"
-                                    ).grantPermissions()
-                                )
+                                fileActions.open(it.file)
                             }
                             is FilesDesign.Request.DeleteFile -> {
                                 client.deleteDocument(it.file.id)
@@ -92,20 +87,27 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                                         val name = design.requestFileName(uri.fileName ?: "File")
 
                                         client.importDocument(stack.last(), uri, name)
+                                    } else if (fileActions.isConfiguration(it.file)) {
+                                        fileActions.importEdited(it.file, uri)
                                     } else {
-                                        client.copyDocument(it.file!!.id, uri)
+                                        client.copyDocument(it.file.id, uri)
                                     }
                                 }
                             }
                             is FilesDesign.Request.ExportFile -> {
                                 val uri: Uri? = startActivityForResult(
-                                    ActivityResultContracts.CreateDocument("text/plain"),
-                                    it.file.name
+                                    ActivityResultContracts.CreateDocument(
+                                        fileActions.mimeType(it.file)
+                                    ),
+                                    it.file.name,
                                 )
 
                                 if (uri != null) {
                                     client.copyDocument(uri, it.file.id)
                                 }
+                            }
+                            is FilesDesign.Request.ShowOutline -> {
+                                fileActions.showOutline(it.file)
                             }
                         }
                     } catch (e: Exception) {

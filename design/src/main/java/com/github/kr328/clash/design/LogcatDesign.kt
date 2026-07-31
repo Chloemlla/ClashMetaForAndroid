@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.design.adapter.LogMessageAdapter
 import com.github.kr328.clash.design.databinding.DesignLogcatBinding
+import com.github.kr328.clash.design.dialog.requestModelTextInput
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import kotlinx.coroutines.Dispatchers
@@ -34,13 +35,27 @@ class LogcatDesign(
             showToast(R.string.copied, ToastDuration.Short)
         }
     }
+    private var latestMessages: List<LogMessage> = emptyList()
+    private var filterQuery = ""
 
     suspend fun patchMessages(messages: List<LogMessage>, removed: Int, appended: Int) {
         withContext(Dispatchers.Main) {
-            adapter.submitMessages(messages, removed, appended)
+            latestMessages = messages
+            renderMessages(removed, appended, allowIncremental = filterQuery.isEmpty())
+        }
+    }
 
-            if (streaming && messages.isNotEmpty() && binding.recyclerList.isTop) {
-                binding.recyclerList.scrollToPosition(messages.size - 1)
+    fun requestFilter() {
+        launch {
+            val updated = context.requestModelTextInput(
+                initial = filterQuery.takeIf { it.isNotEmpty() },
+                title = context.getString(R.string.filter_logs),
+                reset = context.getString(R.string.reset),
+                hint = context.getString(R.string.log_filter_hint),
+            )
+            withContext(Dispatchers.Main) {
+                filterQuery = updated.orEmpty().trim()
+                renderMessages(removed = 0, appended = 0, allowIncremental = false)
             }
         }
     }
@@ -63,5 +78,37 @@ class LogcatDesign(
             }
         }
         binding.recyclerList.adapter = adapter
+        binding.filterView.setOnClickListener { requestFilter() }
+        updateFilterChrome()
+    }
+
+    private fun renderMessages(removed: Int, appended: Int, allowIncremental: Boolean) {
+        val displayed = if (filterQuery.isEmpty()) {
+            latestMessages
+        } else {
+            latestMessages.filter { it.matchesLogQuery(filterQuery) }
+        }
+
+        if (allowIncremental) {
+            adapter.submitMessages(displayed, removed, appended)
+        } else {
+            adapter.replaceMessages(displayed)
+        }
+        binding.filterEmptyView.visibility =
+            if (filterQuery.isNotEmpty() && displayed.isEmpty()) View.VISIBLE else View.GONE
+        updateFilterChrome()
+
+        if (streaming && displayed.isNotEmpty() && binding.recyclerList.isTop) {
+            binding.recyclerList.scrollToPosition(displayed.size - 1)
+        }
+    }
+
+    private fun updateFilterChrome() {
+        binding.filterView.alpha = if (filterQuery.isEmpty()) 0.72f else 1f
+        binding.filterView.contentDescription = if (filterQuery.isEmpty()) {
+            context.getString(R.string.filter_logs)
+        } else {
+            context.getString(R.string.filter_logs_active, filterQuery)
+        }
     }
 }

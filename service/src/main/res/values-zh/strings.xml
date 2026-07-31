@@ -30,4 +30,11 @@
     <string name="subscription_expiring_title">订阅即将到期</string>
     <string name="format_subscription_expired">%1$s 已过期</string>
     <string name="format_subscription_expiring">%1$s 将在 3 天内到期</string>
+    <string name="automation_notification_channel">场景与故障转移</string>
+    <string name="service_scene_home_direct">家庭直连</string>
+    <string name="service_scene_away_proxy">外出代理</string>
+    <string name="format_scene_applied">已应用场景：%1$s</string>
+    <string name="scene_applied_summary">当前网络和时间条件与此场景匹配。</string>
+    <string name="proxy_failover_applied">连续失败后已切换代理</string>
+    <string name="format_proxy_failover">%1$s：%2$s → %3$s</string>
 </resources>

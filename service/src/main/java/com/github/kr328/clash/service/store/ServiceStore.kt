@@ -3,6 +3,7 @@ package com.github.kr328.clash.service.store
 import android.content.Context
 import com.github.kr328.clash.common.store.Store
 import com.github.kr328.clash.common.store.asStoreProvider
+import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.service.PreferenceProvider
 import com.github.kr328.clash.service.model.AccessControlMode
 import java.util.*
@@ -136,5 +137,51 @@ class ServiceStore(context: Context) {
     var subscriptionExpiryNotifiedKeys by store.stringSet(
         key = "subscription_expiry_notified_keys",
         defaultValue = emptySet()
+    )
+
+    var autoScenesEnabled by store.boolean(
+        key = "auto_scenes_enabled",
+        defaultValue = false,
+    )
+
+    var sceneNotificationsEnabled by store.boolean(
+        key = "scene_notifications_enabled",
+        defaultValue = true,
+    )
+
+    var sceneSsidMatchingEnabled by store.boolean(
+        key = "scene_ssid_matching_enabled",
+        defaultValue = false,
+    )
+
+    internal var scenesJson by store.string(
+        key = "scenes_json",
+        defaultValue = "",
+    )
+
+    var autoFailoverEnabled by store.boolean(
+        key = "auto_failover_enabled",
+        defaultValue = false,
+    )
+
+    var failoverNotificationsEnabled by store.boolean(
+        key = "failover_notifications_enabled",
+        defaultValue = true,
+    )
+
+    var failoverThreshold by store.int(
+        key = "failover_threshold",
+        defaultValue = 3,
+    )
+
+    var failoverCooldownMillis by store.long(
+        key = "failover_cooldown_millis",
+        defaultValue = 60_000L,
+    )
+
+    var failoverSort by store.enum(
+        key = "failover_sort",
+        defaultValue = ProxySort.Default,
+        values = ProxySort.values(),
     )
 }

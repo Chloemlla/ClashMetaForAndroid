@@ -78,10 +78,10 @@ class Picker(private val context: Context) {
                 if (writable && type != Profile.Type.File)
                     throw IllegalArgumentException("invalid open mode")
 
-                val flags: Set<Flag> = if (type == Profile.Type.Url)
-                    emptySet()
-                else
+                val flags: Set<Flag> = if (type == Profile.Type.File)
                     setOf(Flag.Writable)
+                else
+                    emptySet()
 
                 return FileDocument(
                     file = when {

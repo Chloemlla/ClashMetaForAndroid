@@ -23,7 +23,6 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         object Commit : Request()
         object BrowseFiles : Request()
         object ExportQr : Request()
-        data class SetLocalTrafficBilling(val enabled: Boolean) : Request()
     }
 
     private val binding = DesignPropertiesBinding
@@ -43,7 +42,6 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     var localTrafficBilling: Boolean = true
         set(value) {
-            if (field == value) return
             field = value
             refreshTrafficBillingLabel()
         }
@@ -213,7 +211,6 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             if (enabled == localTrafficBilling) return@launch
 
             localTrafficBilling = enabled
-            requests.trySend(Request.SetLocalTrafficBilling(enabled))
         }
     }
 
@@ -229,7 +226,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         requests.trySend(Request.ExportQr)
     }
 
-    /** Long-press / eye-icon reveal for the masked subscription URL (R3). */
+    /** Long-press / eye-icon reveal for the masked subscription URL. */
     fun toggleUrlReveal(): Boolean {
         urlRevealed = !urlRevealed
         binding.invalidateAll()
@@ -241,7 +238,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         return true
     }
 
-    /** Long-press / eye-icon reveal for the masked age secret key (R3). */
+    /** Long-press / eye-icon reveal for the masked age secret key. */
     fun toggleAgeSecretKeyReveal(): Boolean {
         ageSecretKeyRevealed = !ageSecretKeyRevealed
         binding.invalidateAll()

@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Large-screen (sw600dp+) Proxy dual-pane host (M4 R1).
-
-    The detail pane below is a byte-for-byte copy of the default `design_proxy.xml` content
-    (same ids, same view types) so ProxyDesign/ProxyPageAdapter/ProxyAdapter continue to own
-    all business logic (search / sort / progressive delay / selection) unchanged. The only
-    additive piece is the group-list rail on the start side, which is a pure navigation
-    shortcut over the existing ViewPager2 pages.
+    Large-screen Proxy list-detail host. The detail pane keeps the default layout's ids and
+    view types so the existing pager and adapters continue to own search, sorting, delay
+    updates, and selection. The group rail only navigates between those existing pages.
 -->
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -21,13 +17,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- List pane: proxy group names. Fixed width; screen-start inset lives here since
-             this pane is now the one flush against the physical screen edge. -->
+        <!-- List pane: proxy group names. Fixed width; start/top insets live here since
+             this pane is now flush against those physical screen edges. -->
         <LinearLayout
             android:layout_width="@dimen/proxy_group_list_pane_width"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:paddingStart="@{self.surface.insets.start}"
+            android:paddingTop="@{self.surface.insets.top}"
             android:background="?android:windowBackground">
 
             <TextView
@@ -38,7 +35,6 @@
                 android:gravity="center_vertical"
                 android:paddingStart="@dimen/item_header_margin"
                 android:paddingEnd="@dimen/item_header_margin"
-                android:paddingTop="@{self.surface.insets.top}"
                 android:text="@string/proxy"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
 
@@ -57,7 +53,7 @@
                 android:paddingBottom="@{self.surface.insets.bottom}" />
         </LinearLayout>
 
-        <!-- Detail pane: unmodified copy of the phone (default) design_proxy.xml content. -->
+        <!-- Detail pane: the same Proxy pager surface used by the phone layout. -->
         <androidx.coordinatorlayout.widget.CoordinatorLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"

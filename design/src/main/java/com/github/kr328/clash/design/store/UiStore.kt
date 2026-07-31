@@ -27,6 +27,12 @@ class UiStore(context: Context) {
         values = DarkMode.values()
     )
 
+    /** Wallpaper-derived colors for non-critical illustration chrome. Android 12+, default OFF. */
+    var dynamicColors: Boolean by store.boolean(
+        key = "dynamic_colors",
+        defaultValue = false,
+    )
+
     var hideAppIcon: Boolean by store.boolean(
         key = "hide_app_icon",
         defaultValue = context.packageManager.getComponentEnabledSetting(context.mainActivityAlias)

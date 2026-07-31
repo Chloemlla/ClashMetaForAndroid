@@ -32,20 +32,7 @@ object ProfileProcessor {
     suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
         withContext(NonCancellable) {
             processLock.withLock {
-                val snapshot = profileLock.withLock {
-                    val pending =
-                        PendingDao().queryByUUID(uuid) ?: throw IllegalArgumentException("profile $uuid not found")
-
-                    pending.enforceFieldValid()
-
-                    context.processingDir.deleteRecursively()
-                    context.processingDir.mkdirs()
-
-                    context.pendingDir.resolve(pending.uuid.toString())
-                        .copyRecursively(context.processingDir, overwrite = true)
-
-                    pending
-                }
+                val snapshot = snapshotPending(context, uuid)
 
                 Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
 
@@ -111,6 +98,30 @@ object ProfileProcessor {
 
                         context.sendProfileChanged(snapshot.uuid)
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate the current pending profile with the same kernel path used by [apply],
+     * without replacing the imported profile or consuming the pending edit.
+     */
+    suspend fun validate(context: Context, uuid: UUID) {
+        withContext(NonCancellable) {
+            processLock.withLock {
+                try {
+                    val snapshot = snapshotPending(context, uuid)
+
+                    Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
+                    fetchProfile(
+                        context = context,
+                        source = snapshot.source,
+                        force = snapshot.type != Profile.Type.File,
+                        callback = null,
+                    )
+                } finally {
+                    context.processingDir.deleteRecursively()
                 }
             }
         }
@@ -258,6 +269,23 @@ object ProfileProcessor {
                     context.sendProfileChanged(uuid)
                 }
             }
+        }
+    }
+
+    private suspend fun snapshotPending(context: Context, uuid: UUID): Pending {
+        return profileLock.withLock {
+            val pending = PendingDao().queryByUUID(uuid)
+                ?: throw IllegalArgumentException("profile $uuid not found")
+
+            pending.enforceFieldValid()
+
+            context.processingDir.deleteRecursively()
+            context.processingDir.mkdirs()
+
+            context.pendingDir.resolve(pending.uuid.toString())
+                .copyRecursively(context.processingDir, overwrite = true)
+
+            pending
         }
     }
 

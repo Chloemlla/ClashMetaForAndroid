@@ -94,6 +94,10 @@ jobs:
       - name: Repository policy checks
         run: python3 .github/scripts/verify-repository-policy.py
 
+      - name: ADB audit bridge tests
+        shell: pwsh
+        run: ./tools/adb-audit/Test-AdbAuditBridge.ps1
+
       - name: Release signing must fail without credentials
         shell: bash
         env:

@@ -22,3 +22,17 @@ Release builds fail when the file or any required property is missing. Temporary
 Stable and alpha workflows both use `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`.
 
 Never print signing properties, passwords, Base64 keystore values, or private-key material to workflow logs. Key rotation and distribution-console changes remain explicit maintainer operations outside this repository.
+
+## Authorized device audit boundary
+
+The Windows ADB audit companion is for devices and packages the tester is authorized to
+inspect. It requires explicit authorized-use confirmation, refuses ambiguous multi-device
+selection, validates the package name, and writes into a unique child directory under the
+user-selected output location. It must never install a CA, change the system proxy or VPN,
+grant permissions, obtain root, bypass TLS pinning, or inject a process.
+
+Generated text records are redacted by default. Disabling redaction requires a second
+explicit confirmation, and externally supplied PCAP/mitmproxy/Frida artifacts remain raw
+user-reviewed inputs. The Android importer rejects traversal paths, oversized reports,
+missing consent/redaction metadata, mismatched sessions, and unhashed or hash-mismatched
+artifacts.

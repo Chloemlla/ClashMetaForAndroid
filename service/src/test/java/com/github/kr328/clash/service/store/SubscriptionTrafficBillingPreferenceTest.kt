@@ -48,11 +48,14 @@ class SubscriptionTrafficBillingPreferenceTest {
     @Test
     fun clear_restoresLegacyFallbackForThatProfileOnly() {
         val profile = UUID.fromString("00000000-0000-0000-0000-000000000001")
+        val otherProfile = UUID.fromString("00000000-0000-0000-0000-000000000002")
 
         preference.set(profile, false)
+        preference.set(otherProfile, false)
         preference.clear(profile)
 
         assertTrue(preference.get(profile, legacyDefault = true))
+        assertFalse(preference.get(otherProfile, legacyDefault = true))
     }
 
     @Test

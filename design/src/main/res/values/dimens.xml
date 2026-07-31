@@ -67,6 +67,10 @@
     <dimen name="main_padding_horizontal">30dp</dimen>
     <dimen name="main_logo_size">50dp</dimen>
     <dimen name="main_top_banner_height">90dp</dimen>
+    <dimen name="traffic_sparkline_height">64dp</dimen>
+
+    <!-- Connections Design: toolbar + grouping tabs. -->
+    <dimen name="connections_header_height">104dp</dimen>
 
     <!--  Proxy Design -->
     <dimen name="proxy_search_bar_height">48dp</dimen>
@@ -79,7 +83,7 @@
     <dimen name="proxy_text_size_grid3">11sp</dimen>
     <dimen name="proxy_card_radius">5dp</dimen>
     <dimen name="proxy_card_offset">0dp</dimen>
-    <!-- sw600dp dual-pane host (M4 R1): fixed width of the group-list rail. -->
+    <!-- Fixed width of the large-screen Proxy group rail. -->
     <dimen name="proxy_group_list_pane_width">320dp</dimen>
 
     <!-- Properties Design -->
@@ -93,4 +97,3 @@
     <dimen name="logcat_padding_vertical">12dp</dimen>
     <dimen name="logcat_padding_horizontal">12dp</dimen>
 </resources>
-

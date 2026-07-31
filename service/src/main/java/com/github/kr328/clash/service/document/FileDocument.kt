@@ -14,7 +14,12 @@ class FileDocument(
     override val name: String
         get() = nameOverride ?: file.name
     override val mimeType: String
-        get() = if (file.isDirectory) DocumentsContract.Document.MIME_TYPE_DIR else "text/plain"
+        get() = when {
+            file.isDirectory -> DocumentsContract.Document.MIME_TYPE_DIR
+            file.extension.equals("yaml", ignoreCase = true) ||
+                file.extension.equals("yml", ignoreCase = true) -> "application/yaml"
+            else -> "text/plain"
+        }
     override val size: Long
         get() = file.length()
     override val updatedAt: Long

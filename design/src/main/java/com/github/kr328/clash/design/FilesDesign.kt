@@ -10,6 +10,7 @@ import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.dialog.requestModelTextInput
 import com.github.kr328.clash.design.model.File
 import com.github.kr328.clash.design.util.*
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -21,6 +22,7 @@ class FilesDesign(context: Context) : Design<FilesDesign.Request>(context) {
         data class DeleteFile(val file: File) : Request()
         data class ImportFile(val file: File?) : Request()
         data class ExportFile(val file: File) : Request()
+        data class ShowOutline(val file: File) : Request()
 
         object PopStack : Request()
     }
@@ -96,6 +98,40 @@ class FilesDesign(context: Context) : Design<FilesDesign.Request>(context) {
         dialog.dismiss()
     }
 
+    fun requestOutline(dialog: Dialog, file: File) {
+        requests.trySend(Request.ShowOutline(file))
+
+        dialog.dismiss()
+    }
+
+    fun showOutline(
+        file: File,
+        proxies: Int,
+        proxyGroups: Int,
+        rules: Int,
+        malformed: Boolean,
+    ) {
+        val message = if (malformed) {
+            context.getString(R.string.configuration_outline_unavailable)
+        } else {
+            context.getString(
+                R.string.configuration_outline_counts,
+                proxies,
+                proxyGroups,
+                rules,
+            )
+        }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.configuration_outline)
+            .setMessage(message)
+            .setPositiveButton(R.string.open_in_external_editor) { _, _ ->
+                requests.trySend(Request.OpenFile(file))
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
     fun requestDelete(dialog: Dialog, file: File) {
         requests.trySend(Request.DeleteFile(file))
 
@@ -116,6 +152,7 @@ class FilesDesign(context: Context) : Design<FilesDesign.Request>(context) {
         binding.file = file
         binding.currentInBase = this.binding.currentInBaseDir
         binding.configurationEditable = this.binding.configurationEditable
+        binding.configuration = this.binding.currentInBaseDir && file.id.endsWith("/config.yaml")
 
         dialog.setContentView(binding.root)
         dialog.show()

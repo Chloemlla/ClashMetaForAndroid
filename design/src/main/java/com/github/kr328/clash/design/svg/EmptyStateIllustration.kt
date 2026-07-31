@@ -1,8 +1,6 @@
 package com.github.kr328.clash.design.svg
 
 import android.content.Context
-import android.content.res.Configuration
-import android.os.Build
 import android.util.AttributeSet
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -20,12 +18,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.model.DarkMode
+import com.github.kr328.clash.design.store.UiStore
+import com.github.kr328.clash.design.util.shouldUseDarkIllustrationColors
+import com.github.kr328.clash.design.util.shouldUseDynamicColors
 import com.github.kr328.clash.design.svg.drawablevectors.coder
 import com.github.kr328.clash.design.svg.drawablevectors.download
 import com.github.kr328.clash.design.svg.drawablevectors.videoFiles
@@ -51,11 +56,15 @@ class EmptyStateIllustrationView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : AbstractComposeView(context, attrs, defStyleAttr) {
 
+    private val uiStore = UiStore(context)
     var illustration: UndrawIllustration by mutableStateOf(UndrawIllustration.VideoStreaming)
 
     @Composable
     override fun Content() {
-        ClashUndrawTheme {
+        ClashUndrawTheme(
+            useDynamicColors = uiStore.dynamicColors,
+            darkMode = uiStore.darkMode,
+        ) {
             val vector = when (illustration) {
                 UndrawIllustration.Download -> DynamicColorImageVectors.download()
                 UndrawIllustration.VideoFiles -> DynamicColorImageVectors.videoFiles()
@@ -85,21 +94,24 @@ fun UndrawIllustrationImage(
 }
 
 @Composable
-fun ClashUndrawTheme(content: @Composable () -> Unit) {
+fun ClashUndrawTheme(
+    useDynamicColors: Boolean = false,
+    darkMode: DarkMode = DarkMode.Auto,
+    content: @Composable () -> Unit,
+) {
     val context = LocalContext.current
-    val dark = isSystemInDarkTheme() ||
-        (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-        Configuration.UI_MODE_NIGHT_YES
+    val dark = shouldUseDarkIllustrationColors(darkMode, isSystemInDarkTheme())
 
-    val lightScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val dynamicColors = shouldUseDynamicColors(useDynamicColors)
+    val lightScheme = if (dynamicColors) {
         dynamicLightColorScheme(context)
     } else {
-        lightColorScheme()
+        clashLightColorScheme(context)
     }
-    val darkScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val darkScheme = if (dynamicColors) {
         dynamicDarkColorScheme(context)
     } else {
-        darkColorScheme()
+        clashDarkColorScheme(context)
     }
     val scheme = if (dark) darkScheme else lightScheme
     val fixed = FixedColorRoles.fromColorSchemes(lightColors = lightScheme, darkColors = darkScheme)
@@ -110,3 +122,41 @@ fun ClashUndrawTheme(content: @Composable () -> Unit) {
         }
     }
 }
+
+private fun clashLightColorScheme(context: Context) =
+    ContextCompat.getColor(context, R.color.color_clash_light).let { Color(it) }.let { clash ->
+        lightColorScheme(
+            primary = clash,
+            onPrimary = Color.White,
+            primaryContainer = clash,
+            onPrimaryContainer = Color.White,
+            secondary = clash,
+            onSecondary = Color.White,
+            secondaryContainer = clash,
+            onSecondaryContainer = Color.White,
+            tertiary = clash,
+            onTertiary = Color.White,
+            tertiaryContainer = clash,
+            onTertiaryContainer = Color.White,
+            inversePrimary = clash,
+        )
+    }
+
+private fun clashDarkColorScheme(context: Context) =
+    ContextCompat.getColor(context, R.color.color_clash_dark).let { Color(it) }.let { clash ->
+        darkColorScheme(
+            primary = clash,
+            onPrimary = Color.White,
+            primaryContainer = clash,
+            onPrimaryContainer = Color.White,
+            secondary = clash,
+            onSecondary = Color.White,
+            secondaryContainer = clash,
+            onSecondaryContainer = Color.White,
+            tertiary = clash,
+            onTertiary = Color.White,
+            tertiaryContainer = clash,
+            onTertiaryContainer = Color.White,
+            inversePrimary = clash,
+        )
+    }

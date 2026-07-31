@@ -99,6 +99,29 @@
                     app:subtext="@{clashRunning ? statusSubtext : (clashStarting ? @string/starting_service : @string/tap_to_start)}"
                     app:text="@{clashRunning ? @string/running : (clashStarting ? @string/starting : @string/stopped)}" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/main_card_margin_vertical"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/logcat_padding_horizontal"
+                    android:paddingVertical="@dimen/item_text_margin"
+                    android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/traffic_trend"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textColor="?colorControlNormal" />
+
+                    <com.github.kr328.clash.design.view.TrafficSparklineView
+                        android:id="@+id/traffic_sparkline"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/traffic_sparkline_height"
+                        android:importantForAccessibility="yes" />
+                </LinearLayout>
+
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

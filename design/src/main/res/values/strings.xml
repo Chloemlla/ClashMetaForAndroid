@@ -5,6 +5,12 @@
     <string name="audit_importing">Validating audit report…</string>
     <string name="audit_import_failed">Import failed: %s</string>
     <string name="audit_report_summary">Package %1$s · %2$d evidence files · %3$d capability gaps</string>
+    <string name="audit_report_redacted">Text evidence was redacted. Review raw external artifacts before sharing.</string>
+    <string name="audit_report_unredacted">Warning: this report contains unredacted text evidence.</string>
+    <string name="audit_authorization_reference">Authorization reference: %s</string>
+    <string name="audit_session_id">Session: %s</string>
+    <string name="audit_device_summary">Device: %s</string>
+    <string name="audit_evidence_files">Evidence files</string>
     <string name="audit_authorized_scope">Authorized capture only. This app records your consent and can request Android VPN metadata permission. It does not install certificates, bypass pinning, root the device, or inject processes.</string>
     <string name="audit_authorize_vpn">Authorize VPN metadata capture</string>
     <string name="audit_vpn_authorized">VPN permission authorized for this audit session.</string>
@@ -24,10 +30,13 @@
     <string name="running">Running</string>
     <string name="format_traffic_forwarded">%s Forwarded</string>
     <string name="format_traffic_forwarded_with_speed">%1$s · ↑%2$s/s ↓%3$s/s</string>
+    <string name="traffic_trend">Recent traffic · ↑ upload · ↓ download</string>
     <string name="format_proxy_summary">%1$s · %2$s</string>
     <string name="a11y_status_stopped">Clash is stopped. Double tap to start.</string>
     <string name="a11y_status_starting">Clash is starting.</string>
     <string name="a11y_status_running">Clash is running. %1$s Double tap to stop.</string>
+    <string name="a11y_traffic_trend_empty">Recent traffic trend has no samples yet.</string>
+    <string name="a11y_traffic_trend">Recent traffic trend. Upload %1$s per second, download %2$s per second.</string>
 
     <string name="proxy">Proxy</string>
     <string name="direct_mode">Direct Mode</string>
@@ -44,6 +53,25 @@
     <string name="connections">Active connections</string>
     <string name="format_connections_title">Active connections · %d</string>
     <string name="connections_empty">No active connections</string>
+    <string name="connections_filter_empty">No connections match this view or search.</string>
+    <string name="connection_view_live">Live</string>
+    <string name="connection_view_app">By app</string>
+    <string name="connection_view_host">By host</string>
+    <string name="connection_view_chain">By chain</string>
+    <string name="search_connections">Search connections</string>
+    <string name="search_connections_active">Search connections: %1$s</string>
+    <string name="connection_search_hint">Host, app, UID, chain, or rule</string>
+    <string name="sort_connection_aggregates">Sort connection groups</string>
+    <string name="connection_sort_bytes">Transferred bytes</string>
+    <string name="connection_sort_count">Connection count</string>
+    <string name="connection_unknown_app">Unknown app</string>
+    <string name="connection_unknown_host">Unknown host</string>
+    <string name="connection_direct_chain">Direct / no outbound chain</string>
+    <string name="format_connection_traffic">↑%1$s  ↓%2$s</string>
+    <plurals name="connection_count">
+        <item quantity="one">%d connection</item>
+        <item quantity="other">%d connections</item>
+    </plurals>
     <string name="close_all_connections">Close all</string>
     <string name="close_all_connections_warn">Close all active connections?</string>
     <string name="close_connection">Close connection</string>
@@ -144,6 +172,10 @@
     <string name="clash_logcat">Clash Logcat</string>
     <string name="history">History</string>
     <string name="logcat">Logcat</string>
+    <string name="filter_logs">Filter logs</string>
+    <string name="filter_logs_active">Filter logs: %1$s</string>
+    <string name="log_filter_hint">DNS, rule, match, or another keyword</string>
+    <string name="log_filter_empty">No log messages match this filter.</string>
 
     <string name="delete_all_logs">Delete All Logs</string>
     <string name="delete_all_logs_warn">All historical logs will *LOST*</string>
@@ -297,6 +329,8 @@
     <string name="service">Service</string>
 
     <string name="dark_mode">Dark Mode</string>
+    <string name="dynamic_colors_title">Match device wallpaper colors</string>
+    <string name="dynamic_colors_summary">Use Android 12+ wallpaper colors for non-critical illustrations. Clash brand colors stay unchanged elsewhere.</string>
 
     <string name="show_traffic">Show Traffic</string>
     <string name="show_traffic_summary">Auto refresh traffic in notification</string>
@@ -312,6 +346,21 @@
     <string name="export_qr_share_image">Share image</string>
     <string name="export_qr_unavailable">QR export is only available for URL profiles with an http(s) subscription source</string>
     <string name="export_qr_failed">Unable to create QR code</string>
+    <string name="export_profile_file">Export profile file</string>
+    <string name="export_profile_file_warning">Export the raw file for “%1$s”? It may contain subscription URLs, server addresses, rules, or credentials. This manual share is separate from automatic backup. Review the destination before continuing.</string>
+    <string name="export_profile_file_chooser">Share profile file</string>
+    <string name="edit_configuration">Edit configuration</string>
+    <string name="open_in_external_editor">Open in external editor</string>
+    <string name="external_editor_unavailable">No compatible external text editor is installed.</string>
+    <string name="import_edited_file">Import edited file</string>
+    <string name="external_editor_no_changes">No saved changes were detected. If this editor cannot save back, use “Import edited file” from the file menu.</string>
+    <string name="edited_configuration_no_changes">The selected file matches the current configuration.</string>
+    <string name="edited_configuration_staged">The edited file passed validation. Return to the profile and save to apply it.</string>
+    <string name="edited_configuration_rejected">The edited file was not applied: %1$s. The previous profile was kept.</string>
+    <string name="edited_configuration_rollback_failed">The edited file was rejected (%1$s). The saved profile was not replaced, but the pending copy could not be restored. Reopen Files before saving.</string>
+    <string name="configuration_outline">Configuration outline</string>
+    <string name="configuration_outline_counts">Proxies: %1$d\nProxy groups: %2$d\nRules: %3$d</string>
+    <string name="configuration_outline_unavailable">This file could not be summarized safely. You can still open it in an external editor.</string>
     <string name="share">Share</string>
     <string name="subscription_traffic_billing">Traffic billing (this profile)</string>
     <string name="subscription_traffic_billing_local">From 0 (local)</string>
@@ -516,12 +565,12 @@
     <string name="open_source_dep_gvisor">Userspace network stack option integrated by the core.</string>
     <string name="open_source_dep_meta_rules">Bundled geoip / geosite / ASN rule assets used by the core.</string>
     <string name="open_source_dep_lumen_crash">Crash capture and local crash-report surface for this fork.</string>
-    <string name="open_source_dep_undraw">Open-source illustrations used for empty states; filled with Material dynamic colors.</string>
+    <string name="open_source_dep_undraw">Open-source illustrations used for empty states; tinted with Clash brand colors by default and optional Android 12+ wallpaper colors.</string>
 
     <string name="open_source_fork_modules">Module-level improvements (Chloemlla/main)</string>
     <string name="open_source_fork_modules_intro"><![CDATA[Relative to upstream <strong>MetaCubeX/CMFA</strong>, this fork’s first-install splash summarizes production deltas by Android module. Full inventory: README → Branch Improvements.]]></string>
     <string name="open_source_mod_app">First-install open-source gate · Alpha→Meta same-signature migration · LumenCrash host install/report · cold-start order and flash-exit guards · notification permission UX · immersive update-notes gate · Android 16 (API 36) target + edge-to-edge</string>
-    <string name="open_source_mod_design">Progressive proxy delay + animation · proxy search · live up/down speed and selected node on home · empty-profile / home setup CTAs · clipboard subscription import · active connections manage · undraw dynamic-color empty states · accessibility and 48dp touch targets</string>
+    <string name="open_source_mod_design">Progressive proxy delay + animation · proxy search · live speed and traffic trend on home · connection aggregation · bounded log filtering · empty-profile / home setup CTAs · clipboard subscription import · undraw optional wallpaper-color empty states · accessibility and 48dp touch targets</string>
     <string name="open_source_mod_service">Live Update status notification (promoted ongoing) · POST_NOTIFICATIONS guards · sharedpref-only backup · Access Control stop timeout · external VPN control denied by default · partner auto-adapt (PiliPlus/NexAI/Project-Lumen/Zhihu++)</string>
     <string name="open_source_mod_core">Mihomo bridge retained · subscription-userinfo / Go-side fetch and related kernel sync from upstream kept current</string>
     <string name="open_source_mod_common">App-wide CoroutineExceptionHandler · Components / Intent security boundary · internal-only control paths for shortcuts</string>
@@ -543,4 +592,56 @@
     <string name="update_notes_continue">Got it</string>
     <string name="update_notes_continue_summary">Enter the app</string>
 
+    <string name="scenes">Scenes</string>
+    <string name="scene_automation">Scene automation</string>
+    <string name="auto_scenes">Auto scenes</string>
+    <string name="auto_scenes_summary">Apply a scene while Clash is already running. Scenes never start or stop the VPN.</string>
+    <string name="scene_notifications">Scene notifications</string>
+    <string name="scene_notifications_summary">Notify when a different matching scene is applied.</string>
+    <string name="scene_ssid_matching">Use SSID matching</string>
+    <string name="scene_ssid_matching_summary">Optional enhancement for scenes tied to one Wi-Fi network.</string>
+    <string name="scene_safety_tip">Auto scenes are off by default and only patch Mode or switch an already imported Profile.</string>
+    <string name="scene_ssid_rationale">Android may hide SSID on some versions. If it is unavailable, SSID-bound scenes stay inactive; scenes without an SSID continue to use network type and time.</string>
+    <string name="add_example_scenes">Add example scenes</string>
+    <string name="add_example_scenes_summary">Restore any missing Home direct and Away proxy templates. Both templates are disabled initially.</string>
+    <string name="scene_home_direct">Home direct</string>
+    <string name="scene_away_proxy">Away proxy</string>
+    <string name="scene_enabled">Enabled</string>
+    <string name="format_scene_summary">Priority %1$d · %2$s → %3$s</string>
+    <string name="scene_network_trigger">Network trigger</string>
+    <string name="unmetered_wifi">Unmetered Wi-Fi</string>
+    <string name="metered_or_cellular">Metered or cellular</string>
+    <string name="any_network">Any network</string>
+    <string name="scene_time_window">Time window</string>
+    <string name="scene_schedule_always">Any time</string>
+    <string name="scene_schedule_daytime">Daytime (07:00–19:00)</string>
+    <string name="scene_schedule_night">Night (19:00–07:00)</string>
+    <string name="scene_schedule_custom">Custom schedule (preserved)</string>
+    <string name="scene_mode_action">Mode action</string>
+    <string name="scene_profile_action">Profile action</string>
+    <string name="keep_active_profile">Keep active profile</string>
+    <string name="format_missing_profile">Unavailable profile (%1$s)</string>
+    <string name="scene_ssid">SSID (optional)</string>
+    <string name="scene_ssid_not_set">Match any Wi-Fi name</string>
+    <string name="move_scene_up">Move scene up</string>
+    <string name="move_scene_up_summary">Give this scene higher priority.</string>
+    <string name="move_scene_down">Move scene down</string>
+    <string name="move_scene_down_summary">Give this scene lower priority.</string>
+    <string name="proxy_failover">Proxy failover</string>
+    <string name="auto_switch_on_failure">Auto switch on failure</string>
+    <string name="auto_switch_on_failure_summary">After repeated health-check failures, switch a selectable group to the next healthy candidate.</string>
+    <string name="failover_notifications">Failover notifications</string>
+    <string name="failover_notifications_summary">Notify after an automatic proxy switch.</string>
+    <string name="failover_threshold">Failure threshold</string>
+    <string name="two_failures">2 consecutive failures</string>
+    <string name="three_failures">3 consecutive failures</string>
+    <string name="four_failures">4 consecutive failures</string>
+    <string name="five_failures">5 consecutive failures</string>
+    <string name="failover_cooldown">Switch cooldown</string>
+    <string name="thirty_seconds">30 seconds</string>
+    <string name="sixty_seconds">60 seconds</string>
+    <string name="two_minutes">2 minutes</string>
+    <string name="five_minutes">5 minutes</string>
+    <string name="failover_candidate_order">Candidate order</string>
+    <string name="failover_tip">Failover is off by default. It only reacts to health checks for selectable groups and observes the candidate order chosen here.</string>
 </resources>

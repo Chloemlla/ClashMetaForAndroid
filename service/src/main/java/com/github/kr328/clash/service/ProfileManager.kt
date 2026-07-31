@@ -144,6 +144,10 @@ class ProfileManager(private val context: Context) : IProfileManager,
         scheduleUpdate(uuid, false)
     }
 
+    override suspend fun validate(uuid: UUID) {
+        ProfileProcessor.validate(context, uuid)
+    }
+
     override suspend fun release(uuid: UUID) {
         ProfileProcessor.release(context, uuid)
     }
@@ -281,4 +285,3 @@ class ProfileManager(private val context: Context) : IProfileManager,
         }
     }
 }
-

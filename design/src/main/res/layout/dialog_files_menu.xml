@@ -17,6 +17,9 @@
         <variable
             name="configurationEditable"
             type="boolean" />
+        <variable
+            name="configuration"
+            type="boolean" />
 
         <import type="android.view.View" />
     </data>
@@ -32,14 +35,23 @@
             android:padding="@dimen/bottom_sheet_menu_items_padding"
             android:visibility="@{!file.isDirectory &amp;&amp; (!currentInBase || configurationEditable) ? View.VISIBLE : View.GONE}"
             app:icon="@drawable/ic_baseline_get_app"
-            app:text="@string/import_" />
+            app:text="@{configuration ? @string/import_edited_file : @string/import_}" />
+
+        <com.github.kr328.clash.design.view.LargeActionLabel
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:onClick="@{() -> master.requestOutline(self, file)}"
+            android:padding="@dimen/bottom_sheet_menu_items_padding"
+            android:visibility="@{configuration &amp;&amp; file.size > 0 ? View.VISIBLE : View.GONE}"
+            app:icon="@drawable/ic_outline_info"
+            app:text="@string/configuration_outline" />
 
         <com.github.kr328.clash.design.view.LargeActionLabel
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:onClick="@{() -> master.requestExport(self, file)}"
             android:padding="@dimen/bottom_sheet_menu_items_padding"
-            android:visibility="@{!file.isDirectory &amp;&amp; file.size > 0 ? View.VISIBLE : View.GONE}"
+            android:visibility="@{!file.isDirectory &amp;&amp; file.size > 0 &amp;&amp; !configuration ? View.VISIBLE : View.GONE}"
             app:icon="@drawable/ic_baseline_publish"
             app:text="@string/export" />
 

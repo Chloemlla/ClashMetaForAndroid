@@ -147,7 +147,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | **`:common`** | 应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径 |
 | **`:sdk`** | `ClashRuntime` 同 App 嵌入门面（Profile / VPN / 代理组）；非跨应用遥控；见 [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) |
 | **CI / release** | main 并行 **Meta latest + Alpha pre-release** · 签名 fail-fast · `SHA256SUMS` · 单测/Lint 全量可见 · 社区 i18n · 仓库策略脚本 |
-| **Windows ADB audit bridge** | Android 端提供明确授权说明、系统 VPN 权限确认、VPN 设置入口、外部工具指引和审计报告校验；`tools/adb-audit/Invoke-AdbAudit.ps1` 要求 `-ConfirmAuthorizedUse`，调用用户指定的 `adb.exe`，导出设备/包/权限/logcat/网络/socket/文件证据为 JSONL/ZIP；可附加 PCAPdroid、mitmproxy、Frida 产物，并显式记录授权引用及 root、DNS、HTTPS 参数和运行时 hook 的不可见能力缺口；不会自动安装 CA、修改代理/VPN、授予权限或注入进程 |
+| **Windows ADB audit bridge** | Android 端提供明确授权说明、系统 VPN 权限确认、VPN 设置入口、外部工具指引和审计报告校验；`tools/adb-audit/Invoke-AdbAudit.ps1` 要求 `-ConfirmAuthorizedUse`，多设备时要求显式 `-Serial`，在用户指定目录下创建独立会话并默认脱敏文本证据，导出设备/包/权限/logcat/网络/socket/文件证据为 JSONL/ZIP；可附加 PCAPdroid、mitmproxy、Frida 原始产物，并显式记录授权引用及 root、DNS、HTTPS 参数和运行时 hook 的不可见能力缺口；不会自动安装 CA、修改代理/VPN、授予权限或注入进程 |
 
 当前版本基线约为 **2.11.32**。上表与首装页文案均已落在源码中；**构建、单元测试与 Lint 以 GitHub Actions 为唯一权威执行环境**（本机不跑 Gradle/Flutter 作为门禁）。
 

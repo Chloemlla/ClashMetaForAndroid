@@ -25,20 +25,39 @@ object ConfigOutline {
             var proxies = 0
             var proxyGroups = 0
             var rules = 0
+            var malformed = false
 
             var currentKey: String? = null
             var itemIndent: Int? = null
 
             for (rawLine in yaml.lineSequence()) {
-                val line = stripComment(rawLine)
+                val line = stripComment(rawLine.removePrefix("\uFEFF"))
 
                 if (line.isBlank()) continue
 
+                val leadingWhitespace = line.takeWhile { it == ' ' || it == '\t' }
+                if ('\t' in leadingWhitespace) {
+                    malformed = true
+                    currentKey = null
+                    itemIndent = null
+                    continue
+                }
+
                 val indent = line.takeWhile { it == ' ' }.length
                 val trimmed = line.trim()
+                val isListItem = trimmed == "-" || trimmed.startsWith("- ")
 
-                if (indent == 0) {
-                    val key = trimmed.removeSuffix(":").trim()
+                // YAML permits an indentless block sequence directly below a mapping key:
+                // `proxies:\n- name: ...`. Keep that sequence attached to the active section.
+                if (indent == 0 && !(currentKey != null && isListItem)) {
+                    val separator = trimmed.indexOf(':')
+                    val key = if (separator >= 0) trimmed.substring(0, separator).trim() else trimmed
+
+                    if (separator < 0 && trimmed != "---" && trimmed != "..." &&
+                        !trimmed.startsWith('%')
+                    ) {
+                        malformed = true
+                    }
 
                     currentKey = when (key) {
                         KEY_PROXIES, KEY_PROXY_GROUPS, KEY_RULES -> key
@@ -46,14 +65,31 @@ object ConfigOutline {
                     }
                     itemIndent = null
 
+                    if (currentKey != null) {
+                        if (separator < 0) {
+                            malformed = true
+                            currentKey = null
+                        } else {
+                            val inlineValue = trimmed.substring(separator + 1).trim()
+                            if (inlineValue.isNotEmpty()) {
+                                if (inlineValue != "[]") malformed = true
+                                currentKey = null
+                            }
+                        }
+                    }
+
                     continue
                 }
 
                 if (currentKey == null) continue
 
-                val isListItem = trimmed == "-" || trimmed.startsWith("- ")
-
-                if (!isListItem) continue
+                if (!isListItem) {
+                    if (itemIndent == null) {
+                        malformed = true
+                        currentKey = null
+                    }
+                    continue
+                }
 
                 // Only count items at the section's own indent level; deeper-indented
                 // list items (e.g. a proxy-group's nested `proxies:` member list) belong
@@ -68,7 +104,12 @@ object ConfigOutline {
                 }
             }
 
-            Counts(proxies = proxies, proxyGroups = proxyGroups, rules = rules)
+            Counts(
+                proxies = proxies,
+                proxyGroups = proxyGroups,
+                rules = rules,
+                malformed = malformed,
+            )
         } catch (e: Exception) {
             Counts(malformed = true)
         }

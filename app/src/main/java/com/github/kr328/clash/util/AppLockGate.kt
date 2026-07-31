@@ -3,7 +3,7 @@ package com.github.kr328.clash.util
 /**
  * Pure helpers for optional app-lock gating.
  *
- * Default background grace is 60s (PRD R1). No secrets are stored here —
+ * Default background grace is 60s. No secrets are stored here —
  * only whether lock is enabled and when the last successful unlock happened.
  */
 object AppLockGate {

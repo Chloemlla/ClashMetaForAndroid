@@ -24,6 +24,19 @@ Older versions of the app used broader backup rules. Updating the app cannot del
 
 Diagnostic logs remain on the device unless the user chooses to export or share them. Logs may contain connection details or configuration-derived values, so users should review them before sharing. The project does not automatically upload app logs to an operator-controlled service.
 
+Authorized ADB audit reports imported through the document picker are stored in app-private
+local storage. The Windows companion redacts known credentials, Android identifiers, email
+addresses, and precise coordinates from generated text records by default. User-supplied
+PCAP, proxy, or runtime-hook artifacts are not rewritten and may still contain sensitive
+payloads. Reports are never uploaded automatically; review the redaction status, capability
+gaps, and evidence file list before sharing an archive.
+
+Raw profile files are shared only after the user selects **Export profile file**, reviews a
+warning, and confirms the Android share action. A raw export may contain subscription URLs,
+server addresses, rules, or credentials. This manual export uses a temporary local cache file
+and is not connected to Android automatic backup or device transfer; those remain limited to
+`sharedpref` as described above.
+
 ## Platform and third-party processing
 
 Android, the device vendor, the configured VPN/proxy endpoints, subscription providers, and any app store used to obtain the app may process data under their own policies. ClashMetaForAndroid does not control those services.

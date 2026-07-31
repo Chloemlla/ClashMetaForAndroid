@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <data>
         <variable
             name="self"
@@ -18,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
+            android:paddingTop="@{(float) self.surface.insets.top + @dimen/connections_header_height}"
             android:paddingBottom="@{self.surface.insets.bottom}" />
 
         <LinearLayout
@@ -38,6 +39,7 @@
                 android:importantForAccessibility="no" />
 
             <TextView
+                android:id="@+id/empty_text_view"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/item_text_margin"
@@ -47,40 +49,82 @@
                 android:textColor="?colorControlNormal" />
         </LinearLayout>
 
-        <com.github.kr328.clash.design.view.ActivityBarLayout
-            android:id="@+id/activity_bar_layout"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="@{self.surface.insets.top}">
+            android:orientation="vertical">
 
-            <RelativeLayout
+            <com.github.kr328.clash.design.view.ActivityBarLayout
+                android:id="@+id/activity_bar_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingEnd="@dimen/item_tailing_margin">
+                android:paddingTop="@{self.surface.insets.top}">
 
-                <include
-                    layout="@layout/common_activity_bar"
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:layout_toStartOf="@id/close_all_view" />
+                    android:paddingEnd="@dimen/item_tailing_margin">
 
-                <ImageView
-                    android:id="@+id/close_all_view"
-                    android:layout_width="@dimen/toolbar_image_action_size"
-                    android:layout_height="@dimen/toolbar_image_action_size"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginStart="@dimen/item_tailing_margin"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:clickable="true"
-                    android:contentDescription="@string/close_all_connections"
-                    android:focusable="true"
-                    android:onClick="@{() -> self.requests.offer(Request.CloseAll.INSTANCE)}"
-                    android:padding="@dimen/toolbar_image_action_padding"
-                    android:src="@drawable/ic_baseline_clear_all" />
-            </RelativeLayout>
-        </com.github.kr328.clash.design.view.ActivityBarLayout>
+                    <include
+                        layout="@layout/common_activity_bar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:layout_toStartOf="@id/action_layout" />
+
+                    <LinearLayout
+                        android:id="@+id/action_layout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/search_view"
+                            android:layout_width="@dimen/toolbar_image_action_size"
+                            android:layout_height="@dimen/toolbar_image_action_size"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:contentDescription="@string/search_connections"
+                            android:focusable="true"
+                            android:padding="@dimen/toolbar_image_action_padding"
+                            android:src="@drawable/ic_baseline_search" />
+
+                        <ImageView
+                            android:id="@+id/sort_view"
+                            android:layout_width="@dimen/toolbar_image_action_size"
+                            android:layout_height="@dimen/toolbar_image_action_size"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:contentDescription="@string/sort_connection_aggregates"
+                            android:focusable="true"
+                            android:padding="@dimen/toolbar_image_action_padding"
+                            android:src="@drawable/ic_baseline_more_vert" />
+
+                        <ImageView
+                            android:id="@+id/close_all_view"
+                            android:layout_width="@dimen/toolbar_image_action_size"
+                            android:layout_height="@dimen/toolbar_image_action_size"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:contentDescription="@string/close_all_connections"
+                            android:focusable="true"
+                            android:onClick="@{() -> self.requests.offer(Request.CloseAll.INSTANCE)}"
+                            android:padding="@dimen/toolbar_image_action_padding"
+                            android:src="@drawable/ic_baseline_clear_all" />
+                    </LinearLayout>
+                </RelativeLayout>
+            </com.github.kr328.clash.design.view.ActivityBarLayout>
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tab_layout_view"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/tab_layout_height"
+                android:background="?android:windowBackground"
+                android:elevation="@dimen/tab_layout_elevation"
+                app:tabMode="scrollable" />
+        </LinearLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>

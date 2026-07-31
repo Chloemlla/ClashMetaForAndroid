@@ -48,6 +48,10 @@ fun Context.sendOverrideChanged() {
     sendBroadcastSelf(intent)
 }
 
+fun Context.sendAutomationChanged() {
+    sendBroadcastSelf(Intent(Intents.ACTION_AUTOMATION_CHANGED))
+}
+
 fun Context.sendServiceRecreated() {
     sendBroadcastSelf(Intent(Intents.ACTION_SERVICE_RECREATED))
 }

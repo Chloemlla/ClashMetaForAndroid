@@ -78,6 +78,15 @@ class FilesClient(private val context: Context) {
         context.contentResolver.copyContentTo(source, target)
     }
 
+    suspend fun readText(documentId: String): String = withContext(Dispatchers.IO) {
+        val source = buildDocumentUri(documentId)
+
+        (context.contentResolver.openInputStream(source)
+            ?: throw java.io.FileNotFoundException("$source not found"))
+            .bufferedReader(Charsets.UTF_8)
+            .use { it.readText() }
+    }
+
     fun buildDocumentUri(documentId: String): Uri {
         return DC.buildDocumentUri(Authorities.FILES_PROVIDER, documentId)
     }

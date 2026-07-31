@@ -21,6 +21,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
     private var canceled: Boolean = false
     private lateinit var original: Profile
     private lateinit var serviceStore: ServiceStore
+    private var originalLocalTrafficBilling: Boolean = true
 
     override suspend fun main() {
         setResult(RESULT_CANCELED)
@@ -31,8 +32,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
         original = withProfile { queryByUUID(uuid) }?.toDesignProfile() ?: return finish()
 
+        originalLocalTrafficBilling = serviceStore.getLocalSubscriptionTraffic(uuid)
         design.profile = original
-        design.localTrafficBilling = serviceStore.getLocalSubscriptionTraffic(uuid)
+        design.localTrafficBilling = originalLocalTrafficBilling
 
         setContentDesign(design)
 
@@ -72,9 +74,6 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         PropertiesDesign.Request.ExportQr -> {
                             ProfileQrExport.show(design, design.profile)
                         }
-                        is PropertiesDesign.Request.SetLocalTrafficBilling -> {
-                            serviceStore.setLocalSubscriptionTraffic(uuid, it.enabled)
-                        }
                     }
                 }
             }
@@ -85,7 +84,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         val current = design ?: return false
         current.launch {
             if (!current.progressing) {
-                if (original == current.profile || current.requestExitWithoutSaving()) {
+                val unchanged = original == current.profile &&
+                    originalLocalTrafficBilling == current.localTrafficBilling
+                if (unchanged || current.requestExitWithoutSaving()) {
                     finish()
                 }
             }
@@ -102,6 +103,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                 showToast(R.string.invalid_url, ToastDuration.Long)
             }
             else -> {
+                val previousBilling = originalLocalTrafficBilling
                 try {
                     withProcessing { updateStatus ->
                         withProfile {
@@ -120,10 +122,12 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         }
                     }
 
+                    originalLocalTrafficBilling = localTrafficBilling
                     setResult(RESULT_OK)
 
                     finish()
                 } catch (e: Exception) {
+                    serviceStore.setLocalSubscriptionTraffic(profile.uuid, previousBilling)
                     showExceptionToast(e)
                 }
             }

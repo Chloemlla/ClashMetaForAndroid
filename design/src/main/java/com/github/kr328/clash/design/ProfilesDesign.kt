@@ -28,6 +28,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         data class Edit(val profile: Profile) : Request()
         data class Duplicate(val profile: Profile) : Request()
         data class ExportQr(val profile: Profile) : Request()
+        data class ExportFile(val profile: Profile) : Request()
         data class ResetLocalTraffic(val profile: Profile) : Request()
         data class Delete(val profile: Profile) : Request()
     }
@@ -143,6 +144,19 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         dialog.dismiss()
     }
 
+    fun requestExportFile(dialog: Dialog, profile: Profile) {
+        dialog.dismiss()
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.export_profile_file)
+            .setMessage(context.getString(R.string.export_profile_file_warning, profile.name))
+            .setPositiveButton(R.string.export) { _, _ ->
+                requests.trySend(Request.ExportFile(profile))
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     fun requestResetLocalTraffic(dialog: Dialog, profile: Profile) {
         dialog.dismiss()
 
@@ -185,4 +199,3 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         }
     }
 }
-

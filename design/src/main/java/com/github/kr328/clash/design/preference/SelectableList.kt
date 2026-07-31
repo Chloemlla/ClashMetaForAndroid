@@ -25,13 +25,29 @@ fun <T> PreferenceScreen.selectableList(
     @StringRes title: Int,
     @DrawableRes icon: Int? = null,
     configure: SelectableListPreference<T>.() -> Unit = {},
+): SelectableListPreference<T> = selectableList(
+    value = value,
+    values = values,
+    valuesText = valuesText.map { context.getText(it) },
+    title = title,
+    icon = icon,
+    configure = configure,
+)
+
+fun <T> PreferenceScreen.selectableList(
+    value: KMutableProperty0<T>,
+    values: Array<T>,
+    valuesText: List<CharSequence>,
+    @StringRes title: Int,
+    @DrawableRes icon: Int? = null,
+    configure: SelectableListPreference<T>.() -> Unit = {},
 ): SelectableListPreference<T> {
     val impl = object : SelectableListPreference<T>, ClickablePreference by clickable(title, icon) {
         override var selected: Int = 0
             set(value) {
                 field = value
 
-                this.summary = context.getText(valuesText[value])
+                this.summary = valuesText.getOrNull(value)
             }
         override var listener: OnChangedListener? = null
     }
@@ -43,10 +59,10 @@ fun <T> PreferenceScreen.selectableList(
             value.get()
         }
 
-        impl.selected = values.indexOf(initial)
+        impl.selected = values.indexOf(initial).coerceAtLeast(0)
 
         impl.clicked {
-            popupSelectMenu(impl, value, valuesText.map { context.getText(it) }, values)
+            popupSelectMenu(impl, value, valuesText, values)
         }
     }
 

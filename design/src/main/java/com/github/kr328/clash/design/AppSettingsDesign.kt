@@ -10,6 +10,7 @@ import com.github.kr328.clash.design.preference.*
 import com.github.kr328.clash.design.store.UiStore
 import com.github.kr328.clash.design.util.applyFrom
 import com.github.kr328.clash.design.util.bindAppBarElevation
+import com.github.kr328.clash.design.util.isDynamicColorAvailable
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.root
 
@@ -63,6 +64,19 @@ class AppSettingsDesign(
             ) {
                 listener = OnChangedListener {
                     requests.trySend(Request.ReCreateAllActivities)
+                }
+            }
+
+            if (isDynamicColorAvailable()) {
+                switch(
+                    value = uiStore::dynamicColors,
+                    icon = R.drawable.ic_baseline_brightness_4,
+                    title = R.string.dynamic_colors_title,
+                    summary = R.string.dynamic_colors_summary,
+                ) {
+                    listener = OnChangedListener {
+                        requests.trySend(Request.ReCreateAllActivities)
+                    }
                 }
             }
 

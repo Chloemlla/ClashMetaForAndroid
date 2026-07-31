@@ -8,12 +8,17 @@ import android.widget.TextView
 import androidx.core.content.getSystemService
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.kr328.clash.core.model.Connection
+import com.github.kr328.clash.design.adapter.ConnectionAggregateAdapter
 import com.github.kr328.clash.design.adapter.ConnectionAdapter
+import com.github.kr328.clash.design.component.ConnectionAppLabelCache
+import com.github.kr328.clash.design.component.ConnectionSortMenu
 import com.github.kr328.clash.design.databinding.DesignConnectionsBinding
+import com.github.kr328.clash.design.dialog.requestModelTextInput
 import com.github.kr328.clash.design.svg.UndrawIllustration
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -21,6 +26,13 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(context) {
+
+    private enum class ViewMode(val grouping: ConnectionGrouping?) {
+        Live(null),
+        App(ConnectionGrouping.App),
+        Host(ConnectionGrouping.Host),
+        Chain(ConnectionGrouping.Chain),
+    }
 
     sealed class Request {
         object CloseAll : Request()
@@ -30,7 +42,7 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     private val binding = DesignConnectionsBinding
         .inflate(context.layoutInflater, context.root, false)
 
-    private val adapter = ConnectionAdapter(
+    private val rawAdapter = ConnectionAdapter(
         context,
         onClick = { conn ->
             requests.trySend(Request.Close(conn.id))
@@ -77,22 +89,32 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
             }
         },
     )
+    private val aggregateAdapter = ConnectionAggregateAdapter(context)
+    private val appLabelCache = ConnectionAppLabelCache(context)
+    private val sortMenu by lazy {
+        ConnectionSortMenu(
+            context = context,
+            anchor = binding.sortView,
+            initial = aggregateSort,
+            onSortChanged = { sort ->
+                aggregateSort = sort
+                renderConnections(resetScroll = true)
+            },
+        )
+    }
+
+    private var connections: List<Connection> = emptyList()
+    private var appLabels: Map<String, String> = emptyMap()
+    private var viewMode = ViewMode.Live
+    private var aggregateSort = ConnectionAggregateSort.Bytes
+    private var keyword = ""
 
     suspend fun updateConnections(connections: List<Connection>) {
+        val labels = appLabelCache.resolve(connections)
         withContext(Dispatchers.Main) {
-            adapter.submitList(connections)
-            val count = connections.size
-            binding.emptyView.visibility = if (count == 0) View.VISIBLE else View.GONE
-            binding.closeAllView.isEnabled = count > 0
-            binding.closeAllView.isClickable = count > 0
-            binding.closeAllView.alpha = if (count == 0) 0.4f else 1f
-            binding.activityBarLayout
-                .findViewById<TextView>(R.id.activity_bar_title_view)
-                ?.text = if (count == 0) {
-                context.getString(R.string.connections)
-            } else {
-                context.getString(R.string.format_connections_title, count)
-            }
+            this@ConnectionsDesign.connections = connections
+            appLabels = labels
+            renderConnections(resetScroll = false)
         }
     }
 
@@ -113,16 +135,108 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     override val root: View
         get() = binding.root
 
+    fun requestSearch() {
+        launch {
+            val updated = context.requestModelTextInput(
+                initial = keyword.takeIf { it.isNotEmpty() },
+                title = context.getString(R.string.search_connections),
+                reset = context.getString(R.string.reset),
+                hint = context.getString(R.string.connection_search_hint),
+            )
+            withContext(Dispatchers.Main) {
+                keyword = updated.orEmpty().trim()
+                renderConnections(resetScroll = true)
+            }
+        }
+    }
+
     init {
         binding.self = this
         binding.activityBarLayout.applyFrom(context)
         binding.recyclerList.bindAppBarElevation(binding.activityBarLayout)
         binding.recyclerList.layoutManager = LinearLayoutManager(context)
-        binding.recyclerList.adapter = adapter
+        binding.recyclerList.adapter = rawAdapter
         binding.emptyIllustration.illustration = UndrawIllustration.VideoStreaming
-        binding.emptyView.visibility = View.VISIBLE
-        binding.closeAllView.isEnabled = false
-        binding.closeAllView.isClickable = false
-        binding.closeAllView.alpha = 0.4f
+        binding.searchView.setOnClickListener { requestSearch() }
+        binding.sortView.setOnClickListener { sortMenu.show() }
+        setupTabs()
+        renderConnections(resetScroll = false)
+    }
+
+    private fun setupTabs() {
+        val labels = listOf(
+            R.string.connection_view_live,
+            R.string.connection_view_app,
+            R.string.connection_view_host,
+            R.string.connection_view_chain,
+        )
+        labels.forEach { label ->
+            binding.tabLayoutView.addTab(binding.tabLayoutView.newTab().setText(label))
+        }
+        binding.tabLayoutView.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                viewMode = ViewMode.values()[tab.position]
+                renderConnections(resetScroll = true)
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+
+            override fun onTabReselected(tab: TabLayout.Tab) {
+                binding.recyclerList.scrollToPosition(0)
+            }
+        })
+    }
+
+    private fun renderConnections(resetScroll: Boolean) {
+        val visibleCount = when (val grouping = viewMode.grouping) {
+            null -> {
+                val filtered = filterConnections(connections, keyword)
+                if (binding.recyclerList.adapter !== rawAdapter) {
+                    binding.recyclerList.adapter = rawAdapter
+                }
+                rawAdapter.submitList(filtered)
+                filtered.size
+            }
+            else -> {
+                val filtered = filterConnectionAggregates(
+                    aggregateConnections(connections, grouping, aggregateSort, appLabels),
+                    keyword,
+                )
+                if (binding.recyclerList.adapter !== aggregateAdapter) {
+                    binding.recyclerList.adapter = aggregateAdapter
+                }
+                aggregateAdapter.submitList(filtered)
+                filtered.size
+            }
+        }
+
+        val hasConnections = connections.isNotEmpty()
+        binding.emptyView.visibility = if (visibleCount == 0) View.VISIBLE else View.GONE
+        binding.emptyTextView.setText(
+            if (hasConnections) R.string.connections_filter_empty else R.string.connections_empty,
+        )
+        binding.closeAllView.isEnabled = hasConnections
+        binding.closeAllView.isClickable = hasConnections
+        binding.closeAllView.alpha = if (hasConnections) 1f else 0.4f
+        binding.sortView.isEnabled = viewMode != ViewMode.Live
+        binding.sortView.isClickable = viewMode != ViewMode.Live
+        binding.sortView.alpha = if (viewMode == ViewMode.Live) 0.4f else 1f
+        binding.searchView.alpha = if (keyword.isEmpty()) 0.72f else 1f
+        binding.searchView.contentDescription = if (keyword.isEmpty()) {
+            context.getString(R.string.search_connections)
+        } else {
+            context.getString(R.string.search_connections_active, keyword)
+        }
+        binding.activityBarLayout
+            .findViewById<TextView>(R.id.activity_bar_title_view)
+            ?.text = if (connections.isEmpty()) {
+            context.getString(R.string.connections)
+        } else {
+            context.getString(R.string.format_connections_title, connections.size)
+        }
+
+        if (resetScroll && visibleCount > 0) {
+            binding.recyclerList.scrollToPosition(0)
+        }
     }
 }

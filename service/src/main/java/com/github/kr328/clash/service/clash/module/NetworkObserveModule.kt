@@ -1,11 +1,15 @@
 package com.github.kr328.clash.service.clash.module
 
+import android.annotation.SuppressLint
 import android.app.Service
 import android.net.*
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
+import com.github.kr328.clash.service.scene.SceneNetworkSnapshot
 import com.github.kr328.clash.service.util.asSocketAddressText
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
@@ -42,6 +46,7 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         override fun onAvailable(network: Network) {
             Log.i("NetworkObserve onAvailable network=$network")
             networkInfos[network] = NetworkInfo()
+            networks.trySend(network)
         }
 
         override fun onLosing(network: Network, maxMsToLive: Int) {
@@ -65,6 +70,19 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             networkInfos[network]?.dnsList = linkProperties.dnsServers
             notifyDnsChange()
 
+            networks.trySend(network)
+        }
+
+        override fun onCapabilitiesChanged(
+            network: Network,
+            networkCapabilities: NetworkCapabilities,
+        ) {
+            Log.i(
+                "NetworkObserve onCapabilitiesChanged network=$network " +
+                        "wifi=${networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)} " +
+                        "cellular=${networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)}",
+            )
+            networkInfos.putIfAbsent(network, NetworkInfo())
             networks.trySend(network)
         }
 
@@ -125,6 +143,47 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             curDnsList = dnsList
             Clash.notifyDnsChanged(dnsList)
         }
+    }
+
+    fun currentSceneSnapshot(includeSsid: Boolean): SceneNetworkSnapshot {
+        val entry = networkInfos.entries.minByOrNull { networkToInt(it) }
+            ?: return SceneNetworkSnapshot(false, false, false)
+        val capabilities = connectivity.getNetworkCapabilities(entry.key)
+            ?: return SceneNetworkSnapshot(false, false, false)
+        val wifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val cellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        val metered = cellular ||
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+
+        return SceneNetworkSnapshot(
+            connected = entry.value.isAvailable(),
+            wifi = wifi,
+            metered = metered,
+            ssid = if (wifi && includeSsid) resolveSsid(capabilities) else null,
+        )
+    }
+
+    // SSID is an optional enhancement: Android may withhold it without location access,
+    // so this guarded lookup deliberately fails closed instead of requesting permission.
+    @SuppressLint("MissingPermission")
+    private fun resolveSsid(capabilities: NetworkCapabilities): String? {
+        return runCatching {
+            val transportInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                capabilities.transportInfo as? WifiInfo
+            } else {
+                null
+            }
+            val managerInfo = service.getSystemService<WifiManager>()?.connectionInfo
+
+            sanitizeSsid(transportInfo?.ssid) ?: sanitizeSsid(managerInfo?.ssid)
+        }.getOrNull()
+    }
+
+    private fun sanitizeSsid(value: String?): String? {
+        return value
+            ?.trim()
+            ?.removeSurrounding("\"")
+            ?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID }
     }
 
     override suspend fun run() {

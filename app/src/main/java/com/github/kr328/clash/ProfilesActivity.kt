@@ -10,6 +10,7 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile as ServiceProfile
 import com.github.kr328.clash.service.util.SubscriptionExpiryNotifier
+import com.github.kr328.clash.util.ProfileFileExport
 import com.github.kr328.clash.util.ProfileQrExport
 import com.github.kr328.clash.util.toDesignProfile
 import com.github.kr328.clash.util.withProfile
@@ -84,6 +85,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                         }
                         is ProfilesDesign.Request.ExportQr -> {
                             ProfileQrExport.show(design, it.profile)
+                        }
+                        is ProfilesDesign.Request.ExportFile -> {
+                            ProfileFileExport.share(design, it.profile)
                         }
                         is ProfilesDesign.Request.ResetLocalTraffic -> {
                             withProfile {

@@ -25,6 +25,18 @@
             android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
             android:paddingBottom="@{self.surface.insets.bottom}" />
 
+        <TextView
+            android:id="@+id/filter_empty_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:paddingHorizontal="@dimen/main_padding_horizontal"
+            android:text="@string/log_filter_empty"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+            android:textColor="?colorControlNormal"
+            android:visibility="gone" />
+
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
             android:layout_width="match_parent"
@@ -44,12 +56,24 @@
                     android:layout_centerVertical="true"
                     android:layout_toStartOf="@id/action_layout" />
 
-                <FrameLayout
+                <LinearLayout
                     android:id="@+id/action_layout"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true">
+                    android:layout_centerVertical="true"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/filter_view"
+                        android:layout_width="@dimen/toolbar_image_action_size"
+                        android:layout_height="@dimen/toolbar_image_action_size"
+                        android:background="?selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:contentDescription="@string/filter_logs"
+                        android:focusable="true"
+                        android:padding="@dimen/toolbar_image_action_padding"
+                        android:src="@drawable/ic_baseline_search" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -84,7 +108,6 @@
                     <ImageView
                         android:layout_width="@dimen/toolbar_image_action_size"
                         android:layout_height="@dimen/toolbar_image_action_size"
-                        android:layout_gravity="end"
                         android:layout_marginStart="@dimen/item_tailing_margin"
                         android:background="?selectableItemBackgroundBorderless"
                         android:clickable="true"
@@ -94,7 +117,7 @@
                         android:padding="@dimen/toolbar_image_action_padding"
                         android:src="@drawable/ic_baseline_stop"
                         android:visibility="@{streaming ? View.VISIBLE : View.GONE}" />
-                </FrameLayout>
+                </LinearLayout>
 
             </RelativeLayout>
         </com.github.kr328.clash.design.view.ActivityBarLayout>
