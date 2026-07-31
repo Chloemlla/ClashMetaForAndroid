@@ -35,7 +35,7 @@ fun ConfigOutline.count(yaml: String): ConfigOutline.Counts
 suspend fun ProfileFileExport.share(design: Design<*>, profile: Profile)
 ```
 
-`validateAndStage` returns `Staged` or `Rejected(cause, rollbackFailure)`; cancellation is cleaned up and rethrown.
+`validateAndStage` returns `Staged` or `Rejected(cause: Exception, rollbackFailure: Throwable?)`; cancellation is cleaned up and rethrown.
 
 ## 3. Contracts
 

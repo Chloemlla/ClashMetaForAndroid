@@ -83,14 +83,16 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                                 )
 
                                 if (uri != null) {
-                                    if (it.file == null) {
+                                    val file = it.file
+
+                                    if (file == null) {
                                         val name = design.requestFileName(uri.fileName ?: "File")
 
                                         client.importDocument(stack.last(), uri, name)
-                                    } else if (fileActions.isConfiguration(it.file)) {
-                                        fileActions.importEdited(it.file, uri)
+                                    } else if (fileActions.isConfiguration(file)) {
+                                        fileActions.importEdited(file, uri)
                                     } else {
-                                        client.copyDocument(it.file.id, uri)
+                                        client.copyDocument(file.id, uri)
                                     }
                                 }
                             }

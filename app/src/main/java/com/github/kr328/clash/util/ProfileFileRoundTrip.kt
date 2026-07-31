@@ -11,7 +11,7 @@ object ProfileFileRoundTrip {
         object Staged : Result()
         data class Rejected(
             val cause: Exception,
-            val rollbackFailure: Exception? = null,
+            val rollbackFailure: Throwable? = null,
         ) : Result()
     }
 
