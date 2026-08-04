@@ -27,6 +27,7 @@ object Bridge {
     external fun nativeQueryGroupDelays(name: String): String
     external fun nativeHasProviders(): Boolean
     external fun nativeQueryDashboardSummary(preferred: String, excludeNotSelectable: Boolean): String
+    external fun nativeQueryMemoryUsage(): Long
     external fun nativeHealthCheck(completable: CompletableDeferred<Unit>, name: String)
     external fun nativeHealthCheckAll()
     external fun nativePatchSelector(selector: String, name: String): Boolean

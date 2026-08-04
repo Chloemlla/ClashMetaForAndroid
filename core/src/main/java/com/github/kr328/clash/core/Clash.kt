@@ -156,6 +156,9 @@ object Clash {
         }
     }
 
+    /** Clash core Go runtime allocated memory in bytes. */
+    fun queryMemoryUsage(): Long = Bridge.nativeQueryMemoryUsage()
+
     fun healthCheck(name: String): CompletableDeferred<Unit> {
         return CompletableDeferred<Unit>().apply {
             Bridge.nativeHealthCheck(this, name)

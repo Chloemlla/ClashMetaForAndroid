@@ -95,6 +95,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
 
         StatusProvider.serviceRunning = true
         StatusProvider.vpnRunning = true
+        StatusProvider.lastError = null
 
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
@@ -113,6 +114,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
 
         StatusProvider.serviceRunning = false
         StatusProvider.vpnRunning = false
+        StatusProvider.lastError = reason
 
         sendClashStopped(reason)
 

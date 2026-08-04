@@ -78,6 +78,7 @@ class ClashService : BaseService() {
             return stopSelf()
 
         StatusProvider.serviceRunning = true
+        StatusProvider.lastError = null
 
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
@@ -97,6 +98,7 @@ class ClashService : BaseService() {
 
     override fun onDestroy() {
         StatusProvider.serviceRunning = false
+        StatusProvider.lastError = reason
 
         sendClashStopped(reason)
 

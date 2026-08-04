@@ -14,6 +14,9 @@ import com.github.kr328.clash.service.store.WidgetStateStore
 import com.github.kr328.clash.service.util.sendBroadcastSelf
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.TimeUnit
 
 /**
@@ -89,6 +92,34 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                 Clash.queryDashboardSummary(preferred = "", excludeNotSelectable = true)
             }.getOrElse { DashboardSummary() }
 
+            // Compute proxy delay and alive count from the selected group.
+            var proxyDelay = 0L
+            var aliveProxies = 0
+            if (summary.selectedNow.isNotEmpty()) {
+                val delaysJson = runCatching {
+                    Clash.queryGroupDelays(summary.selectedNow)
+                }.getOrNull()
+                if (delaysJson != null) {
+                    try {
+                        val delays = Json.decodeFromString<Map<String, Int>>(delaysJson)
+                        for ((_, delay) in delays) {
+                            if (delay > 0) {
+                                aliveProxies++
+                                if (proxyDelay == 0L || delay < proxyDelay) {
+                                    proxyDelay = delay.toLong()
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                        // Non-fatal parse failure; keep defaults.
+                    }
+                }
+            }
+
+            val memoryUsage = runCatching {
+                Clash.queryMemoryUsage()
+            }.getOrElse { 0L }
+
             publishWidgetState(
                 WidgetState(
                     running = StatusProvider.serviceRunning,
@@ -100,6 +131,9 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                     upTotalBytes = upTotal,
                     downTotalBytes = downTotal,
                     updatedAtEpochMs = nowMs,
+                    proxyDelay = proxyDelay,
+                    aliveProxies = aliveProxies,
+                    memoryUsageBytes = memoryUsage,
                 ),
             )
         } catch (e: Exception) {

@@ -1,10 +1,10 @@
 package com.github.kr328.clash.service.model
 
 /**
- * Read-only snapshot for future home-screen widgets and dashboard UI.
+ * Read-only snapshot for home-screen widgets, StatusProvider, and dashboard UI.
  *
- * In-process only for M1 — no AppWidgetProvider, no Binder surface expansion.
- * M2 may observe this via broadcast / AppWidgetManager.
+ * M2 adds [proxyDelay], [aliveProxies], [memoryUsageBytes] for partner-app
+ * status bar display and debug panel.
  */
 data class WidgetState(
     val running: Boolean,
@@ -16,6 +16,12 @@ data class WidgetState(
     val upTotalBytes: Long,
     val downTotalBytes: Long,
     val updatedAtEpochMs: Long,
+    /** Average delay (ms) of the currently selected proxy, or 0 if unknown. */
+    val proxyDelay: Long = 0L,
+    /** Count of alive proxies (delay > 0) in the selected proxy group, or 0. */
+    val aliveProxies: Int = 0,
+    /** Clash core Go runtime allocated memory in bytes. */
+    val memoryUsageBytes: Long = 0L,
 ) {
     /**
      * Content equality for skip-if-unchanged publishers.
@@ -30,6 +36,9 @@ data class WidgetState(
             upRateBytesPerSec == other.upRateBytesPerSec &&
             downRateBytesPerSec == other.downRateBytesPerSec &&
             upTotalBytes == other.upTotalBytes &&
-            downTotalBytes == other.downTotalBytes
+            downTotalBytes == other.downTotalBytes &&
+            proxyDelay == other.proxyDelay &&
+            aliveProxies == other.aliveProxies &&
+            memoryUsageBytes == other.memoryUsageBytes
     }
 }

@@ -46,15 +46,20 @@ by a recognized partner (see §1); all other callers get `null`.
 
 | Key | Type | Notes |
 |---|---|---|
-| `apiVersion` | int | Currently `1`; bump when fields are added/removed. |
+| `apiVersion` | int | Currently `2`; bump when fields are added/removed. |
 | `running` | boolean | Clash core running. |
-| `vpnRunning` | boolean | VPN tunnel active. |
+| `vpnRunning` | boolean | VPN tunnel active (kept for v1 backward compatibility). |
+| `vpnState` | int | v2: `0`=disconnected, `1`=connecting, `2`=connected. |
 | `partnerAppAutoAdapt` | boolean | Whether partner auto-include is enabled (`piliPlusAutoAdapt` kept as a legacy alias). |
 | `name` | string? | Current profile name. |
 | `package` | string | CMFA's own applicationId. |
 | `mode` | string? | Present only once a `WidgetState` snapshot exists; current tunnel mode. |
 | `selectedNode` | string? | Present only once a `WidgetState` snapshot exists; the selected proxy/group. |
 | `upTotal` / `downTotal` | long | Present only once a `WidgetState` snapshot exists; cumulative byte totals. |
+| `proxyDelay` | long | v2: Average delay (ms) of the currently selected proxy, or 0. |
+| `aliveProxies` | int | v2: Count of alive proxies (delay > 0) in the selected proxy group, or 0. |
+| `memoryUsage` | long | v2: Clash core Go runtime allocated memory (bytes). |
+| `lastError` | string? | v2: Last stop/crash reason, null when healthy. |
 
 `partnerStatus` **never** includes subscription URLs, `ageSecretKey`, full configuration,
 or any control method. There is no `start`/`stop`/`toggle` method on this provider for

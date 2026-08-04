@@ -4,6 +4,7 @@ package main
 import "C"
 
 import (
+	"runtime"
 	"unsafe"
 
 	"cfa/native/app"
@@ -27,6 +28,13 @@ func queryNow(upload, download *C.uint64_t) {
 
 	*upload = C.uint64_t(up)
 	*download = C.uint64_t(down)
+}
+
+//export queryMemoryUsage
+func queryMemoryUsage() C.uint64_t {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return C.uint64_t(m.Alloc)
 }
 
 //export queryTotal

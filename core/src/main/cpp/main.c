@@ -431,6 +431,13 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeHasProviders(JNIEnv *env, j
     return (jboolean) hasProviders();
 }
 
+JNIEXPORT jlong JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryMemoryUsage(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    return (jlong) queryMemoryUsage();
+}
+
 JNIEXPORT jstring JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryDashboardSummary(JNIEnv *env, jobject thiz,
                                                                             jstring preferred,

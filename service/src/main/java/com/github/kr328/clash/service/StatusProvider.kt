@@ -38,7 +38,10 @@ class StatusProvider : ContentProvider() {
                 Bundle().apply {
                     putInt(KEY_API_VERSION, PARTNER_STATUS_API_VERSION)
                     putBoolean("running", serviceRunning)
+                    // v2: granular VPN state (0=disconnected, 1=connecting, 2=connected).
+                    // Keep vpnRunning for backward compatibility with v1 clients.
                     putBoolean("vpnRunning", vpnRunning)
+                    putInt(KEY_VPN_STATE, if (vpnRunning) VPN_STATE_CONNECTED else VPN_STATE_DISCONNECTED)
                     // Keep legacy key for older partner clients.
                     putBoolean("piliPlusAutoAdapt", autoAdapt)
                     putBoolean("partnerAppAutoAdapt", autoAdapt)
@@ -49,7 +52,13 @@ class StatusProvider : ContentProvider() {
                         putString(KEY_SELECTED_NODE, state.selectedNode)
                         putLong(KEY_UP_TOTAL, state.upTotalBytes)
                         putLong(KEY_DOWN_TOTAL, state.downTotalBytes)
+                        // v2: proxy delay, alive proxies, memory usage
+                        putLong(KEY_PROXY_DELAY, state.proxyDelay)
+                        putInt(KEY_ALIVE_PROXIES, state.aliveProxies)
+                        putLong(KEY_MEMORY_USAGE, state.memoryUsageBytes)
                     }
+                    // v2: last error from the clash runtime, null when healthy
+                    putString(KEY_LAST_ERROR, lastError)
                 }
             }
             // Self-only read surface for home widgets (no control, no secrets).
@@ -146,7 +155,18 @@ class StatusProvider : ContentProvider() {
         const val KEY_API_VERSION = "apiVersion"
         const val KEY_UP_TOTAL = "upTotal"
         const val KEY_DOWN_TOTAL = "downTotal"
-        const val PARTNER_STATUS_API_VERSION = 1
+        const val PARTNER_STATUS_API_VERSION = 2
+
+        // v2 fields
+        const val KEY_VPN_STATE = "vpnState"
+        const val KEY_PROXY_DELAY = "proxyDelay"
+        const val KEY_ALIVE_PROXIES = "aliveProxies"
+        const val KEY_MEMORY_USAGE = "memoryUsage"
+        const val KEY_LAST_ERROR = "lastError"
+
+        const val VPN_STATE_DISCONNECTED = 0
+        const val VPN_STATE_CONNECTING = 1
+        const val VPN_STATE_CONNECTED = 2
 
         private const val CLASH_SERVICE_RUNNING_FILE = "service_running.lock"
 
@@ -157,6 +177,7 @@ class StatusProvider : ContentProvider() {
                 shouldStartClashOnBoot = value
             }
         var vpnRunning: Boolean = false
+        var lastError: String? = null
         var shouldStartClashOnBoot: Boolean
             get() = Global.application.filesDir.resolve(CLASH_SERVICE_RUNNING_FILE).exists()
             set(value) {
