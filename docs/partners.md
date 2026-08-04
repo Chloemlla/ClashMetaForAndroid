@@ -1,5 +1,7 @@
 # Partner Registry and `partnerStatus`
 
+> [中文版](partners.zh-CN.md)
+
 > Module: `:common` (`PartnerApps`), `:service` (`StatusProvider`, `TunService`)
 > Security boundary: **read-only status + VPN access-control auto-include only**. Partners
 > can never start/stop/toggle the VPN through this surface (see `SECURITY.md`, audit

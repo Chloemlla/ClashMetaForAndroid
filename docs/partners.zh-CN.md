@@ -1,5 +1,7 @@
 # Partner 注册表与 `partnerStatus`
 
+> [English](partners.md)
+
 > 模块：`:common`（`PartnerApps`）、`:service`（`StatusProvider`、`TunService`）
 > 安全边界：**只读状态 + VPN 访问控制自动包含**。Partner 永远不能通过此接口启动/停止/切换 VPN（参见 `SECURITY.md`，审计合约 **F-12**）。
 
