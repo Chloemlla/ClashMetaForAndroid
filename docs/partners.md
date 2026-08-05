@@ -18,8 +18,11 @@ isPartner = hardcode ∪ (meta-data present ∧ sharesSignatureWith(any installe
 
 - **Hardcode allowlist** (`PartnerApps.hardcodePackages`): the PiliPlus / NexAI /
   Project-Lumen / Zhihu++ applicationIds and their common `.debug` / `.dev` / `.lite`
-  suffixes. This remains the trust root and always works, with or without
-  discovery.
+  suffixes. This is the static trust root for deny-list exclusion and works with or
+  without discovery. When a hardcoded applicationId is actually **installed**, the
+  runtime gate additionally requires it to share a signing certificate with CMFA or
+  another installed hardcode partner, so a spoofed install under a known partner name
+  cannot read `partnerStatus`.
 - **Meta-data discovery**: any other installed app may declare the following in its
   `AndroidManifest.xml` (inside `<application>`, not `<activity>`) to opt into
   discovery:

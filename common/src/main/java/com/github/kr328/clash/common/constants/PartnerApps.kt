@@ -87,15 +87,41 @@ object PartnerApps {
      * Full partner membership check used by the runtime (StatusProvider / TunService):
      * hardcode allowlist OR discovered-and-signature-verified partner. See the class KDoc
      * for the exact rule.
+     *
+     * An installed app that borrows a hardcoded partner applicationId is trusted only when it
+     * shares a signing certificate with CMFA or another installed hardcode partner (see
+     * [sharesTrustedSignature]); a spoofed install under a known partner name must not read
+     * partner status for free. A package that is not installed keeps static membership (used
+     * for deny-list exclusion) since there is no app to impersonate at runtime.
      */
     fun isPartnerPackage(context: Context, packageName: String): Boolean {
+        val pm = context.packageManager
         if (packageName in hardcodePackages) {
+            if (isInstalled(pm, packageName) && !sharesTrustedSignature(pm, packageName, context.packageName)) {
+                return false
+            }
             return true
         }
-        val pm = context.packageManager
         val trustedSigners = installedHardcodePackages(pm) + context.packageName
         return declaresPartnerMetaData(pm, packageName) &&
             trustedSigners.any { signer -> signaturesMatch(pm, packageName, signer) }
+    }
+
+    /**
+     * True when [packageName] (an installed hardcode partner) shares at least one signing
+     * certificate with CMFA itself or with any other installed hardcode partner. The package
+     * itself is excluded from the anchor set so it cannot act as its own trust anchor.
+     */
+    private fun sharesTrustedSignature(pm: PackageManager, packageName: String, selfPackage: String): Boolean {
+        val target = signingCertificatesOf(pm, packageName)
+        if (target.isEmpty()) {
+            return false
+        }
+        val anchors = installedHardcodePackages(pm).filter { it != packageName } + selfPackage
+        return anchors.any { trusted ->
+            val trustedCerts = signingCertificatesOf(pm, trusted)
+            trustedCerts.isNotEmpty() && target.any { it in trustedCerts }
+        }
     }
 
     /**
