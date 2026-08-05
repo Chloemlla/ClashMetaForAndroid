@@ -16,6 +16,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.TimeUnit
 
@@ -101,7 +102,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                 }.getOrNull()
                 if (delaysJson != null) {
                     try {
-                        val root = Json.decodeFromString<JsonObject>(delaysJson)
+                        val root = Json.parseToJsonElement(delaysJson).jsonObject
                         val delays = mutableMapOf<String, Int>()
                         for ((key, value) in root) {
                             value.jsonPrimitive.content.toIntOrNull()?.let { delays[key] = it }
