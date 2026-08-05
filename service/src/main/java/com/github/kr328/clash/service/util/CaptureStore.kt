@@ -117,7 +117,7 @@ object CaptureStore {
                     break
                 }
 
-                val line = _eventChannel.poll()
+                val line = _eventChannel.tryReceive().getOrNull()
                 if (line != null) {
                     writer.write(line)
                     writer.newLine()

@@ -103,7 +103,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                 }.getOrNull()
                 if (delaysJson != null) {
                     try {
-                        val delays = Json.decodeFromString(
+                        val delays = Json.Default.decodeFromString(
                             MapSerializer(String.serializer(), Int.serializer()),
                             delaysJson
                         )
