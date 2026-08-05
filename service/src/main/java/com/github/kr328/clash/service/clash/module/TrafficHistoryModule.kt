@@ -17,8 +17,6 @@ import kotlinx.coroutines.selects.select
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import java.util.concurrent.TimeUnit
 
 /**
@@ -103,10 +101,11 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                 }.getOrNull()
                 if (delaysJson != null) {
                     try {
-                        val delays = Json.Default.decodeFromString(
-                            MapSerializer(String.serializer(), Int.serializer()),
-                            delaysJson
-                        )
+                        val root = Json.decodeFromString<JsonObject>(delaysJson)
+                        val delays = mutableMapOf<String, Int>()
+                        for ((key, value) in root) {
+                            value.jsonPrimitive.content.toIntOrNull()?.let { delays[key] = it }
+                        }
                         for ((_, delay) in delays) {
                             if (delay > 0) {
                                 aliveProxies++
