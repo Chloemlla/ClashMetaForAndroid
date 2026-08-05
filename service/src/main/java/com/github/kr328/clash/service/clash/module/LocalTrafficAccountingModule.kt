@@ -75,7 +75,9 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         val useLocalTraffic = serviceStore.getLocalSubscriptionTrafficIfPresent(uuid)
         if (useLocalTraffic != true) {
             // Upstream mode or a removed profile: do not accumulate local counters.
-            captureBaseline()
+            // Skip the native query entirely when local accounting is disabled.
+            lastUploadBytes = 0L
+            lastDownloadBytes = 0L
             return
         }
         val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())

@@ -32,6 +32,9 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
     private var lastUpTotal: Long = Long.MIN_VALUE
     private var lastDownTotal: Long = Long.MIN_VALUE
 
+    /** Last epoch ms at which memory usage was sampled (throttled; see [MEMORY_SAMPLE_INTERVAL_MS]). */
+    private var lastMemorySampleMs: Long = Long.MIN_VALUE
+
     override suspend fun run() = coroutineScope {
         // Process-local buffer may survive a prior runtime in the same process;
         // reset so min-interval gate / history do not leak across restarts.
@@ -40,6 +43,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
         lastDownRate = Long.MIN_VALUE
         lastUpTotal = Long.MIN_VALUE
         lastDownTotal = Long.MIN_VALUE
+        lastMemorySampleMs = Long.MIN_VALUE
 
         val ticker = ticker(SAMPLE_INTERVAL_MS)
 
@@ -108,9 +112,19 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                     }
                 }
 
-            val memoryUsage = runCatching {
-                Clash.queryMemoryUsage()
-            }.getOrElse { 0L }
+            // Memory sampling is throttled: queryMemoryUsage() calls runtime.ReadMemStats,
+            // which stop-the-worlds the Go proxy core. Sample at most every 30s.
+            var memoryUsage = 0L
+            if (lastMemorySampleMs == Long.MIN_VALUE ||
+                nowMs - lastMemorySampleMs >= MEMORY_SAMPLE_INTERVAL_MS
+            ) {
+                memoryUsage = runCatching {
+                    Clash.queryMemoryUsage()
+                }.getOrElse { 0L }
+                lastMemorySampleMs = nowMs
+            } else {
+                memoryUsage = WidgetStateStore.current()?.memoryUsageBytes ?: 0L
+            }
 
             publishWidgetState(
                 WidgetState(
@@ -168,5 +182,9 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
 
     companion object {
         private val SAMPLE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(2)
+
+        // queryMemoryUsage() triggers Go runtime.ReadMemStats (STW). Sample it
+        // far less often than the 2s traffic cadence to avoid periodic proxy stalls.
+        private val MEMORY_SAMPLE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(30)
     }
 }
