@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="color_launcher_background">#FFFFFF</color>
+
+    <!-- App widget palette (light). Night variants live in values-night/colors.xml. -->
+    <color name="widget_surface">#F5F7FA</color>
+    <color name="widget_surface_stroke">#331E4376</color>
+    <color name="widget_status_running">#1E4376</color>
+    <color name="widget_status_stopped">#808080</color>
+    <color name="widget_text_primary">#DE000000</color>
+    <color name="widget_text_secondary">#99000000</color>
+    <color name="widget_button_bg">#1E4376</color>
+    <color name="widget_button_secondary_bg">#1A1E4376</color>
+    <color name="widget_button_secondary_stroke">#661E4376</color>
+    <color name="widget_button_text">#FFFFFF</color>
+    <color name="widget_button_secondary_text">#1E4376</color>
 </resources>

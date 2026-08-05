@@ -34,7 +34,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="@string/stopped"
-                android:textColor="#1E4376"
+                android:textColor="@color/widget_status_running"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -45,7 +45,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="@string/profile_not_selected"
-                android:textColor="#DE000000"
+                android:textColor="@color/widget_text_primary"
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
@@ -58,7 +58,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:text="—"
-        android:textColor="#DE000000"
+        android:textColor="@color/widget_text_primary"
         android:textSize="12sp" />
 
     <LinearLayout
@@ -75,7 +75,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="—"
-            android:textColor="#99000000"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="11sp" />
 
         <TextView
@@ -85,7 +85,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="—"
-            android:textColor="#99000000"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -106,7 +106,7 @@
             android:paddingHorizontal="6dp"
             android:paddingVertical="8dp"
             android:text="@string/widget_action_toggle"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/widget_button_text"
             android:textSize="12sp" />
 
         <TextView
@@ -120,7 +120,7 @@
             android:paddingHorizontal="6dp"
             android:paddingVertical="8dp"
             android:text="@string/proxy"
-            android:textColor="#1E4376"
+            android:textColor="@color/widget_button_secondary_text"
             android:textSize="12sp" />
 
         <TextView
@@ -134,7 +134,7 @@
             android:paddingHorizontal="6dp"
             android:paddingVertical="8dp"
             android:text="@string/profiles"
-            android:textColor="#1E4376"
+            android:textColor="@color/widget_button_secondary_text"
             android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>

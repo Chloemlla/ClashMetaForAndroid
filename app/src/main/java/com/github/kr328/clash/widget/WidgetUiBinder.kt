@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import androidx.core.content.ContextCompat
 import com.github.kr328.clash.InternalControlActivity
 import com.github.kr328.clash.MainActivity
 import com.github.kr328.clash.ProfilesActivity
@@ -136,9 +137,9 @@ object WidgetUiBinder {
             context.getString(DesignR.string.stopped)
         }
         val statusColor = if (model.running) {
-            0xFF1E4376.toInt()
+            ContextCompat.getColor(context, R.color.widget_status_running)
         } else {
-            0xFF808080.toInt()
+            ContextCompat.getColor(context, R.color.widget_status_stopped)
         }
 
         views.setTextViewText(R.id.widget_status, statusLabel)
