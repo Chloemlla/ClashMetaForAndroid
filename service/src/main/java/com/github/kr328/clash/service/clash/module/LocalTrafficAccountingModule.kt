@@ -24,6 +24,9 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
     private var lastUploadBytes: Long = 0L
     private var lastDownloadBytes: Long = 0L
 
+    /** True when local accounting is disabled and the baseline is stale. */
+    private var baselineDirty: Boolean = false
+
     override suspend fun run() = coroutineScope {
         val profileChanged = receiveBroadcast(false, Channel.CONFLATED) {
             addAction(Intents.ACTION_PROFILE_CHANGED)
@@ -68,6 +71,7 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
             serviceStore.getLocalSubscriptionTraffic(uuid)
         }
         captureBaseline()
+        baselineDirty = false
     }
 
     private fun flushDelta() {
@@ -75,10 +79,14 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         val useLocalTraffic = serviceStore.getLocalSubscriptionTrafficIfPresent(uuid)
         if (useLocalTraffic != true) {
             // Upstream mode or a removed profile: do not accumulate local counters.
-            // Skip the native query entirely when local accounting is disabled.
-            lastUploadBytes = 0L
-            lastDownloadBytes = 0L
+            // Mark baseline stale and skip the native query; re-baseline on next enable.
+            baselineDirty = true
             return
+        }
+        if (baselineDirty) {
+            // Mode was off; re-anchor to the current totals before computing deltas.
+            captureBaseline()
+            baselineDirty = false
         }
         val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
 
