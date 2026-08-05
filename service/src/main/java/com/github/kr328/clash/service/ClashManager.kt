@@ -124,9 +124,9 @@ class ClashManager(private val context: Context) : IClashManager,
     override fun setLogObserver(observer: ILogObserver?) {
         synchronized(this) {
             logReceiver?.apply {
+                // GC + FreeOSMemory are expensive (STW + memory return); they happen once in
+                // this cancelled coroutine's finally after the channel drains, not here.
                 cancel()
-
-                Clash.forceGc()
             }
 
             if (observer != null) {
@@ -157,9 +157,9 @@ class ClashManager(private val context: Context) : IClashManager,
     override fun setConnectionsObserver(observer: IConnectionsObserver?) {
         synchronized(this) {
             connectionsReceiver?.apply {
+                // GC + FreeOSMemory happen once in this cancelled coroutine's finally after
+                // the channel drains, not here.
                 cancel()
-
-                Clash.forceGc()
             }
             connectionsReceiver = null
 
