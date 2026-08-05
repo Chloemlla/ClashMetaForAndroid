@@ -35,13 +35,13 @@ internal suspend fun migrationFromLegacy(context: Context) {
                     2, 3, 4 -> migrationFromLegacy234(context, db, v)
                 }
             }
+
+        context.deleteDatabase("clash-config")
+
+        Log.i("Legacy database migrated")
     } catch (e: Exception) {
-        Log.w("Migration legacy database: $e", e)
+        Log.w("Migration legacy database failed: $e — keeping legacy database for retry", e)
     }
-
-    context.deleteDatabase("clash-config")
-
-    Log.i("Legacy database migrated")
 }
 
 private suspend fun migrationFromLegacy234(

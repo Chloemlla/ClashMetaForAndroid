@@ -15,6 +15,7 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.migration.AlphaDataMigrator
 import com.github.kr328.clash.service.util.sendServiceRecreated
+import com.github.kr328.clash.service.util.SecureStorage
 import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.clashDir
 import com.github.kr328.clash.util.onLumenCrashSaved
@@ -40,6 +41,9 @@ class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize secure storage for sensitive fields (ageSecretKey).
+        SecureStorage.init(this)
 
         val processName = currentProcessName
 
