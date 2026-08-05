@@ -25,6 +25,8 @@ extern int (*connections_received_func)(void *connections_interface, const char 
 
 extern int (*dns_received_func)(void *dns_interface, const char *payload);
 
+extern int (*http_received_func)(void *http_interface, const char *payload);
+
 extern void (*release_object_func)(void *obj);
 
 extern int (*open_content_func)(const char *url, char *error, int error_length);
@@ -45,6 +47,8 @@ extern int logcat_received(void *logcat_interface, char *payload);
 extern int connections_received(void *connections_interface, char *payload);
 
 extern int dns_received(void *dns_interface, char *payload);
+
+extern int http_received(void *http_interface, char *payload);
 
 extern void release_object(void *obj);
 

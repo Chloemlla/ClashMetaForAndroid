@@ -27,6 +27,10 @@ data class Connection(
     val process: String = "",
     @SerialName("package") val packageName: String = "",
     val uid: Int = 0,
+    // HTTP-specific fields (populated only for plain HTTP connections)
+    val httpMethod: String = "",
+    val httpPath: String = "",
+    val statusCode: Int = 0,
 ) : Parcelable {
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         Parcelizer.encodeToParcel(serializer(), parcel, this)

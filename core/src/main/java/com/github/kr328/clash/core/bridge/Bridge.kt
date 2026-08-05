@@ -56,6 +56,8 @@ object Bridge {
     external fun nativeUnsubscribeConnections(token: Long)
     external fun nativeSubscribeDns(callback: DnsInterface): Long
     external fun nativeUnsubscribeDns(token: Long)
+    external fun nativeSubscribeHttp(callback: HttpCaptureInterface): Long
+    external fun nativeUnsubscribeHttp(token: Long)
     external fun nativeCloseConnection(id: String)
     external fun nativeCloseAllConnections()
     external fun nativeCoreVersion(): String

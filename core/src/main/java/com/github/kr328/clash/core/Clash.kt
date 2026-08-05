@@ -321,6 +321,25 @@ object Clash {
         return channel
     }
 
+    /**
+     * Subscribe to HTTP capture events (plaintext HTTP request/response) pushed from the
+     * Go bridge layer. The returned channel delivers [HttpRecord] until closed.
+     */
+    fun subscribeHttp(): ReceiveChannel<HttpRecord> {
+        val channel = Channel<HttpRecord>(Channel.UNLIMITED)
+        val token = Bridge.nativeSubscribeHttp(object : HttpCaptureInterface {
+            override fun received(jsonPayload: String): Boolean {
+                return channel.trySend(
+                    Json.decodeFromString(HttpRecord.serializer(), jsonPayload)
+                ).isSuccess
+            }
+        })
+        channel.invokeOnClose {
+            Bridge.nativeUnsubscribeHttp(token)
+        }
+        return channel
+    }
+
     fun setAgeSecretKey(key: String?) {
         Bridge.nativeSetAgeSecretKey(key)
     }

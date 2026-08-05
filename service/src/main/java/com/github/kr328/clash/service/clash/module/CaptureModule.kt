@@ -13,8 +13,8 @@ import kotlinx.coroutines.launch
  * ADB-triggered traffic capture module.
  *
  * Listens for [Intents.ACTION_TRAFFIC_CAPTURE] broadcasts (sent via ADB) and
- * manages the [CaptureStore] lifecycle. Subscribes to DNS and connection feeds
- * while capture is active.
+ * manages the [CaptureStore] lifecycle. Subscribes to DNS, connection, and HTTP
+ * feeds while capture is active.
  *
  * ADB usage:
  *   adb shell am broadcast -a <pkg>.intent.action.TRAFFIC_CAPTURE \
@@ -67,11 +67,17 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
     }
 
     /**
-     * Capture loop — subscribes to DNS and connection feeds while capture is active.
+     * Capture loop — subscribes to DNS, connection, and HTTP feeds while capture is active.
      */
     private suspend fun runCapture() = coroutineScope {
         // Subscribe to DNS capture events.
         val dnsChannel = Clash.subscribeDns()
+
+        // Subscribe to periodic connection snapshots (enhanced connection details).
+        val connectionChannel = Clash.subscribeConnections()
+
+        // Subscribe to HTTP capture events (plaintext HTTP request/response).
+        val httpChannel = Clash.subscribeHttp()
 
         // Route DNS events to CaptureStore.
         launch {
@@ -84,8 +90,27 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
             }
         }
 
-        // PR3: subscribe to enhanced ConnectionSnapshot → CaptureStore.enqueue("connection", ...)
-        // PR3: subscribe to HttpRecord channel → CaptureStore.enqueue("http", ...)
+        // Route connection snapshots to CaptureStore.
+        launch {
+            try {
+                for (snapshot in connectionChannel) {
+                    CaptureStore.enqueue("connection", snapshot)
+                }
+            } catch (e: Exception) {
+                Log.w("CaptureModule: connection channel error: ${e.message}", e)
+            }
+        }
+
+        // Route HTTP events to CaptureStore.
+        launch {
+            try {
+                for (record in httpChannel) {
+                    CaptureStore.enqueue("http", record)
+                }
+            } catch (e: Exception) {
+                Log.w("CaptureModule: HTTP channel error: ${e.message}", e)
+            }
+        }
 
         // Poll until capture stops.
         try {
@@ -94,6 +119,8 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
             }
         } finally {
             dnsChannel.cancel()
+            connectionChannel.cancel()
+            httpChannel.cancel()
         }
     }
 }

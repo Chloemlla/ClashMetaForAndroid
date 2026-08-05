@@ -458,6 +458,7 @@ static jmethodID m_completable_complete_exceptionally;
 static jmethodID m_logcat_interface_received;
 static jmethodID m_connections_interface_received;
 static jmethodID m_dns_interface_received;
+static jmethodID m_http_interface_received;
 static jmethodID m_clash_exception;
 static jmethodID m_fetch_callback_report;
 static jmethodID m_fetch_callback_complete;
@@ -610,6 +611,28 @@ static int call_dns_interface_received_impl(void *callback, const char *payload)
     return 0;
 }
 
+static int call_http_interface_received_impl(void *callback, const char *payload) {
+    TRACE_METHOD();
+
+    ATTACH_JNI();
+
+    // Boolean false (or a thrown exception) tells Go to stop the subscriber.
+    jboolean accepted = (*env)->CallBooleanMethod(env,
+                                                  (jobject) callback,
+                                                  (jmethodID) m_http_interface_received,
+                                                  (jstring) new_string(payload));
+
+    if (jni_catch_exception(env)) {
+        return 1;
+    }
+
+    if (!accepted) {
+        return 1;
+    }
+
+    return 0;
+}
+
 static int open_content_impl(const char *url, char *error, int error_length) {
     TRACE_METHOD();
 
@@ -667,6 +690,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
     jclass c_logcat_interface = find_class("com/github/kr328/clash/core/bridge/LogcatInterface");
     jclass c_connections_interface = find_class("com/github/kr328/clash/core/bridge/ConnectionsInterface");
     jclass c_dns_interface = find_class("com/github/kr328/clash/core/bridge/DnsInterface");
+    jclass c_http_interface = find_class("com/github/kr328/clash/core/bridge/HttpCaptureInterface");
     jclass _c_clash_exception = find_class("com/github/kr328/clash/core/bridge/ClashException");
     jclass _c_content = find_class("com/github/kr328/clash/core/bridge/Content");
     jclass c_throwable = find_class("java/lang/Throwable");
@@ -690,6 +714,8 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
                                                    "(Ljava/lang/String;)Z");
     m_dns_interface_received = find_method(c_dns_interface, "received",
                                            "(Ljava/lang/String;)Z");
+    m_http_interface_received = find_method(c_http_interface, "received",
+                                            "(Ljava/lang/String;)Z");
     m_clash_exception = find_method(_c_clash_exception, "<init>",
                                     "(Ljava/lang/String;)V");
     m_get_message = find_method(c_throwable, "getMessage",
@@ -713,6 +739,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
     logcat_received_func = &call_logcat_interface_received_impl;
     connections_received_func = &call_connections_interface_received_impl;
     dns_received_func = &call_dns_interface_received_impl;
+    http_received_func = &call_http_interface_received_impl;
     open_content_func = &open_content_impl;
     release_object_func = &release_jni_object_impl;
 
@@ -780,4 +807,22 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeUnsubscribeDns(JNIEnv *env,
     TRACE_METHOD();
 
     unsubscribeDns((int64_t) token);
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeSubscribeHttp(JNIEnv *env, jobject thiz,
+                                                                     jobject callback) {
+    TRACE_METHOD();
+
+    jobject _callback = new_global(callback);
+
+    return (jlong) subscribeHttp(_callback);
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeUnsubscribeHttp(JNIEnv *env, jobject thiz,
+                                                                       jlong token) {
+    TRACE_METHOD();
+
+    unsubscribeHttp((int64_t) token);
 }

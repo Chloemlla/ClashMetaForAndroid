@@ -17,6 +17,8 @@ int (*connections_received_func)(void *connections_interface, const char *payloa
 
 int (*dns_received_func)(void *dns_interface, const char *payload);
 
+int (*http_received_func)(void *http_interface, const char *payload);
+
 int (*open_content_func)(const char *url, char *error, int error_length);
 
 void (*release_object_func)(void *obj);
@@ -86,6 +88,16 @@ int dns_received(void *dns_interface, char *payload) {
     TRACE_METHOD();
 
     int result = dns_received_func(dns_interface, payload);
+
+    free(payload);
+
+    return result;
+}
+
+int http_received(void *http_interface, char *payload) {
+    TRACE_METHOD();
+
+    int result = http_received_func(http_interface, payload);
 
     free(payload);
 

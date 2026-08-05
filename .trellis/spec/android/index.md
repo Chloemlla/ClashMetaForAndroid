@@ -25,4 +25,5 @@ Concrete Android runtime, persistence, and UI contracts for this repository.
 - [Scene automation and failover](./scene-automation.md)
 - [Profile file round-trip and export](./profile-file-round-trip.md)
 - [Profile-scoped preferences](./profile-scoped-preferences.md)
+- [ADB traffic capture](./adb-traffic-capture.md)
 - [Update notes](./update-notes.md)

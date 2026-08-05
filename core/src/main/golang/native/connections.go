@@ -38,6 +38,13 @@ type connectionSnapshot struct {
 	Process     string `json:"process"`
 	Package     string `json:"package"`
 	UID         int32  `json:"uid"`
+	// HTTP-specific fields. Method/path/status are NOT available from connection
+	// metadata; plain-HTTP connections are already marked via Type ("HTTP").
+	// These are reserved for the dedicated HTTP capture channel (subscribeHttp)
+	// and are omitted from the snapshot until populated.
+	HTTPMethod string `json:"httpMethod,omitempty"`
+	HTTPPath   string `json:"httpPath,omitempty"`
+	StatusCode int32  `json:"statusCode,omitempty"`
 }
 
 // connectionsPayload is the top-level JSON object pushed to Kotlin on every tick.

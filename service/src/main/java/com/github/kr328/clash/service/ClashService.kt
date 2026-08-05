@@ -40,6 +40,8 @@ class ClashService : BaseService() {
         install(TimeZoneModule(self))
         install(SuspendModule(self))
 
+        install(CaptureModule(self))
+
         try {
             while (isActive) {
                 val quit = select<Boolean> {
