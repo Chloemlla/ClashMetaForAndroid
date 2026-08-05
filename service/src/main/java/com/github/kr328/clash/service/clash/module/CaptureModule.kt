@@ -6,9 +6,8 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.util.CaptureStore
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * ADB-triggered traffic capture module.
@@ -70,13 +69,12 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
     /**
      * Capture loop — subscribes to DNS and connection feeds while capture is active.
      */
-    private suspend fun runCapture() {
+    private suspend fun runCapture() = coroutineScope {
         // Subscribe to DNS capture events.
         val dnsChannel = Clash.subscribeDns()
 
         // Route DNS events to CaptureStore.
-        // Using a separate coroutine to consume from the channel.
-        kotlinx.coroutines.launch {
+        launch {
             try {
                 for (record in dnsChannel) {
                     CaptureStore.enqueue("dns", record)
@@ -92,7 +90,7 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
         // Poll until capture stops.
         try {
             while (CaptureStore.isActive) {
-                kotlinx.coroutines.delay(500)
+                delay(500)
             }
         } finally {
             dnsChannel.cancel()
