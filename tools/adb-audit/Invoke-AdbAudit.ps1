@@ -16,7 +16,14 @@ param(
     [ValidateSet('Default', 'None')][string]$RedactionMode = 'Default',
     [switch]$ConfirmUnredactedExport,
     [switch]$KeepDirectory,
-    [ValidateRange(5, 600)][int]$CommandTimeoutSeconds = 120
+    [ValidateRange(5, 600)][int]$CommandTimeoutSeconds = 120,
+    # Traffic capture options (non-root)
+    [switch]$EnablePCAPdroid,
+    [ValidateRange(10, 600)][int]$CaptureDurationSeconds = 60,
+    [string]$PCAPdroidApkUrl = 'https://github.com/emanuele-f/PCAPdroid/releases/download/v1.9.1/PCAPdroid_v1.9.1.apk',
+    [switch]$EnableMitmProxy,
+    [string]$MitmProxyAddress = '192.168.10.1:8080',
+    [switch]$ConfigureWifiProxy
 )
 
 # Script-scope traps handle errors raised anywhere in this file, including guards
@@ -159,6 +166,151 @@ function Import-ExternalArtifact([string]$Path, [string]$Source, [string]$Kind) 
     return $true
 }
 
+# \u2500\u2500 Traffic capture helpers (non-root, VPN-based) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+function Install-PCAPdroid {
+    $pkg = 'com.emanuelef.remote_capture'
+    $check = Invoke-Adb @('-s',$serial,'shell','pm','list','packages',$pkg)
+    if ($check.ExitCode -eq 0 -and $check.Output -match [regex]::Escape($pkg)) {
+        Write-Host "PCAPdroid is already installed."
+        return $true
+    }
+    $apkDir = Join-Path $root '..' 'pcapdroid-apk'
+    New-Item -ItemType Directory -Force -Path $apkDir | Out-Null
+    $apkPath = Join-Path $apkDir 'PCAPdroid.apk'
+    try {
+        Write-Host "Downloading PCAPdroid from $PCAPdroidApkUrl ..."
+        $wc = New-Object Net.WebClient
+        $wc.DownloadFile($PCAPdroidApkUrl, $apkPath)
+        if (-not (Test-Path -LiteralPath $apkPath -PathType Leaf)) { throw 'Download failed' }
+        $size = (Get-Item -LiteralPath $apkPath).Length
+        Write-Host "Downloaded PCAPdroid APK ($([math]::Round($size/1MB, 1)) MB)."
+
+        $remotePath = "/data/local/tmp/PCAPdroid.apk"
+        $push = Invoke-Adb @('-s',$serial,'push',$apkPath,$remotePath)
+        if ($push.ExitCode -ne 0) { throw "Failed to push APK to device: $($push.Error)" }
+
+        $install = Invoke-Adb @('-s',$serial,'shell','pm','install','-r','-t','-g','--originating-uri','null','--referrer','null',$remotePath)
+        $null = Invoke-Adb @('-s',$serial,'shell','rm','-f',$remotePath)
+        $installFailed = ($install.ExitCode -ne 0) -or ($install.Output -match 'Failure') -or ($install.Error -match 'Failure')
+        if ($installFailed) {
+            Write-Host "PCAPdroid install blocked by device (Vivo/OriginOS restriction)."
+            Write-Host "Install PCAPdroid manually from Google Play / F-Droid, then re-run."
+            $limitations.Add("PCAPdroid not installed (Vivo ADB install restriction). Manual install required.")
+            return $false
+        }
+        Write-Host "PCAPdroid installed successfully."
+        return $true
+    } finally {
+        if (Test-Path -LiteralPath $apkDir -PathType Container) {
+            Remove-Item -LiteralPath $apkDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Start-PCAPdroidCapture {
+    $pkg = 'com.emanuelef.remote_capture'
+    $outDir = '/sdcard/PCAPdroid'
+    $outFile = "cmfa-capture-$sessionId.pcap"
+
+    # Grant notification permission (Android 13+) and VPN permission (Android 14+)
+    $null = Invoke-Adb @('-s',$serial,'shell','appops','set',$pkg,'POST_NOTIFICATIONS','allow')
+    $null = Invoke-Adb @('-s',$serial,'shell','cmd','vpn','grant',$pkg)
+
+    # Launch PCAPdroid main activity once to initialize (required for VPN setup on first run)
+    $null = Invoke-Adb @('-s',$serial,'shell','am','start','-n',"$pkg/.MainActivity")
+    Start-Sleep -Seconds 2
+    $null = Invoke-Adb @('-s',$serial,'shell','input','keyevent','KEYCODE_HOME')
+
+    $intentArgs = @(
+        '-s',$serial,'shell','am','start','-n',"$pkg/.CaptureCtrl",
+        '-e','action','start',
+        '-e','pcap_dump_mode','file',
+        '-e','pcap_dump_dir',$outDir,
+        '-e','pcap_dump_file_name',$outFile
+    )
+    if ($EnableMitmProxy -and $MitmProxyAddress) {
+        $intentArgs += @('-e','http_server',$MitmProxyAddress)
+        Add-Record 'pcapdroid' 'capture-config' @{
+            mode = 'file+mitmproxy'
+            mitmProxy = $MitmProxyAddress
+        } | ConvertTo-Json -Compress
+    } else {
+        Add-Record 'pcapdroid' 'capture-config' @{
+            mode = 'file'
+        } | ConvertTo-Json -Compress
+    }
+
+    $result = Invoke-Adb $intentArgs
+    if ($result.ExitCode -ne 0) {
+        $limitations.Add("PCAPdroid capture failed to start: $($result.Error)")
+        return $null
+    }
+    # Wait for capture to initialize
+    Start-Sleep -Seconds 3
+    $pcapPath = "$outDir/$outFile"
+    $check = Invoke-Adb @('-s',$serial,'shell','ls',$pcapPath)
+    if ($check.ExitCode -ne 0) {
+        $limitations.Add("PCAPdroid did not create output file; capture may not have started.")
+        return $null
+    }
+    return $pcapPath
+}
+
+function Pull-PCAPdroidArtifact([string]$RemotePath) {
+    if (-not $RemotePath) { return $null }
+    $safeName = "pcapdroid-capture-$(Split-Path -Leaf $RemotePath)"
+    $destination = Join-Path $artifactDir $safeName
+
+    $pull = Invoke-Adb @('-s',$serial,'pull',$RemotePath,$destination)
+    if ($pull.ExitCode -ne 0) {
+        $limitations.Add("Failed to pull PCAPdroid capture: $($pull.Error)")
+        return $null
+    }
+    if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) {
+        $limitations.Add("PCAPdroid capture file not found after pull.")
+        return $null
+    }
+    $size = (Get-Item -LiteralPath $destination).Length
+    $script:artifactBytes += $size
+    $script:artifactCount += 1
+    Add-Record 'pcapdroid' 'capture-pcap' ([ordered]@{
+        file = "artifacts/$safeName"
+        bytes = $size
+        durationSeconds = $CaptureDurationSeconds
+        mitmProxy = if ($EnableMitmProxy) { $MitmProxyAddress } else { $null }
+    } | ConvertTo-Json -Compress)
+    $pcapAvailable = $true
+    return "artifacts/$safeName"
+}
+
+function Set-WifiProxy {
+    $current = Invoke-Adb @('-s',$serial,'shell','settings','get','global','http_proxy')
+    if ($current.ExitCode -eq 0 -and $current.Output.Trim() -ne 'null' -and [string]::IsNullOrWhiteSpace($current.Output)) {
+        Add-Record 'adb-shell' 'proxy-override' @{
+            previous = $current.Output.Trim()
+            new = $MitmProxyAddress
+        } | ConvertTo-Json -Compress
+    }
+    $result = Invoke-Adb @('-s',$serial,'shell','settings','put','global','http_proxy',$MitmProxyAddress)
+    if ($result.ExitCode -ne 0) {
+        $limitations.Add("Failed to set WiFi proxy: $($result.Error)")
+    }
+}
+
+function Clear-WifiProxy {
+    $null = Invoke-Adb @('-s',$serial,'shell','settings','put','global','http_proxy',':0')
+    $null = Invoke-Adb @('-s',$serial,'shell','settings','delete','global','http_proxy')
+}
+
+function Stop-PCAPdroid {
+    $pkg = 'com.emanuelef.remote_capture'
+    $null = Invoke-Adb @('-s',$serial,'shell','am','start','-n',"$pkg/.CaptureCtrl",'-e','action','stop')
+    Start-Sleep -Seconds 2
+}
+
+# \u2500\u2500 Frida pre-check (non-root advisory) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
 $devices = Invoke-Adb @('devices','-l')
 if ($devices.ExitCode -ne 0) { throw $devices.Error }
 $authorizedDevices = @($devices.Output -split "`r?`n" | Where-Object { $_ -match '^\S+\s+device(?:\s|$)' })
@@ -276,6 +428,49 @@ if (-not ($mitmAvailable -or $mitmJsonAvailable)) {
 }
 if (-not ($fridaAvailable -or $fridaJsonAvailable)) {
     $limitations.Add('Runtime hook data requires an explicitly supplied Frida log; no injection is performed by this script.')
+}
+
+# ── Traffic capture phase ─────────────────────────────────────────────────
+$pcapRemotePath = $null
+$captureStarted = $false
+$pulled = $null
+
+if ($EnablePCAPdroid) {
+    Add-Record 'pcapdroid' 'capture-begin' ([ordered]@{
+        durationSeconds = $CaptureDurationSeconds
+        mitmProxy = if ($EnableMitmProxy) { $MitmProxyAddress } else { $null }
+    } | ConvertTo-Json -Compress)
+
+    if ($EnableMitmProxy -and $ConfigureWifiProxy) {
+        Set-WifiProxy
+        Add-Record 'adb-shell' 'proxy-configured' $MitmProxyAddress
+    }
+
+    $installResult = Install-PCAPdroid
+    if ($installResult) {
+        $pcapRemotePath = Start-PCAPdroidCapture
+        if ($pcapRemotePath) {
+            $captureStarted = $true
+            Write-Host "Capturing traffic for $CaptureDurationSeconds seconds..."
+            Start-Sleep -Seconds $CaptureDurationSeconds
+            Stop-PCAPdroid
+            $pulled = Pull-PCAPdroidArtifact $pcapRemotePath
+            if ($pulled) {
+                $pcapAvailable = $true
+                $pcapMetadataAvailable = $true
+            }
+        }
+    }
+
+    if ($ConfigureWifiProxy) {
+        Clear-WifiProxy
+        Add-Record 'adb-shell' 'proxy-cleared' 'WiFi proxy restored to default'
+    }
+
+    Add-Record 'pcapdroid' 'capture-end' ([ordered]@{
+        started = $captureStarted
+        pcapCollected = ($null -ne $pulled)
+    } | ConvertTo-Json -Compress)
 }
 
 $finished = [DateTime]::UtcNow
