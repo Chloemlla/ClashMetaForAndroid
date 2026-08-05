@@ -1,5 +1,6 @@
 package com.github.kr328.clash.core
 
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.core.model.*
 import com.github.kr328.clash.core.util.parseInetSocketAddress
@@ -150,8 +151,10 @@ object Clash {
                 isLenient = true
                 coerceInputValues = true
             }.decodeFromString(DashboardSummary.serializer(), raw)
-        }.getOrElse {
+        }.getOrElse { e ->
             // Native may return "{}" on marshal failure; never let decode kill the UI process.
+            // Log so a persistent mismatch between native payload and the Kotlin model is observable.
+            Log.w("queryDashboardSummary: decode failed, falling back to defaults: ${e.message}")
             DashboardSummary()
         }
     }
@@ -231,6 +234,7 @@ object Clash {
                 Bridge.nativeReadOverride(slot.ordinal)
             )
         } catch (e: Exception) {
+            Log.w("queryOverride: decode failed for slot ${slot.name}, returning empty override: ${e.message}")
             ConfigurationOverride()
         }
     }
@@ -250,10 +254,17 @@ object Clash {
     }
 
     fun queryConfiguration(): UiConfiguration {
-        return Json.Default.decodeFromString(
-            UiConfiguration.serializer(),
-            Bridge.nativeQueryConfiguration()
-        )
+        return runCatching {
+            // UiConfiguration is an empty model; tolerate unknown keys and malformed payloads
+            // the same way queryDashboardSummary does instead of crashing the caller on decode.
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            }.decodeFromString(UiConfiguration.serializer(), Bridge.nativeQueryConfiguration())
+        }.getOrElse { e ->
+            Log.w("queryConfiguration: decode failed, returning empty configuration: ${e.message}")
+            UiConfiguration()
+        }
     }
 
     fun subscribeLogcat(): ReceiveChannel<LogMessage> {
