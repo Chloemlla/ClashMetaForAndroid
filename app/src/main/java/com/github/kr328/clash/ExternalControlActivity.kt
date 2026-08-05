@@ -4,12 +4,15 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.util.withProfile
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -37,24 +40,34 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
         if (scheme != "http" && scheme != "https") return finish()
 
         launch {
-            val uuid = withProfile {
-                val type = when (uri.getQueryParameter("type")?.lowercase(Locale.getDefault())) {
-                    "url" -> Profile.Type.Url
-                    "file" -> Profile.Type.File
-                    else -> Profile.Type.Url
-                }
-                val name = uri.getQueryParameter("name") ?: getString(R.string.new_profile)
+            try {
+                val uuid = withProfile {
+                    val type = when (uri.getQueryParameter("type")?.lowercase(Locale.getDefault())) {
+                        "url" -> Profile.Type.Url
+                        "file" -> Profile.Type.File
+                        else -> Profile.Type.Url
+                    }
+                    val name = uri.getQueryParameter("name") ?: getString(R.string.new_profile)
 
-                val parsedInterval = uri.getQueryParameter("update-interval")?.toLongOrNull() ?: 0L
-                val updateInterval = if (parsedInterval > 0) parsedInterval.coerceAtLeast(15L) else 0L
-                val intervalMs = TimeUnit.MINUTES.toMillis(updateInterval)
+                    val parsedInterval = uri.getQueryParameter("update-interval")?.toLongOrNull() ?: 0L
+                    val updateInterval = if (parsedInterval > 0) parsedInterval.coerceAtLeast(15L) else 0L
+                    val intervalMs = TimeUnit.MINUTES.toMillis(updateInterval)
 
-                create(type, name).also {
-                    patch(it, name, url, intervalMs, null)
+                    create(type, name).also {
+                        patch(it, name, url, intervalMs, null)
+                    }
                 }
+                startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // This activity is exported, so arbitrary callers can pass malformed URLs.
+                // Never let an exception from profile creation/patching crash the process.
+                Log.w("ExternalControlActivity: failed to install profile from deep link", e)
+                Toast.makeText(this@ExternalControlActivity, R.string.invalid_url, Toast.LENGTH_LONG).show()
+            } finally {
+                finish()
             }
-            startActivity(PropertiesActivity::class.intent.setUUID(uuid))
-            finish()
         }
     }
 
