@@ -14,10 +14,6 @@ import com.github.kr328.clash.service.store.WidgetStateStore
 import com.github.kr328.clash.service.util.sendBroadcastSelf
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.TimeUnit
 
 /**
@@ -97,17 +93,11 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
             var proxyDelay = 0L
             var aliveProxies = 0
             if (summary.selectedNow.isNotEmpty()) {
-                val delaysJson = runCatching {
+                val delays = runCatching {
                     Clash.queryGroupDelays(summary.selectedNow)
                 }.getOrNull()
-                if (delaysJson != null) {
-                    try {
-                        val root = Json.parseToJsonElement(delaysJson).jsonObject
-                        val delays = mutableMapOf<String, Int>()
-                        for ((key, value) in root) {
-                            value.jsonPrimitive.content.toIntOrNull()?.let { delays[key] = it }
-                        }
-                        for ((_, delay) in delays) {
+                if (delays != null) {
+                    for ((_, delay) in delays) {
                             if (delay > 0) {
                                 aliveProxies++
                                 if (proxyDelay == 0L || delay < proxyDelay) {
@@ -115,11 +105,8 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                                 }
                             }
                         }
-                    } catch (_: Exception) {
-                        // Non-fatal parse failure; keep defaults.
                     }
                 }
-            }
 
             val memoryUsage = runCatching {
                 Clash.queryMemoryUsage()
