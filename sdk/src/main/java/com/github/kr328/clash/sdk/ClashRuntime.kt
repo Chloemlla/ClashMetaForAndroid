@@ -23,6 +23,7 @@ import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.IProfileManager
 import com.github.kr328.clash.service.util.sendBroadcastSelf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -46,6 +47,9 @@ import kotlin.coroutines.CoroutineContext
  * 7. [stop] / [unbind]
  */
 object ClashRuntime {
+    private const val MAX_BINDER_RETRIES = 5
+    private const val BINDER_RETRY_BASE_DELAY_MS = 100L
+
     @Volatile
     private var app: Application? = null
 
@@ -269,40 +273,49 @@ object ClashRuntime {
     // endregion
 
     /**
-     * Execute a block against [IClashManager] with DeadObjectException retry.
-     * Prefer the typed helpers above when possible.
+     * Execute a block against [IClashManager] with bounded DeadObjectException retry
+     * and exponential backoff.
      */
     suspend fun <T> withClash(
         context: CoroutineContext = Dispatchers.IO,
         block: suspend IClashManager.() -> T,
     ): T {
+        var attempt = 0
         while (true) {
             val remote = requireSession().remote.get()
             val client = remote.clash()
             try {
                 return withContext(context) { client.block() }
             } catch (e: DeadObjectException) {
-                Log.w("ClashRuntime: IClashManager dead, retrying")
+                attempt += 1
+                if (attempt > MAX_BINDER_RETRIES) throw e
+                Log.w("ClashRuntime: IClashManager dead, retrying ($attempt/$MAX_BINDER_RETRIES)")
                 requireSession().remote.reset(remote)
+                delay(BINDER_RETRY_BASE_DELAY_MS * attempt)
             }
         }
     }
 
     /**
-     * Execute a block against [IProfileManager] with DeadObjectException retry.
+     * Execute a block against [IProfileManager] with bounded DeadObjectException retry
+     * and exponential backoff.
      */
     suspend fun <T> withProfile(
         context: CoroutineContext = Dispatchers.IO,
         block: suspend IProfileManager.() -> T,
     ): T {
+        var attempt = 0
         while (true) {
             val remote = requireSession().remote.get()
             val client = remote.profile()
             try {
                 return withContext(context) { client.block() }
             } catch (e: DeadObjectException) {
-                Log.w("ClashRuntime: IProfileManager dead, retrying")
+                attempt += 1
+                if (attempt > MAX_BINDER_RETRIES) throw e
+                Log.w("ClashRuntime: IProfileManager dead, retrying ($attempt/$MAX_BINDER_RETRIES)")
                 requireSession().remote.reset(remote)
+                delay(BINDER_RETRY_BASE_DELAY_MS * attempt)
             }
         }
     }

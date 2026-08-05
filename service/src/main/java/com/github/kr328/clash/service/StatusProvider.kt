@@ -170,14 +170,19 @@ class StatusProvider : ContentProvider() {
 
         private const val CLASH_SERVICE_RUNNING_FILE = "service_running.lock"
 
+        @Volatile
         var serviceRunning: Boolean = false
             set(value) {
                 field = value
 
                 shouldStartClashOnBoot = value
             }
+        @Volatile
         var vpnRunning: Boolean = false
+        @Volatile
         var lastError: String? = null
+        @Volatile
+        var currentProfile: String? = null
         var shouldStartClashOnBoot: Boolean
             get() = Global.application.filesDir.resolve(CLASH_SERVICE_RUNNING_FILE).exists()
             set(value) {
@@ -188,6 +193,5 @@ class StatusProvider : ContentProvider() {
                         delete()
                 }
             }
-        var currentProfile: String? = null
     }
 }
