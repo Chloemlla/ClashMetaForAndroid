@@ -230,6 +230,8 @@
     <string name="tproxy_port">TProxy Port</string>
     <string name="authentication">Authentication</string>
     <string name="allow_lan">Allow LAN</string>
+    <string name="security_warning">Security Warning</string>
+    <string name="allow_lan_no_auth_warning">Allow LAN is enabled without authentication. This exposes an open proxy on your local network, which can be abused by anyone on the same LAN. Consider setting authentication credentials.</string>
     <string name="bind_address">Bind Address</string>
     <string name="mode">Mode</string>
     <string name="log_level">Log Level</string>

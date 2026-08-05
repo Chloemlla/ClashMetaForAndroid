@@ -124,7 +124,19 @@ class OverrideSettingsDesign(
                 values = booleanValues,
                 valuesText = booleanValuesText,
                 title = R.string.allow_lan,
-            )
+            ) {
+                listener = OnChangedListener {
+                    if (configuration.allowLan == true &&
+                        (configuration.authentication.isNullOrEmpty() ||
+                         configuration.authentication.all { it.isBlank() })) {
+                        MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.security_warning)
+                            .setMessage(R.string.allow_lan_no_auth_warning)
+                            .setPositiveButton(R.string.ok, null)
+                            .show()
+                    }
+                }
+            }
 
             selectableList(
                 value = configuration::ipv6,

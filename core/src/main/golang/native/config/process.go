@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/dlclark/regexp2"
@@ -19,6 +20,7 @@ import (
 var processors = []processor{
 	patchExternalController, // must before patchOverride, so we only apply ExternalController in Override settings
 	patchOverride,
+	patchExternalControllerSecurity, // enforce security checks on external-controller after override
 	patchGeneral,
 	patchProfile,
 	patchDns,
@@ -44,6 +46,41 @@ func patchOverride(cfg *config.RawConfig, _ string) error {
 func patchExternalController(cfg *config.RawConfig, _ string) error {
 	cfg.ExternalController = ""
 	cfg.ExternalControllerTLS = ""
+
+	return nil
+}
+
+// patchExternalControllerSecurity enforces security constraints on the
+// external-controller after the Override settings have been applied.
+// If the external-controller is bound to a non-loopback address, the
+// secret must be non-empty to prevent unauthorized remote access to
+// the Clash REST API.
+func patchExternalControllerSecurity(cfg *config.RawConfig, _ string) error {
+	ec := cfg.ExternalController
+	if ec == "" {
+		ec = cfg.ExternalControllerTLS
+	}
+	if ec == "" {
+		return nil
+	}
+
+	// Check if the address is non-loopback.
+	// Format is "host:port" or just ":port".
+	host, _, err := net.SplitHostPort(ec)
+	if err != nil {
+		// Invalid format, clear it to be safe.
+		cfg.ExternalController = ""
+		cfg.ExternalControllerTLS = ""
+		return nil
+	}
+
+	if host != "" && host != "127.0.0.1" && host != "::1" && host != "localhost" {
+		if cfg.Secret == "" {
+			log.Warnln("External controller bound to non-loopback address %q without a secret — clearing binding", ec)
+			cfg.ExternalController = ""
+			cfg.ExternalControllerTLS = ""
+		}
+	}
 
 	return nil
 }
