@@ -21,7 +21,9 @@ class TunModule(private val vpn: VpnService) : Module<Unit>(vpn) {
         val dns: String,
     )
 
-    private val connectivity = service.getSystemService<ConnectivityManager>()!!
+    private val connectivity = checkNotNull(service.getSystemService<ConnectivityManager>()) {
+        "ConnectivityManager unavailable; TUN cannot resolve owner UIDs"
+    }
     private val close = Channel<Unit>(Channel.CONFLATED)
 
     private fun queryUid(

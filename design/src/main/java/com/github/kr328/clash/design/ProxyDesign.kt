@@ -63,7 +63,8 @@ class ProxyDesign(
     }
 
     private val adapter: ProxyPageAdapter
-        get() = binding.pagesView.adapter!! as ProxyPageAdapter
+        get() = binding.pagesView.adapter as? ProxyPageAdapter
+            ?: error("pagesView adapter is not a ProxyPageAdapter")
 
     private val groupListView: RecyclerView? =
         binding.root.findViewById<RecyclerView>(R.id.group_list_view)

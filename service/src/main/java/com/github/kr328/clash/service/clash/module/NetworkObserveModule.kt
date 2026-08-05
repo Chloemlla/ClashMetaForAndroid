@@ -19,7 +19,9 @@ import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 
 class NetworkObserveModule(service: Service) : Module<Network>(service) {
-    private val connectivity = service.getSystemService<ConnectivityManager>()!!
+    private val connectivity = checkNotNull(service.getSystemService<ConnectivityManager>()) {
+        "ConnectivityManager unavailable; network observation cannot start"
+    }
     private val networks: Channel<Network> = Channel(Channel.UNLIMITED)
     private val request = NetworkRequest.Builder().apply {
         addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)

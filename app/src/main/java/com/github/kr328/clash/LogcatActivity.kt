@@ -142,11 +142,17 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         return suspendCoroutine { ctx ->
             bindService(LogcatService::class.intent, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                    val srv = service!!.queryLocalInterface("") as LogcatService
+                    val srv = service?.queryLocalInterface("") as? LogcatService
 
-                    ctx.resume(srv)
+                    if (srv != null) {
+                        ctx.resume(srv)
 
-                    conn = this
+                        conn = this
+                    } else {
+                        // A null binder or wrong interface would otherwise hang the coroutine
+                        // or throw NPE on the binder thread; surface it to the caller instead.
+                        ctx.resumeWithException(IllegalStateException("LogcatService binder unavailable"))
+                    }
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {

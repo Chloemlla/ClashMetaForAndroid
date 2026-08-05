@@ -60,7 +60,8 @@ class ProxyPageFactory(private val config: ProxyViewConfig) {
     }
 
     fun fromRoot(root: View): Holder {
-        return root.tag!! as Holder
+        return root.tag as? Holder
+            ?: error("View tag is not a ProxyPageFactory.Holder")
     }
 
     private companion object {
