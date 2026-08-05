@@ -26,4 +26,5 @@ Concrete Android runtime, persistence, and UI contracts for this repository.
 - [Profile file round-trip and export](./profile-file-round-trip.md)
 - [Profile-scoped preferences](./profile-scoped-preferences.md)
 - [ADB traffic capture](./adb-traffic-capture.md)
+- [Runtime resilience](./runtime-resilience.md)
 - [Update notes](./update-notes.md)
