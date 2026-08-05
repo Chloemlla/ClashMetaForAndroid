@@ -6,6 +6,26 @@ set -euo pipefail
 
 OWNER_REPO="${LUMEN_CRASH_OWNER_REPO:-Chloemlla/Project-Lumen}"
 OUT_FILE="${LUMEN_CRASH_VERSION_FILE:-lumen-crash.resolved.version}"
+
+# If a pinned version file exists, use it directly and skip API resolution.
+# This allows the repo to pin a specific lumen-crash version when the latest
+# release is incompatible with the project's Kotlin version.
+PIN_FILE="${LUMEN_CRASH_PIN_FILE:-lumen-crash.pinned.version}"
+if [[ -s "$PIN_FILE" ]]; then
+  pinned_version="$(tr -d '\r\n' < "$PIN_FILE")"
+  printf '%s\n' "$pinned_version" > "$OUT_FILE"
+  echo "Pinned lumen-crash version: $pinned_version -> $OUT_FILE (from $PIN_FILE)"
+  exit 0
+fi
+
+# If the resolved version file already exists, keep it (don't overwrite).
+# This preserves the committed version when no pin file is present.
+if [[ -s "$OUT_FILE" ]]; then
+  existing="$(tr -d '\r\n' < "$OUT_FILE")"
+  echo "Keeping existing lumen-crash version: $existing"
+  exit 0
+fi
+
 API_URL="https://api.github.com/repos/${OWNER_REPO}/releases?per_page=100"
 
 auth_args=()
