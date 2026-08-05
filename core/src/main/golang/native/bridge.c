@@ -15,6 +15,8 @@ int (*logcat_received_func)(void *logcat_interface, const char *payload);
 
 int (*connections_received_func)(void *connections_interface, const char *payload);
 
+int (*dns_received_func)(void *dns_interface, const char *payload);
+
 int (*open_content_func)(const char *url, char *error, int error_length);
 
 void (*release_object_func)(void *obj);
@@ -74,6 +76,16 @@ int connections_received(void *connections_interface, char *payload) {
     TRACE_METHOD();
 
     int result = connections_received_func(connections_interface, payload);
+
+    free(payload);
+
+    return result;
+}
+
+int dns_received(void *dns_interface, char *payload) {
+    TRACE_METHOD();
+
+    int result = dns_received_func(dns_interface, payload);
 
     free(payload);
 
