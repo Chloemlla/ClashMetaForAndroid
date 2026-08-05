@@ -25,7 +25,13 @@ object Intents {
     val ACTION_OVERRIDE_CHANGED = "$packageName.intent.action.OVERRIDE_CHANGED"
     val ACTION_AUTOMATION_CHANGED = "$packageName.intent.action.AUTOMATION_CHANGED"
 
+    // Traffic capture (debug tool, ADB-triggered)
+    val ACTION_TRAFFIC_CAPTURE = "$packageName.intent.action.TRAFFIC_CAPTURE"
+
     const val EXTRA_STOP_REASON = "stop_reason"
     const val EXTRA_UUID = "uuid"
     const val EXTRA_FAIL_REASON = "fail_reason"
+    // Traffic capture extras
+    const val EXTRA_CAPTURE_ACTION = "capture_action"
+    const val EXTRA_CAPTURE_DURATION = "capture_duration"
 }

@@ -302,6 +302,25 @@ object Clash {
         return channel
     }
 
+    /**
+     * Subscribe to DNS capture events (query/response/cache_hit) pushed from the
+     * Go bridge layer. The returned channel delivers [DnsRecord] until closed.
+     */
+    fun subscribeDns(): ReceiveChannel<DnsRecord> {
+        val channel = Channel<DnsRecord>(Channel.UNLIMITED)
+        val token = Bridge.nativeSubscribeDns(object : DnsInterface {
+            override fun received(jsonPayload: String): Boolean {
+                return channel.trySend(
+                    Json.decodeFromString(DnsRecord.serializer(), jsonPayload)
+                ).isSuccess
+            }
+        })
+        channel.invokeOnClose {
+            Bridge.nativeUnsubscribeDns(token)
+        }
+        return channel
+    }
+
     fun setAgeSecretKey(key: String?) {
         Bridge.nativeSetAgeSecretKey(key)
     }

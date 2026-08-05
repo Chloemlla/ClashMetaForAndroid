@@ -48,6 +48,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         install(TimeZoneModule(self))
         install(SuspendModule(self))
 
+        install(CaptureModule(self))
+
         try {
             tun.open()
 
