@@ -78,6 +78,10 @@ fun Double.toProgress(): Int {
     return this.toInt()
 }
 fun Long.toDateStr(): String {
-    val simpleDateFormat =SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    return simpleDateFormat.format(Date(this))
+    // Localized: adapts date order / separators / 12-24h to the device locale instead of a
+    // fixed "yyyy-MM-dd HH:mm:ss" pattern. Used from DataBinding (no Context available), so
+    // this must not require android.content.Context.
+    val locale = Locale.getDefault()
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "yyyyMMddHHmmss")
+    return android.text.format.DateFormat.format(pattern, Date(this)).toString()
 }
