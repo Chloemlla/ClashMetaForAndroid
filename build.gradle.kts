@@ -50,7 +50,18 @@ buildscript {
     repositories {
         mavenCentral()
         google()
-        maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
+        // STOP-G: MetaCubeX Maven mirror — raw GitHub content served as Maven repo,
+        // no checksum or PGP verification. If this repo is hijacked or tampered with,
+        // all builds silently fetch compromised artifacts (supply-chain injection).
+        // Provides com.github.kr328.golang and com.github.kr328.kaidl artifacts not
+        // available on Maven Central / Google. Migration path: republish these artifacts
+        // to a controlled repository (GitHub Packages or Sonatype) with proper signing.
+        maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases") {
+            content {
+                includeGroup("com.github.kr328.golang")
+                includeGroup("com.github.kr328.kaidl")
+            }
+        }
     }
     dependencies {
         classpath(libs.build.android)
@@ -66,7 +77,13 @@ subprojects {
     repositories {
         mavenCentral()
         google()
-        maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
+        // STOP-G: MetaCubeX Maven mirror — see buildscript block above for details.
+        maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases") {
+            content {
+                includeGroup("com.github.kr328.golang")
+                includeGroup("com.github.kr328.kaidl")
+            }
+        }
         // README option C: no-auth release assets synced under ./local-maven
         maven {
             name = "LocalMavenLumenCrash"

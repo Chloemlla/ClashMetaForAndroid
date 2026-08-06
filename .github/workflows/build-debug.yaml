@@ -150,7 +150,12 @@ jobs:
             **/build/reports/lint-results-*.html
           if-no-files-found: warn
 
+      # Supply-chain hardening: only sign on manual dispatch from main.
+      # PR builds must NOT have access to production signing secrets — a
+      # malicious PR that modifies any step before this point could exfiltrate
+      # the keystore material.  PR validation is done with unsigned APKs.
       - name: Prepare release signing (GitHub secrets only)
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -159,6 +164,7 @@ jobs:
         run: bash .github/scripts/prepare-signing.sh
 
       - name: Build signed Alpha release APK (arm64 only)
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
@@ -178,9 +184,11 @@ jobs:
           fi
 
       - name: Stage secret-signed Alpha APKs
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
         run: bash .github/scripts/stage-signed-apks.sh app/build/ci-apks/alpha-release
 
       - name: Prepare Alpha migration APK aliases
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
         run: |
           set -euo pipefail
           release_dir=app/build/ci-apks/alpha-release
@@ -200,6 +208,7 @@ jobs:
           done
 
       - name: Upload APKs
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
         uses: actions/upload-artifact@v7
         with:
           name: CMFA Alpha Release APKs

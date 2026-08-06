@@ -17,6 +17,21 @@ jobs:
           set -euo pipefail
           git submodule update --init --recursive --remote --force
 
+      - name: Record submodule commit for review
+        run: |
+          set -euo pipefail
+          COMMIT=$(git submodule status core/src/foss/golang/clash | awk '{print $1}' | sed 's/^[+-]//')
+          echo "New mihomo commit: ${COMMIT}"
+          echo "Upstream diff: https://github.com/MetaCubeX/mihomo/commit/${COMMIT}"
+          cat > /tmp/pr-body.md <<EOF
+          - Update Clash-Meta Core
+          - Update Go Module Dependencies
+
+          ## Submodule update
+          mihomo commit: ${COMMIT}
+          https://github.com/MetaCubeX/mihomo/commit/${COMMIT}
+          EOF
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -72,6 +87,12 @@ jobs:
           update-go-mod-replace "${{ github.workspace }}/core/src/foss/golang/clash/go.mod" "$(pwd)/go.mod"
           go mod tidy
 
+      - name: Bump Go security deps
+        run: |
+          set -euo pipefail
+          cd core/src/main/golang && go get -u golang.org/x/net golang.org/x/crypto golang.org/x/sys && go mod tidy
+          cd ../../foss/golang && go get -u golang.org/x/net golang.org/x/crypto golang.org/x/sys && go mod tidy
+
       - uses: actions/create-github-app-token@v3
         id: generate-token
         with:
@@ -89,9 +110,7 @@ jobs:
           delete-branch: true
           title: 'Update Dependencies'
           draft: false
-          body: |
-            - Update Clash-Meta Core
-            - Update Go Module Dependecies
+          body-path: /tmp/pr-body.md
           labels: |
             Update
 

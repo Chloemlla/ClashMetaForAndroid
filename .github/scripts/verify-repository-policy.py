@@ -243,6 +243,32 @@ for workflow_name in ("build-release.yaml", "build-pre-release.yaml"):
         f"{workflow_name} updates submodules from a floating branch (--remote) in a release build",
     )
 
+# Signing material must not exist anywhere in the working directory, even if
+# gitignored (audit STOP-A / NET-SUPPLY-1).
+exclude_dirs = {".git", ".gradle", "build", "tmp", ".trellis"}
+for found in ROOT.rglob("*"):
+    if exclude_dirs.intersection(found.relative_to(ROOT).parts):
+        continue
+    if found.is_file():
+        name = found.name.lower()
+        if name == "keystore_base64.txt" or any(
+            name.endswith(suffix) for suffix in (".jks", ".p12", ".keystore")
+        ):
+            require(
+                False,
+                f"signing material found on disk in working directory: {found.relative_to(ROOT)}",
+            )
+
+# .gitmodules must not contain a `branch =` line, which would pin a submodule
+# to a floating branch tip rather than a recorded commit (audit STOP-F / NET-SUPPLY-3).
+gitmodules = ROOT / ".gitmodules"
+if gitmodules.is_file():
+    gitmodules_text = gitmodules.read_text(encoding="utf-8")
+    require(
+        "branch = " not in gitmodules_text,
+        ".gitmodules contains a `branch =` line — submodules must be pinned to a recorded commit, not a floating branch",
+    )
+
 if errors:
     for error in errors:
         print(f"policy error: {error}", file=sys.stderr)
