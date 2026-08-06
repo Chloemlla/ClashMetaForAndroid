@@ -125,6 +125,7 @@ cd core/src/main/golang && go get -u golang.org/x/net golang.org/x/crypto golang
 - `build-pre-release.yaml` / `build-release.yaml` do not run the Go security bump — releases before the update PR merges still carry vulnerable Go deps.
 - `setup-go` uses the MetaCubeX Go toolchain feed (NET-SUPPLY-7) — later batch.
 - `release.keystore` still reachable from git history (pre-existing policy failure; history rewrite out of scope).
+- `ageSecretKey` is stored **plaintext** in Room (`imported.ageSecretKey` / `pending.ageSecretKey`, TEXT columns). The `fromSecureString`/`toSecureString` `String?→String?` `@TypeConverter`s added in `e91fbe38` were **dead code that never executed** (Room flags custom String↔String converters as conflicting and String columns map natively) and broke the KSP build — they were removed on 2026-08-06 to unblock CI. A real at-rest encryption (BLOB column + migration, or boundary encryption) is **deferred to the credentials audit batch 3**; do not re-add String→String converters.
 
 ## Related
 
