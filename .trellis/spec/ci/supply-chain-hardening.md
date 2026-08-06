@@ -38,6 +38,7 @@ Do NOT use `if found.is_dir() and found.name in exclude_dirs: continue` — `Pat
 ## 5. Submodule & Go dependency contracts
 
 - `.gitmodules`: no `branch =` line — submodules pinned to recorded commits.
+- **Submodule↔go.mod consistency** (2026-08-06): the mihomo submodule must be pinned to a commit whose `go.mod` matches `core/src/main/golang/go.mod` dep-for-dep. Canonical reference: the gitlink used by `MetaCubeX/ClashMetaForAndroid@main` (`gh api repos/MetaCubeX/ClashMetaForAndroid/git/trees/main?recursive=1`). Pinning a NEWER mihomo head breaks the go build with `go: updates to go.mod needed; go mod tidy` because new library deps (e.g. `metacubex/mipstack`, `metacubex/zerotier-go`) are missing from the main go.mod. Do NOT fix this by hand-editing go.mod — re-pin the submodule instead, or regenerate via the update-dependencies workflow only. `go.uber.org/automaxprocs` may be required by mihomo's go.mod yet absent from CMFA's: that is expected, since CMFA builds mihomo as a library (its `main` package, the only automaxprocs importer, is never built).
 - `update-dependencies.yaml` is the ONLY workflow that may run `git submodule update --remote`; the update PR body must carry the new submodule commit hash for review (step `Record submodule commit for review`, `body-path: /tmp/pr-body.md`), and must never auto-merge.
 - Go security bump runs in CI (never locally): for both `core/src/main/golang` and `core/src/foss/golang`:
   ```bash
