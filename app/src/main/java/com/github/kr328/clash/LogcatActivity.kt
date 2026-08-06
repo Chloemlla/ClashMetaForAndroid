@@ -26,6 +26,7 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.io.OutputStreamWriter
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import com.github.kr328.clash.design.R
 
@@ -140,7 +141,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
 
     private suspend fun bindLogcatService(): LogcatService {
         return suspendCoroutine { ctx ->
-            bindService(LogcatService::class.intent, object : ServiceConnection {
+            val bound = bindService(LogcatService::class.intent, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                     val srv = service?.queryLocalInterface("") as? LogcatService
 
@@ -159,6 +160,13 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
                     conn = null
                 }
             }, Context.BIND_AUTO_CREATE)
+
+            if (!bound) {
+                // bindService() returning false means the system rejected the request and
+                // onServiceConnected will never be called; resume now to avoid hanging
+                // mainStreaming() forever.
+                ctx.resumeWithException(IllegalStateException("Failed to bind to LogcatService"))
+            }
         }
     }
 

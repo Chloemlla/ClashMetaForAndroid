@@ -15,7 +15,7 @@ jobs:
   BuildDebug:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: read
     steps:
       - name: Checkout Repository
@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
           for p in "${patches[@]}"; do
-            patch --verbose -p 1 < "$p"
+            patch --verbose -p1 < "$p"
           done
 
       - uses: actions/cache@v5
@@ -150,6 +150,91 @@ jobs:
             **/build/reports/lint-results-*.html
           if-no-files-found: warn
 
+  # Supply-chain hardening (CodeRabbit #3): the signing/publish job is split out
+  # from BuildDebug so PR (pull_request) events never receive a GITHUB_TOKEN
+  # with contents:write. BuildDebug runs with contents:read on every event;
+  # SignAndPublish only starts on manual dispatch from main by the owner, and
+  # only then is granted contents:write. A malicious PR cannot reach the
+  # production signing secrets or create refs/releases because this job is
+  # skipped entirely for pull_request events.
+  SignAndPublish:
+    needs: BuildDebug
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set Alpha release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)"/\1/p' build.gradle.kts | head -n 1)
+          SHORT_HASH=$(git rev-parse --short=7 HEAD)
+          test -n "$VERSION_NAME"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "short_hash=$SHORT_HASH" >> "$GITHUB_OUTPUT"
+          echo "alpha_tag=v${VERSION_NAME}-${SHORT_HASH}-alpha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive --force
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          cache: false
+          go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
+          go-version: '1.26'
+
+      - name: Apply Patches
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          cd "$(go env GOROOT)"
+          patches=("$GITHUB_WORKSPACE"/.github/patch/*.patch)
+          if [ "${#patches[@]}" -eq 0 ]; then
+            echo "No Go patches found under .github/patch" >&2
+            exit 1
+          fi
+          for p in "${patches[@]}"; do
+            patch --verbose -p1 < "$p"
+          done
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('core/src/foss/golang/go.sum', 'core/src/main/golang/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Update CA
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates
+          sudo update-ca-certificates
+          cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
+
+      - name: Resolve lumen-crash version
+        env:
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/resolve-lumen-crash-version.sh
+
       - name: Prepare release signing (GitHub secrets only)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -211,9 +296,8 @@ jobs:
           if-no-files-found: error
 
       # Avoid PR noise: only manual runs publish GitHub pre-releases.
+      # The job-level if (dispatch + main + owner) already gates this step.
       - name: Publish Alpha pre-release
-        # Manual dispatch only, and only from main to avoid tag/release pollution from feature branches.
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

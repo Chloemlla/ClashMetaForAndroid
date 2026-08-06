@@ -36,3 +36,20 @@ explicit confirmation, and externally supplied PCAP/mitmproxy/Frida artifacts re
 user-reviewed inputs. The Android importer rejects traversal paths, oversized reports,
 missing consent/redaction metadata, mismatched sessions, and unhashed or hash-mismatched
 artifacts.
+
+## Working-directory keystore hygiene
+
+The signing keystore must never be placed in the repository working directory, even if
+covered by `.gitignore`. Physical presence on disk exposes the private-key material to
+anyone with working-copy access (developers, CI runners, backups, screen-sharing, sync).
+
+On 2026-08-06 the following files were found in the repo root and moved to
+`F:\Repositories\GitHub\clashmeta-keystore-backup\`:
+
+- `clashmeta-release.jks` (JKS keystore, 2750 bytes)
+- `keystore_base64.txt` (Base64-encoded PKCS#12, 3668 bytes)
+
+These files were gitignored but physically present. They must be **rotated** before any
+new production signing — see "Signing-key incident note" above. The
+`setup-android-signing.ps1` script has been updated to write Base64 output to a
+randomized temporary path under `$env:TEMP` instead of the repo directory.

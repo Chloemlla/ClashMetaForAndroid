@@ -1,8 +1,10 @@
 package com.github.kr328.clash.service.util
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.annotation.RequiresApi
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -28,7 +30,9 @@ object SecureStorage {
     private var initialized = false
     private var key: SecretKey? = null
 
+    @RequiresApi(Build.VERSION_CODES.M)
     fun init(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         if (initialized) return
 
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }

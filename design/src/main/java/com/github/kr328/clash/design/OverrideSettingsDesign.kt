@@ -126,9 +126,10 @@ class OverrideSettingsDesign(
                 title = R.string.allow_lan,
             ) {
                 listener = OnChangedListener {
+                    val authentication = configuration.authentication
                     if (configuration.allowLan == true &&
-                        (configuration.authentication.isNullOrEmpty() ||
-                         configuration.authentication.all { it.isBlank() })) {
+                        (authentication.isNullOrEmpty() ||
+                         authentication.all { it.isBlank() })) {
                         MaterialAlertDialogBuilder(context)
                             .setTitle(R.string.security_warning)
                             .setMessage(R.string.allow_lan_no_auth_warning)
