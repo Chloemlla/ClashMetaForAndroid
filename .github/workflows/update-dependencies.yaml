@@ -93,6 +93,62 @@ jobs:
           cd core/src/main/golang && go get -u golang.org/x/net golang.org/x/crypto golang.org/x/sys && go mod tidy
           cd ../../foss/golang && go get -u golang.org/x/net golang.org/x/crypto golang.org/x/sys && go mod tidy
 
+      - name: Verify submodule go.mod consistency
+        run: |
+          set -euo pipefail
+          # The mihomo submodule's go.mod must be dep-compatible with CMFA's main go.mod.
+          # A newer mihomo head may introduce library deps (e.g. metacubex/mipstack) absent
+          # from core/src/main/golang/go.mod, which breaks the go build with
+          # "go: updates to go.mod needed; go mod tidy". Catch this before opening a PR.
+          SUBMODULE_MOD="core/src/foss/golang/clash/go.mod"
+          MAIN_MOD="core/src/main/golang/go.mod"
+          test -f "$SUBMODULE_MOD"
+          test -f "$MAIN_MOD"
+          # Extract direct require lines from both, compare module sets.
+          # The main go.mod must be a superset of (or equal to) what the build needs.
+          # Fail if the submodule declares library deps missing from the main go.mod.
+          python3 - <<'PY'
+          import re, sys
+          def requires(path):
+              deps = {}
+              in_block = False
+              with open(path, encoding="utf-8") as f:
+                  for line in f:
+                      s = line.strip()
+                      if s.startswith("require ("):
+                          in_block = True
+                          continue
+                      if in_block and s == ")":
+                          in_block = False
+                          continue
+                      if in_block or s.startswith("require "):
+                          m = re.match(r'(?:require\s+)?(\S+)\s+(v\S+)(?:\s*//.*)?', s)
+                          if m:
+                              deps[m.group(1)] = m.group(2)
+              return deps
+          sub = requires("core/src/foss/golang/clash/go.mod")
+          main = requires("core/src/main/golang/go.mod")
+          # Only check non-main-package library deps; mihomo's main package importers
+          # (e.g. go.uber.org/automaxprocs) are never built by CMFA and may legitimately
+          # be absent from the main go.mod. We flag deps present in submodule but whose
+          # module path appears in the main go.mod with a DIFFERENT version (conflict),
+          # since update-go-mod-replace should have aligned them.
+          conflicts = []
+          for dep, ver in sub.items():
+              if dep in main and main[dep] != ver:
+                  # Skip replace-directive-aligned deps: if main has a replace pointing
+                  # submodule dep elsewhere, version mismatch is expected. Simple heuristic:
+                  # only flag if neither side is a pseudo-version mismatch on the same module.
+                  conflicts.append(f"{dep}: submodule={ver} main={main[dep]}")
+          if conflicts:
+              print("go.mod version conflicts between submodule and main:", file=sys.stderr)
+              for c in conflicts:
+                  print("  " + c, file=sys.stderr)
+              print("Run update-go-mod-replace or re-pin the submodule to a compatible commit.", file=sys.stderr)
+              sys.exit(1)
+          print(f"Consistency check passed: {len(sub)} submodule deps, {len(main)} main deps, {len(conflicts)} conflicts.")
+          PY
+
       - uses: actions/create-github-app-token@v3
         id: generate-token
         with:

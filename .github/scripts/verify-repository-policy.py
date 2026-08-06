@@ -244,8 +244,13 @@ for workflow_name in ("build-release.yaml", "build-pre-release.yaml"):
     )
 
 # Signing material must not exist anywhere in the working directory, even if
-# gitignored (audit STOP-A / NET-SUPPLY-1).
-exclude_dirs = {".git", ".gradle", "build", "tmp", ".trellis"}
+# gitignored (audit STOP-A / NET-SUPPLY-1). Only `.git` is excluded (git
+# objects/packed refs should not be scanned); build/, .gradle/, tmp/, .trellis/
+# must NOT be exempt — a keystore hiding under build/ or tmp/ is still a policy
+# violation. `Path.rglob("*")` yields children of excluded dirs, so we prune via
+# `exclude_dirs.intersection(found.relative_to(ROOT).parts)` rather than
+# `if found.is_dir() and found.name in exclude_dirs`.
+exclude_dirs = {".git"}
 for found in ROOT.rglob("*"):
     if exclude_dirs.intersection(found.relative_to(ROOT).parts):
         continue
@@ -261,11 +266,13 @@ for found in ROOT.rglob("*"):
 
 # .gitmodules must not contain a `branch =` line, which would pin a submodule
 # to a floating branch tip rather than a recorded commit (audit STOP-F / NET-SUPPLY-3).
+# Git config allows `branch=`, `branch\t=`, and leading whitespace before the
+# key, so match with a regex in multiline mode rather than a literal substring.
 gitmodules = ROOT / ".gitmodules"
 if gitmodules.is_file():
     gitmodules_text = gitmodules.read_text(encoding="utf-8")
     require(
-        "branch = " not in gitmodules_text,
+        re.search(r"(?m)^\s*branch\s*=", gitmodules_text) is None,
         ".gitmodules contains a `branch =` line — submodules must be pinned to a recorded commit, not a floating branch",
     )
 

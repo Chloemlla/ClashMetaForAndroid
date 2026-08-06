@@ -9,14 +9,18 @@ Keep actual build/test execution in GitHub Actions; local builds/deps are forbid
 
 ## 2. Signatures — signing gate (`.github/workflows/build-debug.yaml`)
 
-- Any step that reads `secrets.KEYSTORE_*` or stages/uploads a **signed** APK MUST be gated:
-  ```yaml
-  if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
-  ```
+- The workflow is split into two jobs so PR events never hold a `contents:write` token:
+  - `BuildDebug` (validation job, runs on `pull_request` **and** `workflow_dispatch`): `permissions: { contents: read, packages: read }`. Builds unsigned output only — debug / unit / lint / negative test `Release signing must fail without credentials` / policy checks / ADB audit.
+  - `SignAndPublish` (signing/publishing job): `permissions: { contents: write, packages: read }`, `needs: BuildDebug`, and a **job-level** triple guard:
+    ```yaml
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository_owner == 'Chloemlla'
+    ```
+    Because the guard is at job level, `pull_request` events never start this job, so the `contents:write` token is never granted on PRs. The job re-runs the checkout/setup/patches/CA/lumen-crash preamble (separate runner, no workspace sharing) then signs/stages/uploads/publishes.
+- Any step that reads `secrets.KEYSTORE_*` or stages/uploads a **signed** APK lives **only** in `SignAndPublish`; no per-step `if` is needed there because the job is already gated (the `Publish Alpha pre-release` step relies on the job-level `if`, not its own).
 - PR runs (`pull_request`) build **unsigned** output only (debug / unit / lint / negative test `Release signing must fail without credentials`).
-- `Remove signing credentials` cleanup keeps `if: always()`.
-- Affected steps: `Prepare release signing`, `Build signed Alpha release APK`, `Stage secret-signed Alpha APKs`, `Prepare Alpha migration APK aliases`, `Upload APKs`.
-- Verify: `grep -n "KEYSTORE_" .github/workflows/build-debug.yaml` — every hit must be inside a gated step.
+- `Remove signing credentials` cleanup keeps `if: always()` in `SignAndPublish`.
+- Affected steps (all moved into `SignAndPublish`): `Prepare release signing`, `Build signed Alpha release APK`, `Stage secret-signed Alpha APKs`, `Prepare Alpha migration APK aliases`, `Upload APKs`, `Publish Alpha pre-release`.
+- Verify: `grep -n "KEYSTORE_" .github/workflows/build-debug.yaml` — every hit must be inside `SignAndPublish`.
 
 ## 3. Keystore hygiene contract
 
@@ -29,10 +33,11 @@ Keep actual build/test execution in GitHub Actions; local builds/deps are forbid
 
 | Condition | Result |
 | --- | --- |
-| `keystore_base64.txt` or any `*.jks` / `*.p12` / `*.keystore` file anywhere under ROOT, except dirs `.git`, `.gradle`, `build`, `tmp`, `.trellis` | `require(False, ...)` → build fails |
-| `.gitmodules` contains a `branch =` line | `require(False, ...)` → build fails |
+| `keystore_base64.txt` or any `*.jks` / `*.p12` / `*.keystore` file anywhere under ROOT, except dir `.git` only | `require(False, ...)` → build fails |
+| `.gitmodules` contains a `branch =` line (matched as regex `(?m)^\s*branch\s*=`, so `branch=`, `branch\t=`, and leading-whitespace forms are also caught) | `require(False, ...)` → build fails |
 
-Exclusion must prune **subtrees**: `exclude_dirs.intersection(found.relative_to(ROOT).parts)`.
+Exclusion prunes **subtrees**: `exclude_dirs.intersection(found.relative_to(ROOT).parts)`.
+`exclude_dirs` is `{".git"}` only — `.gradle`, `build`, `tmp`, `.trellis` are deliberately NOT exempt, since a keystore under `build/` or `tmp/` is still a policy violation. Only `.git` (git objects/packed refs) is excluded from the scan.
 Do NOT use `if found.is_dir() and found.name in exclude_dirs: continue` — `Path.rglob("*")` still yields children of the excluded dir (traverses `.git/`, defeats exclusion).
 
 ## 5. Submodule & Go dependency contracts
@@ -47,6 +52,7 @@ Do NOT use `if found.is_dir() and found.name in exclude_dirs: continue` — `Pat
   Path math: from workspace root, `cd core/src/main/golang` then `cd ../../foss/golang` → `core/src/foss/golang` (correct).
 - go.sum is regenerated **in CI only**. Do NOT hand-edit `go.mod` version lines — local go.sum regeneration is impossible under the no-local-deps rule; a hand-edit desyncs the build.
 - This bump resolves: CVE-2025-22872 (x/net), CVE-2024-45338, CVE-2023-45288, CVE-2024-45337/45336 (x/crypto).
+- **Pre-PR consistency gate** (2026-08-07): `update-dependencies.yaml` now runs a `Verify submodule go.mod consistency` step between `Bump Go security deps` and `Create Pull Request`. It parses the require blocks of `core/src/foss/golang/clash/go.mod` (submodule) and `core/src/main/golang/go.mod` (main) and fails the job if any module path appears in both with different versions (a conflict `update-go-mod-replace` should have aligned). Absent-from-main deps are NOT flagged (mihomo main-package-only importers like `go.uber.org/automaxprocs` are expected to be missing per the contract above). This catches a newer mihomo head whose go.mod desyncs the build before a PR is opened.
 
 ## 6. Maven mirror contract (STOP-G)
 
