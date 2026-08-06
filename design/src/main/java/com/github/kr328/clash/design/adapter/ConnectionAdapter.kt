@@ -98,7 +98,7 @@ class ConnectionAdapter(
                 info.addAction(AccessibilityNodeInfo.AccessibilityAction(ACTION_COPY_ID, copyLabel))
             }
 
-            override fun performAccessibilityAction(host: View, action: Int, args: Bundle): Boolean {
+            override fun performAccessibilityAction(host: View, action: Int, args: Bundle?): Boolean {
                 if (action == ACTION_COPY_ID) {
                     onCopy(conn)
                     return true
