@@ -43,7 +43,9 @@ class MainApplication : Application() {
         super.onCreate()
 
         // Initialize secure storage for sensitive fields (ageSecretKey).
-        SecureStorage.init(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            SecureStorage.init(this)
+        }
 
         val processName = currentProcessName
 
