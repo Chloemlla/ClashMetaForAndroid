@@ -238,6 +238,20 @@ class OverrideSettingsDesign(
                 placeholder = R.string.dont_modify,
             )
 
+            val adblock = object {
+                var value: Boolean
+                    get() = configuration.app.adblock != false
+                    set(value) {
+                        configuration.app.adblock = value
+                    }
+            }
+
+            switch(
+                value = adblock::value,
+                title = R.string.adblock,
+                summary = R.string.adblock_summary,
+            )
+
             category(R.string.dns)
 
             val dnsDependencies: MutableList<Preference> = mutableListOf()
