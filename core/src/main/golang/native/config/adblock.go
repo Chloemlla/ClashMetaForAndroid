@@ -10,7 +10,7 @@ import (
 
 const (
 	adblockProviderName   = "cfm-adblock"
-	adblockProviderURL    = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomo.yaml"
+	adblockProviderURL    = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomo.mrs"
 	adblockUpdateInterval = 28800 // seconds = 8 hours
 )
 
@@ -19,6 +19,14 @@ const (
 // (absent implies enabled). It runs before patchProviders so the provider
 // path is rewritten to profileDir/providers/, and never overwrites an
 // existing user-defined provider of the same name.
+//
+// Performance: the provider uses the precompiled MRS rule-set format
+// (adblockmihomo.mrs, ~1.65 MiB vs ~5.0 MiB for the 185k-line YAML), giving
+// smaller transfer and faster load. Matching is behavior:domain (trie), not
+// classical linear scanning (which would be O(n) per packet and is
+// deliberately avoided). The injected rule carries no-resolve, which only
+// clears helper.ResolveIP for a domain-behavior rule-set, preventing any
+// unnecessary IP resolution.
 func patchAdblock(cfg *config.RawConfig, _ string) error {
 	if !adblockEnabled() {
 		return nil
@@ -34,12 +42,12 @@ func patchAdblock(cfg *config.RawConfig, _ string) error {
 	cfg.RuleProvider[adblockProviderName] = map[string]any{
 		"type":     "http",
 		"behavior": "domain",
-		"format":   "yaml",
+		"format":   "mrs",
 		"url":      adblockProviderURL,
 		"interval": adblockUpdateInterval,
 	}
 
-	cfg.Rule = append([]string{"RULE-SET," + adblockProviderName + ",REJECT"}, cfg.Rule...)
+	cfg.Rule = append([]string{"RULE-SET," + adblockProviderName + ",REJECT,no-resolve"}, cfg.Rule...)
 
 	return nil
 }
