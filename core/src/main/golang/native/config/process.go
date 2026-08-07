@@ -27,6 +27,7 @@ var processors = []processor{
 	patchTun,
 	patchListeners,
 	patchAdblock, // must before patchProviders, so the provider path is rewritten to profileDir/providers/
+	patchBaiduAdblock,
 	patchProviders,
 	validConfig,
 }

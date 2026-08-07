@@ -252,6 +252,20 @@ class OverrideSettingsDesign(
                 summary = R.string.adblock_summary,
             )
 
+            val baiduAdblock = object {
+                var value: Boolean
+                    get() = configuration.app.baidupanAdblock == true
+                    set(value) {
+                        configuration.app.baidupanAdblock = value
+                    }
+            }
+
+            switch(
+                value = baiduAdblock::value,
+                title = R.string.baidu_adblock,
+                summary = R.string.baidu_adblock_summary,
+            )
+
             category(R.string.dns)
 
             val dnsDependencies: MutableList<Preference> = mutableListOf()

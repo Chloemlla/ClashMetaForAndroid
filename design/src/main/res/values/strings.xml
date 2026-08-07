@@ -253,6 +253,8 @@
     <string name="append_system_dns">Append System DNS</string>
     <string name="adblock">AdBlock</string>
     <string name="adblock_summary">Automatically block ads when VPN takes over traffic</string>
+    <string name="baidu_adblock">Baidu Netdisk AdBlock</string>
+    <string name="baidu_adblock_summary">Block ads in Baidu Netdisk using a built-in rule list</string>
     <string name="use_hosts">Use Hosts</string>
     <string name="enhanced_mode">Enhanced Mode</string>
     <string name="name_server">Name Server</string>

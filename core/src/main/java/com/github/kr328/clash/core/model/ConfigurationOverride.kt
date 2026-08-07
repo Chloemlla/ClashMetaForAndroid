@@ -143,7 +143,10 @@ data class ConfigurationOverride(
         var appendSystemDns: Boolean? = null,
 
         @SerialName("adblock")
-        var adblock: Boolean? = null
+        var adblock: Boolean? = null,
+
+        @SerialName("baidupan-adblock")
+        var baidupanAdblock: Boolean? = null
     )
 
     @Serializable

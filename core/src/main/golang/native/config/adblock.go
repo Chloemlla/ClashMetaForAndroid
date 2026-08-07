@@ -12,6 +12,11 @@ const (
 	adblockProviderName   = "cfm-adblock"
 	adblockProviderURL    = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomo.mrs"
 	adblockUpdateInterval = 28800 // seconds = 8 hours
+
+	// adblockKey and baidupanAdblockKey are the `clash-for-android`
+	// override keys controlling the built-in adblock rule-sets.
+	adblockKey         = "adblock"
+	baidupanAdblockKey = "baidupan-adblock"
 )
 
 // patchAdblock injects the built-in adblock rule-provider and a leading
@@ -52,25 +57,98 @@ func patchAdblock(cfg *config.RawConfig, _ string) error {
 	return nil
 }
 
-// adblockEnabled reports whether the adblock switch is on. It reads the
-// "clash-for-android.adblock" key from the persist override; a missing key
-// or a malformed document defaults to enabled.
-func adblockEnabled() bool {
+// patchBaiduAdblock prepends the hardcoded Baidu Netdisk ad-block list to the
+// rules when the "clash-for-android.baidupan-adblock" override flag is enabled
+// (absent implies disabled). Unlike patchAdblock it needs no remote provider,
+// so the curated list works even without network access.
+func patchBaiduAdblock(cfg *config.RawConfig, _ string) error {
+	if !overrideAppFlag(baidupanAdblockKey, false) {
+		return nil
+	}
+
+	rules := make([]string, 0, len(baiduAdblockRules)+len(cfg.Rule))
+	rules = append(rules, baiduAdblockRules...)
+	rules = append(rules, cfg.Rule...)
+	cfg.Rule = rules
+
+	return nil
+}
+
+// baiduAdblockRules is the curated Baidu Netdisk manual ad-block list. Rules
+// are hardcoded (not fetched) and injected as leading rules so they are
+// evaluated before any catch-all in the user profile.
+var baiduAdblockRules = []string{
+	"DOMAIN,afd.baidu.com,REJECT",
+	"DOMAIN,afdconf.baidu.com,REJECT",
+	"DOMAIN,tcbox.baidu.com,REJECT",
+	"DOMAIN,datasink.dxmpay.com,REJECT",
+	"DOMAIN,www.dxmpay.com,REJECT",
+	"DOMAIN,app.duxiaoman.com,REJECT",
+	"DOMAIN,app.duxiaomanfintech.com,REJECT",
+	"DOMAIN,lf-cdn-tos.bytescm.com,REJECT",
+	"DOMAIN,staticsns.cdn.bcebos.com,REJECT",
+	"DOMAIN,mssdk.volces.com,REJECT",
+	"DOMAIN,sdktmp.hubcloud.com.cn,REJECT",
+	"DOMAIN-SUFFIX,hubcloud.com.cn,REJECT",
+	"DOMAIN-SUFFIX,volces.com,REJECT",
+	"DOMAIN,cpro.baidustatic.com,REJECT",
+	"DOMAIN,nsclick.baidu.com,REJECT",
+	"DOMAIN,feed-image.baidu.com,REJECT",
+	"DOMAIN,sdk.e.qq.com,REJECT",
+	"DOMAIN,als.baidu.com,REJECT",
+	"DOMAIN-SUFFIX,advlion.com,REJECT",
+	"DOMAIN-SUFFIX,beizi.biz,REJECT",
+	"DOMAIN-SUFFIX,pangolin-sdk-toutiao.com,REJECT",
+	"DOMAIN-SUFFIX,pangolin-sdk-toutiao1.com,REJECT",
+	"DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com,REJECT",
+	"DOMAIN-SUFFIX,pglstatp-toutiao.com,REJECT",
+	"DOMAIN-SUFFIX,ubixioe.com,REJECT",
+	"DOMAIN-SUFFIX,mentamob.com,REJECT",
+	"DOMAIN-SUFFIX,ctobsnssdk.com,REJECT",
+	"DOMAIN-SUFFIX,zhangyuyidong.cn,REJECT",
+	"DOMAIN-SUFFIX,1rtb.net,REJECT",
+	"DOMAIN-SUFFIX,1rtb.com,REJECT",
+	"DOMAIN,mobads.baidu.com,REJECT",
+	"DOMAIN-SUFFIX,adkwai.com,REJECT",
+	"DOMAIN-SUFFIX,cusky.cn,REJECT",
+	"DOMAIN-SUFFIX,youjingnetwork.com,REJECT",
+	"IP-CIDR,112.34.111.108/32,REJECT,no-resolve",
+	"DOMAIN-SUFFIX,vlion.cn,REJECT",
+	"IP-CIDR,112.34.111.107/32,REJECT,no-resolve",
+	"DOMAIN,mbd.baidu.com,REJECT",
+	"DOMAIN,sofire.baidu.com,REJECT",
+	"DOMAIN,sofire-dr.baidu.com,REJECT",
+	"DOMAIN,dss0.bdstatic.com,REJECT",
+	"DOMAIN,pic.rmb.bdstatic.com,REJECT",
+	"DOMAIN,ecma.bdimg.com,REJECT",
+}
+
+// overrideAppFlag reads a `clash-for-android.<key>` boolean from the persist
+// override, falling back to defaultValue when the key is absent or the
+// document is malformed.
+func overrideAppFlag(key string, defaultValue bool) bool {
 	var raw map[string]any
 	if err := json.NewDecoder(strings.NewReader(ReadOverride(OverrideSlotPersist))).Decode(&raw); err != nil {
-		log.Warnln("Apply adblock enabled flag: %s", err.Error())
-		return true // default to enabled on parse failure
+		log.Warnln("Apply override flag %s: %s", key, err.Error())
+		return defaultValue
 	}
 
 	app, ok := raw["clash-for-android"].(map[string]any)
 	if !ok {
-		return true
+		return defaultValue
 	}
 
-	enabled, ok := app["adblock"].(bool)
+	enabled, ok := app[key].(bool)
 	if !ok {
-		return true // key absent or not a bool — default enabled
+		return defaultValue
 	}
 
 	return enabled
+}
+
+// adblockEnabled reports whether the adblock switch is on. It reads the
+// "clash-for-android.adblock" key from the persist override; a missing key
+// or a malformed document defaults to enabled.
+func adblockEnabled() bool {
+	return overrideAppFlag(adblockKey, true)
 }
