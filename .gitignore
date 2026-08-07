@@ -81,3 +81,14 @@ tmp/
 .claude/
 .codex/
 Install-CodexClaudeTrellis.ps1
+
+# WeChat article scrape artifacts (temp)
+wximg/
+wximg_r/
+wximg_jpg/
+wx_out.txt
+wx_lines.txt
+wx_body.txt
+wx_imgs.txt
+wx_runs.txt
+wx_search.txt

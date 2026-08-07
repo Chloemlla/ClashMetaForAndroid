@@ -214,6 +214,12 @@ object Clash {
         }
     }
 
+    fun updateAdblock(path: File): CompletableDeferred<Unit> {
+        return CompletableDeferred<Unit>().apply {
+            Bridge.nativeUpdateAdblock(this, path.absolutePath)
+        }
+    }
+
     fun queryProviders(): List<Provider> {
         return Json.Default.decodeFromString(
             ListSerializer(Provider.serializer()),

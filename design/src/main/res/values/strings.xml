@@ -253,6 +253,13 @@
     <string name="append_system_dns">Append System DNS</string>
     <string name="adblock">AdBlock</string>
     <string name="adblock_summary">Automatically block ads when VPN takes over traffic</string>
+    <string name="adblock_rules" translatable="false">cfm-adblock</string>
+    <string name="adblock_rules_status_disabled">AdBlock is off; rules will download when it is enabled</string>
+    <string name="adblock_rules_status_missing">Rules not downloaded yet. Tap to update now.</string>
+    <string name="adblock_rules_status_updating">Updating rules…</string>
+    <string name="adblock_rules_status_updated">Downloaded · last updated %1$s</string>
+    <string name="adblock_rules_url">Rule download URL</string>
+    <string name="copy">Copy</string>
     <string name="baidu_adblock">Baidu Netdisk AdBlock</string>
     <string name="baidu_adblock_summary">Block ads in Baidu Netdisk using a built-in rule list</string>
     <string name="use_hosts">Use Hosts</string>

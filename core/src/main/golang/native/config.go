@@ -53,6 +53,19 @@ func load(completable unsafe.Pointer, path C.c_string) {
 	}(C.GoString(path))
 }
 
+//export updateAdblock
+func updateAdblock(completable unsafe.Pointer, profileDir C.c_string) {
+	go func(profileDir string) {
+		defer safeRecover("updateAdblock")
+
+		C.complete(completable, marshalString(config.UpdateAdblockProvider(profileDir)))
+
+		C.release_object(completable)
+
+		runtime.GC()
+	}(C.GoString(profileDir))
+}
+
 //export readOverride
 func readOverride(slot C.int) *C.char {
 	return C.CString(config.ReadOverride(config.OverrideSlot(slot)))

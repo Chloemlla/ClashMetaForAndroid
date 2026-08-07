@@ -11,9 +11,12 @@ import com.github.kr328.clash.service.remote.IConnectionsObserver
 import com.github.kr328.clash.service.remote.ILogObserver
 import com.github.kr328.clash.service.scene.NodeFailoverController
 import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendOverrideChanged
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
+
+private const val ADBLOCK_PROVIDER_NAME = "cfm-adblock"
 
 class ClashManager(private val context: Context) : IClashManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
@@ -119,6 +122,22 @@ class ClashManager(private val context: Context) : IClashManager,
 
     override suspend fun updateProvider(type: Provider.Type, name: String) {
         return Clash.updateProvider(type, name).await()
+    }
+
+    override suspend fun updateAdblock() {
+        try {
+            // Fast path: the tunnel is running with the provider registered.
+            Clash.updateProvider(Provider.Type.Rule, ADBLOCK_PROVIDER_NAME).await()
+        } catch (e: Exception) {
+            // Only pre-download when the provider isn't registered (tunnel idle,
+            // or adblock was just toggled so the loaded config lacks it). A real
+            // fetch failure while the tunnel is running must surface instead of
+            // triggering a second download.
+            if (e.message?.contains("not found") != true) throw e
+
+            val activeProfile = store.activeProfile ?: throw e
+            Clash.updateAdblock(context.importedDir.resolve(activeProfile.toString())).await()
+        }
     }
 
     override fun setLogObserver(observer: ILogObserver?) {

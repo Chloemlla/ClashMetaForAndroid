@@ -26,6 +26,8 @@ interface IClashManager {
 
     suspend fun healthCheck(group: String)
     suspend fun updateProvider(type: Provider.Type, name: String)
+    /** Update the built-in adblock rule-set; works even when the tunnel is idle. */
+    suspend fun updateAdblock()
 
     fun queryOverride(slot: Clash.OverrideSlot): ConfigurationOverride
     fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride)

@@ -2,8 +2,11 @@ package config
 
 import (
 	"encoding/json"
+	"net/url"
+	"path"
 	"strings"
 
+	"github.com/metacubex/mihomo/common/utils"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/log"
 )
@@ -151,4 +154,22 @@ func overrideAppFlag(key string, defaultValue bool) bool {
 // or a malformed document defaults to enabled.
 func adblockEnabled() bool {
 	return overrideAppFlag(adblockKey, true)
+}
+
+// UpdateAdblockProvider downloads the built-in adblock rule-set into the
+// profile's providers directory without requiring a running tunnel, so the
+// rules can be pre-warmed before the first VPN start. The target path must
+// match patchProviders (profileDir/providers/rules/<md5 of url>), otherwise
+// the core would re-fetch the file on the next config load.
+func UpdateAdblockProvider(profileDir string) error {
+	u, err := url.Parse(adblockProviderURL)
+	if err != nil {
+		return err
+	}
+
+	hash := utils.MakeHash([]byte(adblockProviderURL)).String()
+	target := path.Join(profileDir, "providers", "rules", hash)
+
+	_, err = fetch(u, target)
+	return err
 }

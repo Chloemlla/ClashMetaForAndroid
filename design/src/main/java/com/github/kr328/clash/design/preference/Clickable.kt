@@ -15,6 +15,8 @@ interface ClickablePreference : Preference {
     var summary: CharSequence?
 
     fun clicked(clicked: () -> Unit)
+
+    fun longClicked(longClicked: () -> Unit) {}
 }
 
 fun PreferenceScreen.clickable(
@@ -50,6 +52,13 @@ fun PreferenceScreen.clickable(
         override fun clicked(clicked: () -> Unit) {
             binding.root.setOnClickListener {
                 clicked()
+            }
+        }
+
+        override fun longClicked(longClicked: () -> Unit) {
+            binding.root.setOnLongClickListener {
+                longClicked()
+                true
             }
         }
     }

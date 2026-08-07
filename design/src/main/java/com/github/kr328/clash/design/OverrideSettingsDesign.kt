@@ -1,5 +1,7 @@
 package com.github.kr328.clash.design
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.view.View
 import com.github.kr328.clash.core.model.ConfigurationOverride
@@ -22,11 +24,15 @@ class OverrideSettingsDesign(
     configuration: ConfigurationOverride
 ) : Design<OverrideSettingsDesign.Request>(context) {
     enum class Request {
-        ResetOverride
+        ResetOverride,
+        UpdateAdblock,
+        ShowAdblockUrl,
     }
 
     private val binding = DesignSettingsOverideBinding
         .inflate(context.layoutInflater, context.root, false)
+
+    private lateinit var adblockRule: ClickablePreference
 
     override val root: View
         get() = binding.root
@@ -43,6 +49,40 @@ class OverrideSettingsDesign(
             dialog.setOnDismissListener {
                 if (!ctx.isCompleted)
                     ctx.resume(false)
+            }
+
+            ctx.invokeOnCancellation {
+                dialog.dismiss()
+            }
+        }
+    }
+
+    fun setAdblockStatus(summary: CharSequence?) {
+        adblockRule.summary = summary
+    }
+
+    fun setAdblockEnabled(enabled: Boolean) {
+        adblockRule.enabled = enabled
+    }
+
+    suspend fun requestAdblockUrl(url: String) {
+        suspendCancellableCoroutine<Unit> { ctx ->
+            val dialog = MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.adblock_rules_url)
+                .setMessage(url)
+                .setPositiveButton(R.string.copy) { _, _ ->
+                    context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        ?.setPrimaryClip(ClipData.newPlainText("adblock-rules-url", url))
+
+                    ctx.resume(Unit)
+                }
+                .setNegativeButton(R.string.close, null)
+                .show()
+
+            dialog.setOnDismissListener {
+                if (!ctx.isCompleted) {
+                    ctx.resume(Unit)
+                }
             }
 
             ctx.invokeOnCancellation {
@@ -250,7 +290,24 @@ class OverrideSettingsDesign(
                 value = adblock::value,
                 title = R.string.adblock,
                 summary = R.string.adblock_summary,
-            )
+            ) {
+                listener = OnChangedListener {
+                    adblockRule.enabled = adblock.value
+                }
+            }
+
+            adblockRule = clickable(
+                title = R.string.adblock_rules,
+            ) {
+                clicked {
+                    requests.trySend(Request.UpdateAdblock)
+                }
+                longClicked {
+                    requests.trySend(Request.ShowAdblockUrl)
+                }
+            }
+
+            adblockRule.enabled = adblock.value
 
             val baiduAdblock = object {
                 var value: Boolean

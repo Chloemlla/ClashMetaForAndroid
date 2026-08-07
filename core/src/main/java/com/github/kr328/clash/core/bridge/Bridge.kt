@@ -45,6 +45,10 @@ object Bridge {
         type: String,
         name: String
     )
+    external fun nativeUpdateAdblock(
+        completable: CompletableDeferred<Unit>,
+        profileDir: String
+    )
 
     external fun nativeReadOverride(slot: Int): String
     external fun nativeWriteOverride(slot: Int, content: String)
