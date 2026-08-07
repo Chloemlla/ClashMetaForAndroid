@@ -2,6 +2,21 @@
 <resources>
     <string name="access_control_packages_summary">為應用配置訪問權限</string>
     <string name="about">關於</string>
+    <string name="adblock_hits">攔截記錄</string>
+    <string name="adblock_stats_total">總連接數</string>
+    <string name="adblock_stats_blocked">已攔截</string>
+    <string name="adblock_stats_rate">攔截率</string>
+    <string name="adblock_stats_top_domains">被攔域名 Top</string>
+    <string name="adblock_hits_empty_title">暫無記錄</string>
+    <string name="adblock_hits_empty_tips">被攔截的廣告連接會記錄在這裡</string>
+    <string name="adblock_clear" translatable="false">清空</string>
+    <string name="adblock_clear_title" translatable="false">清理垃圾數據</string>
+    <string name="adblock_clear_message" translatable="false">選擇要清理的內容</string>
+    <string name="adblock_clear_hits" translatable="false">攔截記錄</string>
+    <string name="adblock_clear_logs" translatable="false">Clash 日誌</string>
+    <string name="adblock_clear_all" translatable="false">全部</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">百度規則</string>
     <string name="access_control_mode">訪問控制模式</string>
     <string name="access_control_packages">訪問控制應用包列表</string>
     <string name="append_system_dns">追加系統 DNS</string>

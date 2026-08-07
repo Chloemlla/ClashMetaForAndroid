@@ -3,6 +3,7 @@ package com.github.kr328.clash
 import android.content.pm.PackageManager
 import com.github.kr328.clash.common.compat.getDrawableCompat
 import com.github.kr328.clash.common.constants.Metadata
+import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.Provider
 import com.github.kr328.clash.design.OverrideSettingsDesign
@@ -108,6 +109,9 @@ class OverrideSettingsActivity : BaseActivity<OverrideSettingsDesign>() {
                         }
                         OverrideSettingsDesign.Request.ShowAdblockUrl -> {
                             design.requestAdblockUrl(ADBLOCK_PROVIDER_URL)
+                        }
+                        OverrideSettingsDesign.Request.OpenAdblockHits -> {
+                            startActivity(AdblockHitsActivity::class.intent)
                         }
                     }
                 }

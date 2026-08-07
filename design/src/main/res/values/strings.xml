@@ -262,6 +262,21 @@
     <string name="copy">Copy</string>
     <string name="baidu_adblock">Baidu Netdisk AdBlock</string>
     <string name="baidu_adblock_summary">Block ads in Baidu Netdisk using a built-in rule list</string>
+    <string name="adblock_hits">AdBlock Hit Records</string>
+    <string name="adblock_stats_total">Total connections</string>
+    <string name="adblock_stats_blocked">Blocked</string>
+    <string name="adblock_stats_rate">Block rate</string>
+    <string name="adblock_stats_top_domains">Top blocked domains</string>
+    <string name="adblock_hits_empty_title">No records yet</string>
+    <string name="adblock_hits_empty_tips">Blocked ad connections will be recorded here</string>
+    <string name="adblock_clear" translatable="false">Clear</string>
+    <string name="adblock_clear_title" translatable="false">Clear junk</string>
+    <string name="adblock_clear_message" translatable="false">Select what to clear</string>
+    <string name="adblock_clear_hits" translatable="false">AdBlock hit records</string>
+    <string name="adblock_clear_logs" translatable="false">Clash log files</string>
+    <string name="adblock_clear_all" translatable="false">All</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">Baidu rules</string>
     <string name="use_hosts">Use Hosts</string>
     <string name="enhanced_mode">Enhanced Mode</string>
     <string name="name_server">Name Server</string>

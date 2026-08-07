@@ -339,6 +339,43 @@ object Clash {
     }
 
     /**
+     * Subscribe to adblock REJECT hit events pushed from the Go bridge layer.
+     * The returned channel delivers [AdblockHit] until closed.
+     */
+    fun subscribeAdblock(): ReceiveChannel<AdblockHit> {
+        val channel = Channel<AdblockHit>(Channel.UNLIMITED)
+        val token = Bridge.nativeSubscribeAdblock(object : AdblockInterface {
+            override fun received(jsonPayload: String): Boolean {
+                return channel.trySend(
+                    Json.decodeFromString(AdblockHit.serializer(), jsonPayload)
+                ).isSuccess
+            }
+        })
+        channel.invokeOnClose {
+            Bridge.nativeUnsubscribeAdblock(token)
+        }
+        return channel
+    }
+
+    /** Session aggregate adblock stats (total connections / blocked / top domains). */
+    fun queryAdblockStats(): AdblockStats {
+        return runCatching {
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            }.decodeFromString(AdblockStats.serializer(), Bridge.nativeQueryAdblockStats())
+        }.getOrElse { e ->
+            Log.w("queryAdblockStats: decode failed, returning empty stats: ${e.message}")
+            AdblockStats()
+        }
+    }
+
+    /** Clear the adblock hit JSONL and reset session blocked counters. */
+    fun clearAdblockHits() {
+        Bridge.nativeClearAdblockHits()
+    }
+
+    /**
      * Subscribe to HTTP capture events (plaintext HTTP request/response) pushed from the
      * Go bridge layer. The returned channel delivers [HttpRecord] until closed.
      */

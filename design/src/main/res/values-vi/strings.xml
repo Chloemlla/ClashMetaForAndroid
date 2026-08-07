@@ -20,6 +20,21 @@
     <string name="launch_name_meta">Clash Meta</string>
     <string name="_new">Mới</string>
     <string name="about">Thông tin</string>
+    <string name="adblock_hits">Nhật ký chặn AdBlock</string>
+    <string name="adblock_stats_total">Tổng số kết nối</string>
+    <string name="adblock_stats_blocked">Đã chặn</string>
+    <string name="adblock_stats_rate">Tỷ lệ chặn</string>
+    <string name="adblock_stats_top_domains">Tên miền bị chặn nhiều nhất</string>
+    <string name="adblock_hits_empty_title">Chưa có bản ghi</string>
+    <string name="adblock_hits_empty_tips">Các kết nối quảng cáo bị chặn sẽ được ghi lại tại đây</string>
+    <string name="adblock_clear" translatable="false">Xóa</string>
+    <string name="adblock_clear_title" translatable="false">Dọn dẹp rác</string>
+    <string name="adblock_clear_message" translatable="false">Chọn nội dung cần dọn dẹp</string>
+    <string name="adblock_clear_hits" translatable="false">Nhật ký chặn AdBlock</string>
+    <string name="adblock_clear_logs" translatable="false">Tệp nhật ký Clash</string>
+    <string name="adblock_clear_all" translatable="false">Tất cả</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">Quy tắc Baidu</string>
     <string name="accept_http_content">Chỉ chấp nhận http(s)</string>
     <string name="access_control_mode">Chế độ kiểm soát truy cập</string>
     <string name="access_control_packages">Các gói kiểm soát truy cập</string>

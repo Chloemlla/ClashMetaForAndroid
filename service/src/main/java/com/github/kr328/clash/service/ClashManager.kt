@@ -8,6 +8,7 @@ import com.github.kr328.clash.service.data.Selection
 import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.IConnectionsObserver
+import com.github.kr328.clash.service.remote.IAdblockObserver
 import com.github.kr328.clash.service.remote.ILogObserver
 import com.github.kr328.clash.service.scene.NodeFailoverController
 import com.github.kr328.clash.service.store.ServiceStore
@@ -24,6 +25,7 @@ class ClashManager(private val context: Context) : IClashManager,
     private val failover = NodeFailoverController(context)
     private var logReceiver: ReceiveChannel<LogMessage>? = null
     private var connectionsReceiver: ReceiveChannel<com.github.kr328.clash.core.model.ConnectionSnapshot>? = null
+    private var adblockReceiver: ReceiveChannel<com.github.kr328.clash.core.model.AdblockHit>? = null
 
     override fun queryTunnelState(): TunnelState {
         return Clash.queryTunnelState()
@@ -193,6 +195,45 @@ class ClashManager(private val context: Context) : IClashManager,
                             // intended behavior
                         } catch (e: Exception) {
                             Log.w("connections observer crashed", e)
+                        } finally {
+                            withContext(NonCancellable) {
+                                c.cancel()
+
+                                Clash.forceGc()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun queryAdblockStats(): AdblockStats {
+        return Clash.queryAdblockStats()
+    }
+
+    override fun clearAdblockHits() {
+        Clash.clearAdblockHits()
+    }
+
+    override fun setAdblockObserver(observer: IAdblockObserver?) {
+        synchronized(this) {
+            adblockReceiver?.apply {
+                cancel()
+            }
+            adblockReceiver = null
+
+            if (observer != null) {
+                adblockReceiver = Clash.subscribeAdblock().also { c ->
+                    launch {
+                        try {
+                            while (isActive) {
+                                observer.onHit(c.receive())
+                            }
+                        } catch (e: CancellationException) {
+                            // intended behavior
+                        } catch (e: Exception) {
+                            Log.w("adblock observer crashed", e)
                         } finally {
                             withContext(NonCancellable) {
                                 c.cancel()

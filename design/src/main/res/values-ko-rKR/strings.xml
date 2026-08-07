@@ -22,6 +22,21 @@
     <string name="settings">설정</string>
     <string name="help">도움</string>
     <string name="about">정보</string>
+    <string name="adblock_hits">AdBlock 차단 기록</string>
+    <string name="adblock_stats_total">총 연결 수</string>
+    <string name="adblock_stats_blocked">차단됨</string>
+    <string name="adblock_stats_rate">차단률</string>
+    <string name="adblock_stats_top_domains">차단된 상위 도메인</string>
+    <string name="adblock_hits_empty_title">아직 기록이 없습니다</string>
+    <string name="adblock_hits_empty_tips">차단된 광고 연결이 여기에 기록됩니다</string>
+    <string name="adblock_clear" translatable="false">비우기</string>
+    <string name="adblock_clear_title" translatable="false">정크 정리</string>
+    <string name="adblock_clear_message" translatable="false">정리할 항목을 선택하세요</string>
+    <string name="adblock_clear_hits" translatable="false">AdBlock 차단 기록</string>
+    <string name="adblock_clear_logs" translatable="false">Clash 로그 파일</string>
+    <string name="adblock_clear_all" translatable="false">전체</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">Baidu 규칙</string>
     <string name="copied">복사됨</string>
     <string name="recently">최근</string>
     <string name="format_minutes">%d 분</string>

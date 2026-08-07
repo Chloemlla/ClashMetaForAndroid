@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	adblockProviderName   = "cfm-adblock"
+	// AdblockProviderName is the built-in remote adblock rule-provider name.
+	// Exported so the hit recorder in package main can attribute matches.
+	AdblockProviderName   = "cfm-adblock"
 	adblockProviderURL    = "https://raw.githubusercontent.com/217heidai/adblockfilters/main/rules/adblockmihomo.mrs"
 	adblockUpdateInterval = 28800 // seconds = 8 hours
 
@@ -40,14 +42,14 @@ func patchAdblock(cfg *config.RawConfig, _ string) error {
 		return nil
 	}
 
-	if _, exists := cfg.RuleProvider[adblockProviderName]; exists {
+	if _, exists := cfg.RuleProvider[AdblockProviderName]; exists {
 		return nil // user already defines cfm-adblock — do not overwrite
 	}
 
 	if cfg.RuleProvider == nil {
 		cfg.RuleProvider = make(map[string]map[string]any)
 	}
-	cfg.RuleProvider[adblockProviderName] = map[string]any{
+	cfg.RuleProvider[AdblockProviderName] = map[string]any{
 		"type":     "http",
 		"behavior": "domain",
 		"format":   "mrs",
@@ -55,7 +57,7 @@ func patchAdblock(cfg *config.RawConfig, _ string) error {
 		"interval": adblockUpdateInterval,
 	}
 
-	cfg.Rule = append([]string{"RULE-SET," + adblockProviderName + ",REJECT,no-resolve"}, cfg.Rule...)
+	cfg.Rule = append([]string{"RULE-SET," + AdblockProviderName + ",REJECT,no-resolve"}, cfg.Rule...)
 
 	return nil
 }
@@ -172,4 +174,55 @@ func UpdateAdblockProvider(profileDir string) error {
 
 	_, err = fetch(u, target)
 	return err
+}
+
+// Baidu rule attribution sets, built from baiduAdblockRules. The hit recorder
+// in package main uses IsBaiduAdblockHit to attribute a connection log line's
+// rule match (ruleType + payload) to the hardcoded Baidu ad-block list.
+var (
+	baiduDomainSet map[string]struct{}
+	baiduSuffixSet map[string]struct{}
+	baiduIPSet     map[string]struct{}
+)
+
+func init() {
+	baiduDomainSet = make(map[string]struct{}, len(baiduAdblockRules))
+	baiduSuffixSet = make(map[string]struct{}, len(baiduAdblockRules))
+	baiduIPSet = make(map[string]struct{}, len(baiduAdblockRules))
+
+	for _, rule := range baiduAdblockRules {
+		parts := strings.Split(rule, ",")
+		if len(parts) < 3 {
+			continue
+		}
+		switch parts[0] {
+		case "DOMAIN":
+			baiduDomainSet[parts[1]] = struct{}{}
+		case "DOMAIN-SUFFIX":
+			baiduSuffixSet[parts[1]] = struct{}{}
+		case "IP-CIDR":
+			// The log reports IPCIDR(payload) with payload = the rule's CIDR
+			// string (ipnet.String()), so key on the full CIDR.
+			baiduIPSet[parts[1]] = struct{}{}
+		}
+	}
+}
+
+// IsBaiduAdblockHit reports whether a connection log line's rule match belongs
+// to the hardcoded Baidu ad-block list. ruleType/payload mirror the values
+// mihomo logs, e.g. "Domain"/"afd.baidu.com", "DomainSuffix"/"volces.com",
+// "IPCIDR"/"112.34.111.108/32".
+func IsBaiduAdblockHit(ruleType, payload string) bool {
+	switch ruleType {
+	case "Domain":
+		_, ok := baiduDomainSet[payload]
+		return ok
+	case "DomainSuffix":
+		_, ok := baiduSuffixSet[payload]
+		return ok
+	case "IPCIDR":
+		_, ok := baiduIPSet[payload]
+		return ok
+	}
+	return false
 }

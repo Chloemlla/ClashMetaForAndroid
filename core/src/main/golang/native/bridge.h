@@ -25,6 +25,8 @@ extern int (*connections_received_func)(void *connections_interface, const char 
 
 extern int (*dns_received_func)(void *dns_interface, const char *payload);
 
+extern int (*adblock_received_func)(void *adblock_interface, const char *payload);
+
 extern int (*http_received_func)(void *http_interface, const char *payload);
 
 extern void (*release_object_func)(void *obj);
@@ -47,6 +49,8 @@ extern int logcat_received(void *logcat_interface, char *payload);
 extern int connections_received(void *connections_interface, char *payload);
 
 extern int dns_received(void *dns_interface, char *payload);
+
+extern int adblock_received(void *adblock_interface, char *payload);
 
 extern int http_received(void *http_interface, char *payload);
 

@@ -17,6 +17,8 @@ int (*connections_received_func)(void *connections_interface, const char *payloa
 
 int (*dns_received_func)(void *dns_interface, const char *payload);
 
+int (*adblock_received_func)(void *adblock_interface, const char *payload);
+
 int (*http_received_func)(void *http_interface, const char *payload);
 
 int (*open_content_func)(const char *url, char *error, int error_length);
@@ -88,6 +90,16 @@ int dns_received(void *dns_interface, char *payload) {
     TRACE_METHOD();
 
     int result = dns_received_func(dns_interface, payload);
+
+    free(payload);
+
+    return result;
+}
+
+int adblock_received(void *adblock_interface, char *payload) {
+    TRACE_METHOD();
+
+    int result = adblock_received_func(adblock_interface, payload);
 
     free(payload);
 

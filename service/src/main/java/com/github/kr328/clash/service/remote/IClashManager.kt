@@ -35,6 +35,9 @@ interface IClashManager {
 
     fun setLogObserver(observer: ILogObserver?)
     fun setConnectionsObserver(observer: IConnectionsObserver?)
+    fun setAdblockObserver(observer: IAdblockObserver?)
+    fun queryAdblockStats(): AdblockStats
+    fun clearAdblockHits()
 
     fun closeConnection(id: String)
     fun closeAllConnections()

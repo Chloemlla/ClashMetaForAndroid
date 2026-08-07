@@ -37,6 +37,21 @@
     <string name="copy">复制</string>
     <string name="baidu_adblock">百度网盘广告拦截</string>
     <string name="baidu_adblock_summary">使用内置规则列表拦截百度网盘广告</string>
+    <string name="adblock_hits">拦截记录</string>
+    <string name="adblock_stats_total">总连接数</string>
+    <string name="adblock_stats_blocked">已拦截</string>
+    <string name="adblock_stats_rate">拦截率</string>
+    <string name="adblock_stats_top_domains">被拦域名 Top</string>
+    <string name="adblock_hits_empty_title">暂无记录</string>
+    <string name="adblock_hits_empty_tips">被拦截的广告连接会记录在这里</string>
+    <string name="adblock_clear" translatable="false">清空</string>
+    <string name="adblock_clear_title" translatable="false">清理垃圾数据</string>
+    <string name="adblock_clear_message" translatable="false">选择要清理的内容</string>
+    <string name="adblock_clear_hits" translatable="false">拦截记录</string>
+    <string name="adblock_clear_logs" translatable="false">Clash 日志</string>
+    <string name="adblock_clear_all" translatable="false">全部</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">百度规则</string>
     <string name="application_broken">应用损坏</string>
     <string name="auto_update">自动更新</string>
     <string name="behavior">行为</string>

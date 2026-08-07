@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <data>
+        <variable
+            name="self"
+            type="com.github.kr328.clash.design.AdblockHitsDesign" />
+        <import type="com.github.kr328.clash.design.AdblockHitsDesign.Request" />
+    </data>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="@{self.surface.insets.start}"
+        android:paddingEnd="@{self.surface.insets.end}">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <com.github.kr328.clash.design.view.ActivityBarLayout
+                android:id="@+id/activity_bar_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="@{self.surface.insets.top}">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="@dimen/item_tailing_margin">
+
+                    <include
+                        layout="@layout/common_activity_bar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:layout_toStartOf="@id/delete_view" />
+
+                    <ImageView
+                        android:id="@+id/delete_view"
+                        android:layout_width="@dimen/toolbar_image_action_size"
+                        android:layout_height="@dimen/toolbar_image_action_size"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginStart="@dimen/item_tailing_margin"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:contentDescription="@string/adblock_clear"
+                        android:focusable="true"
+                        android:onClick="@{() -> self.requests.offer(Request.Clear.INSTANCE)}"
+                        android:padding="@dimen/toolbar_image_action_padding"
+                        android:src="@drawable/ic_baseline_clear_all" />
+                </RelativeLayout>
+            </com.github.kr328.clash.design.view.ActivityBarLayout>
+
+            <LinearLayout
+                android:id="@+id/stats_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/main_padding_horizontal"
+                android:paddingEnd="@dimen/main_padding_horizontal"
+                android:paddingTop="@dimen/item_padding_vertical"
+                android:paddingBottom="@dimen/item_padding_vertical">
+
+                <TextView
+                    android:id="@+id/stats_total"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+
+                <TextView
+                    android:id="@+id/stats_blocked"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+
+                <TextView
+                    android:id="@+id/stats_rate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+
+                <TextView
+                    android:id="@+id/stats_top"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?attr/colorControlHighlight" />
+
+            <TextView
+                android:id="@+id/history_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="@dimen/item_padding_vertical"
+                android:paddingStart="@{@dimen/item_header_component_size + @dimen/item_header_margin * 2}"
+                android:paddingEnd="@dimen/item_tailing_margin"
+                android:text="@string/adblock_hits"
+                android:textColor="?attr/colorControlActivated" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recycler_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingBottom="@{self.surface.insets.bottom}" />
+
+                <LinearLayout
+                    android:id="@+id/empty_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/main_padding_horizontal"
+                    android:visibility="gone">
+
+                    <com.github.kr328.clash.design.svg.EmptyStateIllustrationView
+                        android:id="@+id/empty_illustration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/item_text_margin"
+                        android:gravity="center"
+                        android:text="@string/adblock_hits_empty_title"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/item_text_margin"
+                        android:gravity="center"
+                        android:text="@string/adblock_hits_empty_tips"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</layout>

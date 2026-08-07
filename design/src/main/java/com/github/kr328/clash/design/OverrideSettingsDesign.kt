@@ -27,6 +27,7 @@ class OverrideSettingsDesign(
         ResetOverride,
         UpdateAdblock,
         ShowAdblockUrl,
+        OpenAdblockHits,
     }
 
     private val binding = DesignSettingsOverideBinding
@@ -322,6 +323,14 @@ class OverrideSettingsDesign(
                 title = R.string.baidu_adblock,
                 summary = R.string.baidu_adblock_summary,
             )
+
+            clickable(
+                title = R.string.adblock_hits,
+            ) {
+                clicked {
+                    requests.trySend(Request.OpenAdblockHits)
+                }
+            }
 
             category(R.string.dns)
 

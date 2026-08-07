@@ -22,6 +22,21 @@
     <string name="settings">設定</string>
     <string name="help">ヘルプ</string>
     <string name="about">アプリについて</string>
+    <string name="adblock_hits">AdBlock ブロック記録</string>
+    <string name="adblock_stats_total">総接続数</string>
+    <string name="adblock_stats_blocked">ブロック済み</string>
+    <string name="adblock_stats_rate">ブロック率</string>
+    <string name="adblock_stats_top_domains">ブロックされたドメイン Top</string>
+    <string name="adblock_hits_empty_title">記録はまだありません</string>
+    <string name="adblock_hits_empty_tips">ブロックされた広告接続はここに記録されます</string>
+    <string name="adblock_clear" translatable="false">クリア</string>
+    <string name="adblock_clear_title" translatable="false">ジャンクを削除</string>
+    <string name="adblock_clear_message" translatable="false">削除する内容を選択してください</string>
+    <string name="adblock_clear_hits" translatable="false">AdBlock ブロック記録</string>
+    <string name="adblock_clear_logs" translatable="false">Clash ログファイル</string>
+    <string name="adblock_clear_all" translatable="false">すべて</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">百度ルール</string>
     <string name="copied">コピーしました</string>
     <string name="recently">直近</string>
     <string name="format_minutes">%d分</string>

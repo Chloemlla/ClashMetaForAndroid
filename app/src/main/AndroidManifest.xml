@@ -150,6 +150,11 @@
             android:exported="false"
             android:label="@string/logs" />
         <activity
+            android:name=".AdblockHitsActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/adblock_hits" />
+        <activity
             android:name=".ConnectionsActivity"
             android:configChanges="uiMode"
             android:exported="false"

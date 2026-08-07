@@ -25,6 +25,22 @@
     <string name="help">Помощь</string>
     <string name="about">О программе</string>
 
+    <string name="adblock_hits">Журнал блокировок AdBlock</string>
+    <string name="adblock_stats_total">Всего соединений</string>
+    <string name="adblock_stats_blocked">Заблокировано</string>
+    <string name="adblock_stats_rate">Доля блокировок</string>
+    <string name="adblock_stats_top_domains">Чаще всего блокируемые домены</string>
+    <string name="adblock_hits_empty_title">Записей пока нет</string>
+    <string name="adblock_hits_empty_tips">Заблокированные рекламные соединения будут записаны здесь</string>
+    <string name="adblock_clear" translatable="false">Очистить</string>
+    <string name="adblock_clear_title" translatable="false">Очистить мусор</string>
+    <string name="adblock_clear_message" translatable="false">Выберите, что очистить</string>
+    <string name="adblock_clear_hits" translatable="false">Журнал блокировок AdBlock</string>
+    <string name="adblock_clear_logs" translatable="false">Файлы журналов Clash</string>
+    <string name="adblock_clear_all" translatable="false">Всё</string>
+    <string name="adblock_source_cfm" translatable="false">cfm-adblock</string>
+    <string name="adblock_source_baidu" translatable="false">Правила Baidu</string>
+
     <string name="copied">Скопировано</string>
 
     <string name="recently">Недавно</string>
