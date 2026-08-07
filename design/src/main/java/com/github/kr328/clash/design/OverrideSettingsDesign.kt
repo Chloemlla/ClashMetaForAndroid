@@ -71,8 +71,8 @@ class OverrideSettingsDesign(
                 .setTitle(R.string.adblock_rules_url)
                 .setMessage(url)
                 .setPositiveButton(R.string.copy) { _, _ ->
-                    context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                        ?.setPrimaryClip(ClipData.newPlainText("adblock-rules-url", url))
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("adblock-rules-url", url))
 
                     ctx.resume(Unit)
                 }
