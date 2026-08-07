@@ -18,6 +18,7 @@ Concrete Android runtime, persistence, and UI contracts for this repository.
 - Scene automation remains opt-in and never starts or stops the VPN; success is recorded only after the full action succeeds.
 - External profile edits are kernel-validated before staging, with non-cancellable rollback and sharedpref-only automatic backup.
 - Focused pure tests cover preference invariants where local Android execution is prohibited.
+- kotlinx-serialization is declared `implementation` in `:core`, so it is NOT transitively visible to `:app`. Any module that calls `Json.decodeFromString(...serializer())` must apply `id("kotlinx-serialization")` and add `libs.kotlin.serialization.json` itself; otherwise `:app:compile*Kotlin` fails with "Unresolved reference 'Json'" / "Cannot access class 'kotlinx.serialization.KSerializer'". See `app/build.gradle.kts` for the working example (AdblockHitsActivity parsing `adblock_hits.jsonl`).
 
 ## Contracts
 
