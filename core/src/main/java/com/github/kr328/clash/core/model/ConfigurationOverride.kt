@@ -140,7 +140,10 @@ data class ConfigurationOverride(
     @Serializable
     data class App(
         @SerialName("append-system-dns")
-        var appendSystemDns: Boolean? = null
+        var appendSystemDns: Boolean? = null,
+
+        @SerialName("adblock")
+        var adblock: Boolean? = null
     )
 
     @Serializable

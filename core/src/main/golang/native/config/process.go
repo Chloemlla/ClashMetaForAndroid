@@ -26,6 +26,7 @@ var processors = []processor{
 	patchDns,
 	patchTun,
 	patchListeners,
+	patchAdblock, // must before patchProviders, so the provider path is rewritten to profileDir/providers/
 	patchProviders,
 	validConfig,
 }
