@@ -10,6 +10,7 @@ plugins {
     kotlin("kapt")
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("kotlinx-serialization")
 }
 
 dependencies {
@@ -19,6 +20,9 @@ dependencies {
     implementation(project(":service"))
     implementation(project(":design"))
     implementation(project(":common"))
+
+    // kotlinx.serialization: AdblockHitsActivity parses adblock_hits.jsonl history lines.
+    implementation(libs.kotlin.serialization.json)
 
     // Lumen Crash SDK (Project-Lumen/lumen-crash README).
     // Prefer lumen-crash.resolved.version from CI (.github/scripts/resolve-lumen-crash-version.sh) or scripts/Resolve-LumenCrashLatest.ps1; fallback 0.1.0.
