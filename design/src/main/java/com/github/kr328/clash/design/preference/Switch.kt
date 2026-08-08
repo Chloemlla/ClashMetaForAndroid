@@ -24,6 +24,8 @@ fun PreferenceScreen.switch(
     @DrawableRes icon: Int? = null,
     @StringRes title: Int? = null,
     @StringRes summary: Int? = null,
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     configure: SwitchPreference.() -> Unit = {},
 ): SwitchPreference {
     val binding = PreferenceSwitchBinding
@@ -80,18 +82,49 @@ fun PreferenceScreen.switch(
             value.get()
         }
 
+        fun persistChecked() {
+            val checked = binding.switchView.isChecked
+
+            this@switch.launch(Dispatchers.Main) {
+                withContext(Dispatchers.IO) {
+                    value.set(checked)
+                }
+
+                impl.listener?.onChanged()
+            }
+        }
+
         binding.switchView.apply {
             isChecked = initialValue
 
-            binding.root.setOnClickListener {
-                isChecked = !isChecked
+            if (onClick == null) {
+                binding.root.setOnClickListener {
+                    isChecked = !isChecked
+                    persistChecked()
+                }
+            } else {
+                // Row tap runs onClick (e.g. "update rules") instead of toggling; the
+                // switch widget itself toggles. SwitchMaterial auto-flips isChecked on
+                // tap, so persistChecked reads the already-toggled value.
+                isClickable = true
+                setOnClickListener {
+                    persistChecked()
+                }
+                binding.root.setOnClickListener {
+                    onClick()
+                }
+            }
 
-                this@switch.launch(Dispatchers.Main) {
-                    withContext(Dispatchers.IO) {
-                        value.set(isChecked)
-                    }
-
-                    impl.listener?.onChanged()
+            if (onLongClick != null) {
+                binding.root.setOnLongClickListener {
+                    onLongClick()
+                    true
+                }
+                // Long-press landing directly on the switch widget is consumed by
+                // the switch once it is clickable; mirror the action there too.
+                binding.switchView.setOnLongClickListener {
+                    onLongClick()
+                    true
                 }
             }
         }

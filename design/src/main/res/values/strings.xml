@@ -251,10 +251,11 @@
     <string name="strategy">Strategy</string>
     <string name="listen">Listen</string>
     <string name="append_system_dns">Append System DNS</string>
+    <string name="adblock_external">External Resources</string>
     <string name="adblock">AdBlock</string>
     <string name="adblock_summary">Automatically block ads when VPN takes over traffic</string>
     <string name="adblock_rules" translatable="false">cfm-adblock</string>
-    <string name="adblock_rules_status_disabled">AdBlock is off; rules will download when it is enabled</string>
+    <string name="adblock_rules_status_disabled">External resources are off; rules will download when enabled</string>
     <string name="adblock_rules_status_missing">Rules not downloaded yet. Tap to update now.</string>
     <string name="adblock_rules_status_updating">Updating rules…</string>
     <string name="adblock_rules_status_updated">Downloaded · last updated %1$s</string>

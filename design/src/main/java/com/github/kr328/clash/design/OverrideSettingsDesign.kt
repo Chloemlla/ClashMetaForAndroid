@@ -33,7 +33,7 @@ class OverrideSettingsDesign(
     private val binding = DesignSettingsOverideBinding
         .inflate(context.layoutInflater, context.root, false)
 
-    private lateinit var adblockRule: ClickablePreference
+    private lateinit var adblockSwitch: SwitchPreference
 
     override val root: View
         get() = binding.root
@@ -59,11 +59,7 @@ class OverrideSettingsDesign(
     }
 
     fun setAdblockStatus(summary: CharSequence?) {
-        adblockRule.summary = summary
-    }
-
-    fun setAdblockEnabled(enabled: Boolean) {
-        adblockRule.enabled = enabled
+        adblockSwitch.summary = summary
     }
 
     suspend fun requestAdblockUrl(url: String) {
@@ -287,28 +283,19 @@ class OverrideSettingsDesign(
                     }
             }
 
-            switch(
+            adblockSwitch = switch(
                 value = adblock::value,
-                title = R.string.adblock,
+                title = R.string.adblock_external,
                 summary = R.string.adblock_summary,
-            ) {
-                listener = OnChangedListener {
-                    adblockRule.enabled = adblock.value
-                }
-            }
-
-            adblockRule = clickable(
-                title = R.string.adblock_rules,
-            ) {
-                clicked {
-                    requests.trySend(Request.UpdateAdblock)
-                }
-                longClicked {
+                onClick = {
+                    if (adblock.value) {
+                        requests.trySend(Request.UpdateAdblock)
+                    }
+                },
+                onLongClick = {
                     requests.trySend(Request.ShowAdblockUrl)
-                }
-            }
-
-            adblockRule.enabled = adblock.value
+                },
+            )
 
             val baiduAdblock = object {
                 var value: Boolean

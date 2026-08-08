@@ -61,7 +61,6 @@ class OverrideSettingsActivity : BaseActivity<OverrideSettingsDesign>() {
                 }
             }
 
-            design.setAdblockEnabled(enabled)
             design.setAdblockStatus(summary)
         }
 
