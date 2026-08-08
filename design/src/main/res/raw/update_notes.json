@@ -1,12 +1,32 @@
 {
   "schemaVersion": 1,
   "identity": {
-    "commitHash": "7cccc5c",
-    "buildTime": "2026-07-31T13:01:56Z",
+    "commitHash": "4cdd96e",
+    "buildTime": "2026-08-08T01:09:53Z",
     "versionName": "2.11.32",
     "versionCode": 211032
   },
   "highlights": [
+    {
+      "id": "adblock-builtin",
+      "title": "内置广告拦截",
+      "body": "VPN 启动时自动注入内置广告拦截规则集，并附带百度网盘等场景的硬编码拦截规则；无需额外订阅即可拦截常见广告域名。"
+    },
+    {
+      "id": "adblock-ruleset-management",
+      "title": "广告拦截规则集管理",
+      "body": "代理页新增广告拦截规则集管理，可查看与更新远程规则集；VPN 空闲时自动预下载规则，避免连接后等待。"
+    },
+    {
+      "id": "adblock-hit-logging",
+      "title": "广告拦截记录与统计",
+      "body": "被广告拦截规则拒绝的连接逐条记录并本地保存；设置页可查看会话级统计（连接总数、拦截数、拦截率与 Top 域名）。"
+    },
+    {
+      "id": "junk-log-cleanup",
+      "title": "一键清理垃圾日志",
+      "body": "新增一键清理：可按类别清理广告拦截记录或 Clash 运行日志，也可一次性全部清理；执行前二次确认，避免误删。"
+    },
     {
       "id": "observability-dashboard",
       "title": "本地可观测面板",
@@ -80,172 +100,172 @@
   ],
   "commits": [
     {
-      "hash": "7cccc5c9",
-      "subject": "feat: complete remaining Trellis roadmap and audit tasks",
-      "type": "feat"
-    },
-    {
-      "hash": "f053f1e3",
-      "subject": "docs(spec): document profile-scoped preferences",
+      "hash": "4cdd96e3",
+      "subject": "docs(spec): capture kotlinx-serialization cross-module convention",
       "type": "docs"
     },
     {
-      "hash": "07be2bd3",
-      "subject": "fix(service): scope subscription billing by profile",
+      "hash": "64053522",
+      "subject": "fix(app): enable kotlinx-serialization for adblock hit history parse",
       "type": "fix"
     },
     {
-      "hash": "8590490a",
-      "subject": "fix(design): guard battery optimization API level",
-      "type": "fix"
-    },
-    {
-      "hash": "3b02c8fd",
-      "subject": "fix(test): use valid app lock unlock timestamp",
-      "type": "fix"
-    },
-    {
-      "hash": "7b1ca800",
-      "subject": "fix(design): resolve wide proxy binding in CI",
-      "type": "fix"
-    },
-    {
-      "hash": "9d9aad0f",
-      "subject": "feat: add consent-gated network audit workflow",
+      "hash": "993bb848",
+      "subject": "feat(adblock): log REJECT hits and add one-click junk-log cleanup",
       "type": "feat"
     },
     {
-      "hash": "cc826e47",
-      "subject": "feat: expand external capture artifact adapters",
+      "hash": "015be695",
+      "subject": "fix(design): fix compile error from safe-call after cast in adblock dialog",
+      "type": "fix"
+    },
+    {
+      "hash": "24c6089a",
+      "subject": "feat(adblock): add rule-set UI and pre-download rules while VPN idle",
       "type": "feat"
     },
     {
-      "hash": "f6621297",
-      "subject": "docs: document branch improvements and sync workspace changes",
+      "hash": "80a755b8",
+      "subject": "feat(core): add optional hardcoded Baidu Netdisk adblock rule-set",
+      "type": "feat"
+    },
+    {
+      "hash": "65628468",
+      "subject": "feat(core): add built-in adblock rule injection on VPN start",
+      "type": "feat"
+    },
+    {
+      "hash": "2542810d",
+      "subject": "fix(security): harden supply chain batch 1 (STOP-A/B/F/G/H) (#10)",
+      "type": "fix"
+    },
+    {
+      "hash": "c6d65c88",
+      "subject": "docs(spec): link runtime-resilience spec from index",
       "type": "docs"
     },
     {
-      "hash": "4d9ff0bd",
-      "subject": "feat: add external ADB audit bridge and report import",
-      "type": "feat"
-    },
-    {
-      "hash": "dbe47461",
-      "subject": "feat(security): optional app lock and sensitive field masking",
-      "type": "feat"
-    },
-    {
-      "hash": "66b705ec",
-      "subject": "feat(ui): access control browsers+partners preset and filters",
-      "type": "feat"
-    },
-    {
-      "hash": "c96d62c8",
-      "subject": "feat(partners): merge signature-verified partner registry v1",
-      "type": "feat"
-    },
-    {
-      "hash": "687cb6ea",
-      "subject": "fix(app): import launch for profile QR share error path",
+      "hash": "c4a5cb81",
+      "subject": "fix(app): support dark mode in home widgets",
       "type": "fix"
     },
     {
-      "hash": "316d039c",
-      "subject": "feat(profiles): export subscription QR and expiry reminders",
-      "type": "feat"
-    },
-    {
-      "hash": "a349ee4f",
-      "subject": "feat(ui): add home screen status and control widgets",
-      "type": "feat"
-    },
-    {
-      "hash": "59b5bf23",
-      "subject": "fix(service): harden traffic history sampling isolation",
+      "hash": "efbab1bf",
+      "subject": "fix(design): localize expiry format and expose connection row a11y",
       "type": "fix"
     },
     {
-      "hash": "6a8a78d1",
-      "subject": "feat(service): add traffic history ring buffer and WidgetState contract",
-      "type": "feat"
-    },
-    {
-      "hash": "a6748d99",
-      "subject": "fix(vpn): stop bypassing zhihu domains from system HTTP proxy",
+      "hash": "6c139db4",
+      "subject": "fix(app): don't crash on malformed external-control deep links",
       "type": "fix"
     },
     {
-      "hash": "af656ed6",
-      "subject": "fix(ui,ci): drop local-traffic intros and silence setup-go cache warning",
+      "hash": "5acd9dc7",
+      "subject": "fix(native): recover panics in health-check goroutines",
       "type": "fix"
     },
     {
-      "hash": "98e08760",
-      "subject": "fix(vpn): update Zhihu++ partner package to com.chloemlla.zhplus",
+      "hash": "ea90906e",
+      "subject": "fix(security): require installed hardcoded partners to share a signing cert",
       "type": "fix"
     },
     {
-      "hash": "eea23a61",
-      "subject": "fix(design): move light system-bar attrs out of base themes",
-      "type": "fix"
-    },
-    {
-      "hash": "7f713591",
-      "subject": "fix: recover JNI goroutine panics and harden profile write order",
-      "type": "fix"
-    },
-    {
-      "hash": "0ccd0821",
-      "subject": "Update target SDK to 36 and fix traffic bitmask",
+      "hash": "a79ec236",
+      "subject": "refactor: replace !! null-forcing with safe unwraps",
       "type": "chore"
     },
     {
-      "hash": "3367258b",
-      "subject": "feat(vpn): extend partner auto-adapt to Zhihu++",
+      "hash": "6545abbd",
+      "subject": "perf(service): GC once after observer channel drain, not on unsubscribe",
+      "type": "chore"
+    },
+    {
+      "hash": "6160481b",
+      "subject": "fix(core): fail-soft on native JSON decode with warning logs",
+      "type": "fix"
+    },
+    {
+      "hash": "23480f8d",
+      "subject": "fix(accounting): re-baseline local traffic when mode is re-enabled",
+      "type": "fix"
+    },
+    {
+      "hash": "6083a94a",
+      "subject": "perf(module): throttle memory sampling, reduce redundant native traffic queries",
+      "type": "chore"
+    },
+    {
+      "hash": "3fd2e73c",
+      "subject": "fix(concurrency): make StatusProvider fields volatile, bound Binder retries with backoff",
+      "type": "fix"
+    },
+    {
+      "hash": "e91fbe38",
+      "subject": "fix(security): encrypt ageSecretKey in Room, preserve legacy DB on migration failure",
+      "type": "fix"
+    },
+    {
+      "hash": "b55b56c6",
+      "subject": "fix(security): remove pprof debug server, warn on allow-lan without auth, secure external-controller",
+      "type": "fix"
+    },
+    {
+      "hash": "f17dc070",
+      "subject": "feat(capture): HTTP plaintext capture + connection detail enhancement",
       "type": "feat"
     },
     {
-      "hash": "614dded3",
-      "subject": "feat(ui): undraw dynamic-color empty-state illustrations (#8)",
-      "type": "feat"
+      "hash": "b9545010",
+      "subject": "fix(ci): add missing dns_received_func definition in bridge.c",
+      "type": "fix"
     },
     {
-      "hash": "8876a461",
-      "subject": "feat(connections): rename to active connections and support close (#7)",
-      "type": "feat"
+      "hash": "b4f308c2",
+      "subject": "fix(ci): pin lumen-crash version to avoid Kotlin 2.4.0 metadata mismatch",
+      "type": "fix"
     },
     {
-      "hash": "a3235ef8",
-      "subject": "feat(vpn): extend partner auto-adapt to NexAI and Project-Lumen",
-      "type": "feat"
+      "hash": "b3ae9ca7",
+      "subject": "fix(ci): CaptureModule — wrap runCapture in coroutineScope for launch scope",
+      "type": "fix"
     },
     {
-      "hash": "e3ec98e3",
-      "subject": "docs(ci): Trellis workflow map and Actions reliability audit",
-      "type": "docs"
+      "hash": "e34cbd3d",
+      "subject": "fix(ci): TrafficHistoryModule — queryGroupDelays already returns Map, no JSON parsing needed",
+      "type": "fix"
     },
     {
-      "hash": "f50e5b5d",
-      "subject": "fix(ci): harden Actions patches and main-only release publish",
+      "hash": "adb0cba6",
+      "subject": "fix(ci): use Json.parseToJsonElement instead of decodeFromString for JsonObject",
+      "type": "fix"
+    },
+    {
+      "hash": "64ad861c",
+      "subject": "fix(ci): use JsonObject parsing instead of MapSerializer for TrafficHistoryModule",
+      "type": "fix"
+    },
+    {
+      "hash": "4d9808bb",
+      "subject": "fix(ci): resolve build errors — TrafficHistoryModule serialization + CaptureStore deprecation",
       "type": "fix"
     }
   ],
   "modules": [
     {
       "module": ":app",
-      "summary": "开源/更新开屏门闸 · 授权 ADB 审计报告导入 · LumenCrash 宿主 · Alpha→Meta 迁移提示"
+      "summary": "开源/更新开屏门闸 · 授权 ADB 审计报告导入 · LumenCrash 宿主 · Alpha→Meta 迁移提示 · 广告拦截命中记录页"
     },
     {
       "module": ":design",
-      "summary": "主页流量趋势 · 连接聚合与日志过滤 · 平板代理双栏 · unDraw 可选壁纸配色插画"
+      "summary": "主页流量趋势 · 连接聚合与日志过滤 · 平板代理双栏 · unDraw 可选壁纸配色插画 · 广告拦截规则集与命中统计/一键清理"
     },
     {
       "module": ":service",
-      "summary": "Live Update 状态通知 · 场景与节点故障转移 · 配置独立流量计费 · 伙伴应用自动适配 · 外部控制加固"
+      "summary": "Live Update 状态通知 · 场景与节点故障转移 · 配置独立流量计费 · 伙伴应用自动适配 · 外部控制加固 · 广告拦截命中推送与统计/清理"
     },
     {
       "module": ":core",
-      "summary": "mihomo 桥接与 subscription-userinfo 解析保留"
+      "summary": "mihomo 桥接与 subscription-userinfo 解析保留 · 内置广告拦截规则注入与命中记录器"
     },
     {
       "module": "CI / release",
