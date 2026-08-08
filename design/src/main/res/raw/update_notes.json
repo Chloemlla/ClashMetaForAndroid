@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "identity": {
-    "commitHash": "4cdd96e",
-    "buildTime": "2026-08-08T01:09:53Z",
+    "commitHash": "0ef98fa",
+    "buildTime": "2026-08-08T04:17:57Z",
     "versionName": "2.11.32",
     "versionCode": 211032
   },
@@ -104,6 +104,16 @@
     }
   ],
   "commits": [
+    {
+      "hash": "0ef98fa9",
+      "subject": "feat(design): unify adblock external-resources control into one switch",
+      "type": "feat"
+    },
+    {
+      "hash": "4858e8e0",
+      "subject": "docs(update-notes): add adblock highlights and refresh commits for 2.11.32",
+      "type": "docs"
+    },
     {
       "hash": "4cdd96e3",
       "subject": "docs(spec): capture kotlinx-serialization cross-module convention",
@@ -242,16 +252,6 @@
     {
       "hash": "adb0cba6",
       "subject": "fix(ci): use Json.parseToJsonElement instead of decodeFromString for JsonObject",
-      "type": "fix"
-    },
-    {
-      "hash": "64ad861c",
-      "subject": "fix(ci): use JsonObject parsing instead of MapSerializer for TrafficHistoryModule",
-      "type": "fix"
-    },
-    {
-      "hash": "4d9808bb",
-      "subject": "fix(ci): resolve build errors — TrafficHistoryModule serialization + CaptureStore deprecation",
       "type": "fix"
     }
   ],
