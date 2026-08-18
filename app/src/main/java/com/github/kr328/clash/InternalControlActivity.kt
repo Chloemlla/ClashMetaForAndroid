@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.design.R
-import com.github.kr328.clash.remote.Remote
+import com.github.kr328.clash.remote.StatusClient
 import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
@@ -20,12 +20,16 @@ class InternalControlActivity : Activity() {
         if (presentPendingLumenCrashReportIfNeeded()) return
 
         when (intent.action) {
-            Intents.ACTION_TOGGLE_CLASH -> if (Remote.broadcasts.clashRunning) stopClash() else startClash()
-            Intents.ACTION_START_CLASH -> if (Remote.broadcasts.clashRunning) showStarted() else startClash()
-            Intents.ACTION_STOP_CLASH -> if (Remote.broadcasts.clashRunning) stopClash() else showStopped()
+            Intents.ACTION_TOGGLE_CLASH -> if (isClashRunning()) stopClash() else startClash()
+            Intents.ACTION_START_CLASH -> if (isClashRunning()) showStarted() else startClash()
+            Intents.ACTION_STOP_CLASH -> stopClash()
         }
 
         finish()
+    }
+
+    private fun isClashRunning(): Boolean {
+        return StatusClient(this).currentProfile() != null
     }
 
     private fun startClash() {

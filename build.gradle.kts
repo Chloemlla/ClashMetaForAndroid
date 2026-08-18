@@ -141,8 +141,8 @@ subprojects {
             // Keep compile/target aligned; AGP 8.8 ships platform-36 tooling.
             targetSdk = 36
 
-            versionName = "2.11.32"
-            versionCode = 211032
+            versionName = "2.11.33"
+            versionCode = 211033
 
             if (isApp) {
                 val commitHash = gitCommitHash(rootProject.projectDir)
