@@ -13,16 +13,23 @@
 recognizes a package as a partner using:
 
 ```
-isPartner = hardcode ∪ (meta-data present ∧ sharesSignatureWith(any installed hardcode partner OR self))
+isPartner = hardcode ∪ (meta-data present ∧ trustedSigner)
+trustedSigner = pinned certificate digest ∨ sharesSignatureWith(any installed hardcode partner OR self)
 ```
 
 - **Hardcode allowlist** (`PartnerApps.hardcodePackages`): the PiliPlus / NexAI /
   Project-Lumen / Zhihu++ / Aura / CDict applicationIds and their common `.debug` / `.dev` /
   `.lite` suffixes. This is the static trust root for deny-list exclusion and works with or
   without discovery. When a hardcoded applicationId is actually **installed**, the
-  runtime gate additionally requires it to share a signing certificate with CMFA or
-  another installed hardcode partner, so a spoofed install under a known partner name
-  cannot read `partnerStatus`.
+  runtime gate additionally requires a trusted signer, so a spoofed install under a known
+  partner name cannot read `partnerStatus`.
+- **Pinned signer digests** (`PartnerApps.trustedSignerSha256`): SHA-256 digests (lowercase
+  hex) of the partner release signing certificates. Each suite app ships its own signing key,
+  so "same signer as CMFA or another installed hardcode partner" matches no real install —
+  without pinning, the anti-spoofing gate rejects the genuine partner apps. Read a digest with
+  `apksigner verify --print-certs <apk>` (`Signer #1 certificate SHA-256 digest`) and add it
+  when a partner key is introduced or rotated. Zhihu++ has no published release yet, so no
+  digest is pinned for it.
 - **Meta-data discovery**: any other installed app may declare the following in its
   `AndroidManifest.xml` (inside `<application>`, not `<activity>`) to opt into
   discovery:
@@ -32,11 +39,10 @@ isPartner = hardcode ∪ (meta-data present ∧ sharesSignatureWith(any installe
   ```
 
   The flag alone is **never trusted**. A package is only accepted as a discovered
-  partner when it also shares a signing certificate with a package already on the
-  hardcode allowlist that is installed on the device, or with this app (CMFA) itself
-  (same-signer / same-suite builds). This keeps discovery strictly additive: it can
-  only widen *who* reaches the existing read-only surface, never *what* a partner can
-  do.
+  partner when it also presents a trusted signer: a pinned certificate digest, the same
+  certificate as an installed hardcode partner, or the same certificate as this app (CMFA)
+  itself. This keeps discovery strictly additive: it can only widen *who* reaches the
+  existing read-only surface, never *what* a partner can do.
 
 `PartnerApps.installedPartnerPackages(context)` returns the merged set (installed
 hardcode ∪ verified discovered) and is what `TunService` uses for VPN access-control
@@ -79,7 +85,9 @@ cross-app status.
 ## 4. Adding a new partner
 
 - Prefer adding the applicationId (and its `.debug`/`.dev` suffixes) to the relevant
-  set in `PartnerApps.kt` when CMFA controls the release process end-to-end.
+  set in `PartnerApps.kt` when CMFA controls the release process end-to-end, and pin the
+  release certificate digest in `PartnerApps.trustedSignerSha256` so the runtime gate
+  recognizes it.
 - Use meta-data discovery instead when the partner app is built and signed
   independently but shares CMFA's signing certificate (or a hardcode partner's), so no
   code change is required on every partner release.

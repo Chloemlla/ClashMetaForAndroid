@@ -6,32 +6,59 @@ import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.os.Build
 import com.github.kr328.clash.common.log.Log
+import java.security.MessageDigest
 
 /**
  * Known partner apps that should be auto-included in VPN access control
  * and allowed to query lightweight Clash running status.
  *
- * ### Registry rule (v1)
+ * ### Registry rule (v2)
  *
- * `isPartner = hardcode ∪ (meta-data present ∧ sharesSignatureWith(any installed hardcode
- * partner OR self))`
+ * `isPartner = hardcode ∪ (meta-data present ∧ trustedSigner)`, where a signer is trusted when
+ * its certificate digest is pinned in [trustedSignerSha256] **or** it matches an already
+ * installed hardcode partner / this app itself.
  *
  * The hardcoded [hardcodePackages] allowlist remains the trust root. Any other app is only
  * recognized as a partner when **both** of the following hold:
  * 1. it declares the [META_DATA_PARTNER_KEY] application meta-data flag, and
- * 2. it is signed with the same signing certificate as an already-installed hardcode partner,
- *    or the same certificate as this app itself (same-suite / same-signer builds).
+ * 2. it is signed with a pinned release certificate, with the same certificate as an already
+ *    installed hardcode partner, or with the same certificate as this app itself.
  *
  * The meta-data flag alone is never trusted — an app cannot self-declare its way into partner
- * status without also sharing a signer with a package already on the static allowlist (or with
- * CMFA itself). This keeps discovery strictly additive: it never widens what a recognized
- * partner can do (still read-only status + VPN access-control auto-include, never
- * start/stop/toggle of the VPN — see F-12 in `SECURITY.md`), it only widens *who* can reach that
- * existing read-only surface.
+ * status without also presenting a trusted signer. This keeps discovery strictly additive: it
+ * never widens what a recognized partner can do (still read-only status + VPN access-control
+ * auto-include, never start/stop/toggle of the VPN — see F-12 in `SECURITY.md`), it only widens
+ * *who* can reach that existing read-only surface.
  */
 object PartnerApps {
     /** Application meta-data flag partner apps declare to opt into discovery. */
     const val META_DATA_PARTNER_KEY: String = "com.github.kr328.clash.partner"
+
+    /**
+     * Pinned SHA-256 digests (lowercase hex, no separators) of release signing certificates
+     * accepted as partner identities.
+     *
+     * Every suite app is signed with its own key, so "shares a signing certificate with CMFA or
+     * another installed hardcode partner" holds for no real-world install — the anti-spoofing
+     * gate rejected exactly the genuine partners it was meant to protect. Pinning the release
+     * certificates restores recognition without weakening the gate: an impostor squatting a
+     * hardcode applicationId still needs the matching private key.
+     *
+     * Read a digest with `apksigner verify --print-certs <apk>` (`Signer #1 certificate SHA-256
+     * digest`) and add it here when a partner's signing key is introduced or rotated.
+     */
+    val trustedSignerSha256: Set<String> = setOf(
+        // CDict release key (CN=cdict)
+        "8d9b6c640b027d7439e594f56682b9e31c38c7588a0c0cc02189da8c1fe91862",
+        // PiliPlus release key
+        "f81faa94443032b07c8f2bb4255d2896b547be95c201ebd6db3b88d1e9e5b89d",
+        // NexAI release key
+        "ffd1f37c27051acc7fa18745e107e6179a28572619b63fc6f74dac3da44ed7ce",
+        // Project-Lumen release key
+        "0fa11497243b9a4375035c540709ff8f7d59c6ac67624319027990707ffbcac4",
+        // Aura release key
+        "a54881fbaf114dc0ca4c40e6644ca2b4c289b8de0bfe44b706981dcda1a51374",
+    )
 
     val piliPlusPackages: Set<String> = setOf(
         "com.chloemlla.piliplus",
@@ -102,23 +129,38 @@ object PartnerApps {
      * for the exact rule.
      *
      * An installed app that borrows a hardcoded partner applicationId is trusted only when it
-     * shares a signing certificate with CMFA or another installed hardcode partner (see
-     * [sharesTrustedSignature]); a spoofed install under a known partner name must not read
-     * partner status for free. A package that is not installed keeps static membership (used
-     * for deny-list exclusion) since there is no app to impersonate at runtime.
+     * presents a pinned release certificate (see [trustedSignerSha256]) or shares a signing
+     * certificate with CMFA or another installed hardcode partner (see [sharesTrustedSignature]);
+     * a spoofed install under a known partner name must not read partner status for free. A
+     * package that is not installed keeps static membership (used for deny-list exclusion) since
+     * there is no app to impersonate at runtime.
      */
     fun isPartnerPackage(context: Context, packageName: String): Boolean {
         val pm = context.packageManager
         if (packageName in hardcodePackages) {
-            if (isInstalled(pm, packageName) && !sharesTrustedSignature(pm, packageName, context.packageName)) {
+            if (isInstalled(pm, packageName) &&
+                !hasPinnedSigner(pm, packageName) &&
+                !sharesTrustedSignature(pm, packageName, context.packageName)
+            ) {
                 return false
             }
             return true
         }
+        if (!declaresPartnerMetaData(pm, packageName)) {
+            return false
+        }
+        if (hasPinnedSigner(pm, packageName)) {
+            return true
+        }
         val trustedSigners = installedHardcodePackages(pm) + context.packageName
-        return declaresPartnerMetaData(pm, packageName) &&
-            trustedSigners.any { signer -> signaturesMatch(pm, packageName, signer) }
+        return trustedSigners.any { signer -> signaturesMatch(pm, packageName, signer) }
     }
+
+    /** True when any signing certificate of [packageName] is pinned in [trustedSignerSha256]. */
+    private fun hasPinnedSigner(pm: PackageManager, packageName: String): Boolean =
+        matchesPinnedSigner(
+            signingCertificatesOf(pm, packageName).map { sha256Hex(it.toByteArray()) },
+        )
 
     /**
      * True when [packageName] (an installed hardcode partner) shares at least one signing
@@ -151,7 +193,9 @@ object PartnerApps {
             installedHardcode = installedHardcode,
             candidateMetaDataPackages = declaredPartnerCandidates(pm),
             trustedSigners = trustedSigners,
-            signatureMatches = { candidate, signer -> signaturesMatch(pm, candidate, signer) },
+            signatureMatches = { candidate, signer ->
+                hasPinnedSigner(pm, candidate) || signaturesMatch(pm, candidate, signer)
+            },
         )
     }
 
@@ -245,6 +289,19 @@ object PartnerApps {
         is String -> value == "1" || value.equals("true", ignoreCase = true)
         else -> false
     }
+
+    /**
+     * Pure certificate-digest membership test, extracted for unit testing without a real
+     * [Signature]/PackageManager. Digests are compared case-insensitively against
+     * [trustedSignerSha256].
+     */
+    internal fun matchesPinnedSigner(certificateDigests: Collection<String>): Boolean =
+        certificateDigests.any { it.lowercase() in trustedSignerSha256 }
+
+    /** Lowercase hex SHA-256, matching the digest `apksigner verify --print-certs` reports. */
+    internal fun sha256Hex(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString(separator = "") { byte -> "%02x".format(byte) }
 
     /**
      * Pure registry set-math, extracted for unit testing with fakes (no PackageManager

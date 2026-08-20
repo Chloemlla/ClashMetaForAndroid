@@ -52,6 +52,39 @@ class PartnerAppsTest {
     }
 
     @Test
+    fun sha256Hex_producesLowercaseHexDigest() {
+        assertEquals(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            PartnerApps.sha256Hex(ByteArray(0)),
+        )
+    }
+
+    @Test
+    fun trustedSignerSha256_pinsCDictReleaseCertificateAsLowercaseHex() {
+        assertTrue(
+            "8d9b6c640b027d7439e594f56682b9e31c38c7588a0c0cc02189da8c1fe91862"
+                in PartnerApps.trustedSignerSha256,
+        )
+        assertTrue(PartnerApps.trustedSignerSha256.all { Regex("[0-9a-f]{64}").matches(it) })
+    }
+
+    @Test
+    fun matchesPinnedSigner_acceptsPinnedDigestIgnoringCase() {
+        val pinned = PartnerApps.trustedSignerSha256.first()
+
+        assertTrue(PartnerApps.matchesPinnedSigner(listOf(pinned)))
+        assertTrue(PartnerApps.matchesPinnedSigner(listOf(pinned.uppercase())))
+    }
+
+    @Test
+    fun matchesPinnedSigner_rejectsUnknownOrMissingDigests() {
+        val pinned = PartnerApps.trustedSignerSha256.first()
+
+        assertFalse(PartnerApps.matchesPinnedSigner(emptyList()))
+        assertFalse(PartnerApps.matchesPinnedSigner(listOf("00" + pinned.drop(2))))
+    }
+
+    @Test
     fun mergePartnerPackages_keepsInstalledHardcodeUnconditionally() {
         val installedHardcode = setOf("com.chloemlla.piliplus")
 

@@ -11,18 +11,21 @@
 通过以下规则识别一个包是否为 partner：
 
 ```
-isPartner = 硬编码 ∪ (元数据标记存在 ∧ 签名与任意已安装的硬编码 partner 或自身匹配)
+isPartner = 硬编码 ∪ (元数据标记存在 ∧ 可信签名者)
+可信签名者 = 证书摘要在固定清单内 ∨ 签名与任意已安装的硬编码 partner 或自身匹配
 ```
 
-- **硬编码白名单**（`PartnerApps.hardcodePackages`）：PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict 的应用 ID 及其常见的 `.debug` / `.dev` / `.lite` 后缀。这是静态信任根，用于排除列表（deny-list），无论是否启用发现机制，始终有效。当某个硬编码应用 ID **实际已安装**时，运行时门禁还要求它与 CMFA 或另一个已安装的硬编码 partner 共享签名证书，从而防止在已知 partner 名下安装的伪造应用读取 `partnerStatus`。
+- **硬编码白名单**（`PartnerApps.hardcodePackages`）：PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict 的应用 ID 及其常见的 `.debug` / `.dev` / `.lite` 后缀。这是静态信任根，用于排除列表（deny-list），无论是否启用发现机制，始终有效。当某个硬编码应用 ID **实际已安装**时，运行时门禁还要求它提供可信签名者，从而防止在已知 partner 名下安装的伪造应用读取 `partnerStatus`。
+- **固定签名摘要**（`PartnerApps.trustedSignerSha256`）：partner 发布签名证书的 SHA-256 摘要（小写十六进制）。套件内每个应用都用各自的签名密钥，"与 CMFA 或另一个已安装硬编码 partner 同签名"在真实设备上永远不成立——不固定摘要的话，防伪门禁恰好会把真正的 partner 挡在门外。用 `apksigner verify --print-certs <apk>`（`Signer #1 certificate SHA-256 digest`）读取摘要，在引入或轮换 partner 签名密钥时补充。Zhihu++ 尚无公开发布，因此未固定其摘要。
 - **元数据发现**：其他已安装的应用可以在其 `AndroidManifest.xml` 中（放在 `<application>` 内，而非 `<activity>`）声明以下内容以加入发现：
 
   ```xml
   <meta-data android:name="com.github.kr328.clash.partner" android:value="true" />
   ```
 
-  该标记本身**绝不值得信任**。一个包只有在同时满足以下条件时才会被接受为已发现的 partner：
-  - 与已安装在设备上的硬编码白名单中的某个包**共享签名证书**
+  该标记本身**绝不值得信任**。一个包只有在同时提供可信签名者时才会被接受为已发现的 partner：
+  - 签名证书摘要在固定清单 `trustedSignerSha256` 内
+  - 或与已安装在设备上的硬编码白名单中的某个包**共享签名证书**
   - 或与本应用（CMFA）自身共享签名证书（同签名者/同套件构建）
 
   这保证了发现机制是**严格累加的**：它只能扩大*谁*可以访问现有只读接口的范围，而不会扩大*什么*操作可以被执行。
@@ -58,6 +61,6 @@ Authority：`${applicationId}.status`，方法：`partnerStatus`。可由 CMFA �
 
 ## 4. 添加新的 Partner
 
-- 当 CMFA 端到端控制发布流程时，优先将 applicationId（及其 `.debug`/`.dev` 后缀）添加到 `PartnerApps.kt` 中的相应集合。
+- 当 CMFA 端到端控制发布流程时，优先将 applicationId（及其 `.debug`/`.dev` 后缀）添加到 `PartnerApps.kt` 中的相应集合，并把其发布证书摘要固定到 `PartnerApps.trustedSignerSha256`，运行时门禁才会认可它。
 - 当 partner 应用独立构建和签名，但与 CMFA（或硬编码 partner）共享签名证书时，改用元数据发现机制，这样每次 partner 发布时无需修改代码。
 - 永远不要添加新的 exported 方法、deep link 或 provider 列，以免让 partner（或伪造元数据标记的包）请求 VPN 启动/停止、读取订阅 URL 或读取 `ageSecretKey`。
