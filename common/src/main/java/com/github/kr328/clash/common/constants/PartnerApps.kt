@@ -156,11 +156,25 @@ object PartnerApps {
         return trustedSigners.any { signer -> signaturesMatch(pm, packageName, signer) }
     }
 
-    /** True when any signing certificate of [packageName] is pinned in [trustedSignerSha256]. */
-    private fun hasPinnedSigner(pm: PackageManager, packageName: String): Boolean =
-        matchesPinnedSigner(
+    /** True when any signing certificate of [packageName] matches a pinned release certificate. */
+    private fun hasPinnedSigner(pm: PackageManager, packageName: String): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            return try {
+                trustedSignerSha256.any { digest ->
+                    pm.hasSigningCertificate(
+                        packageName,
+                        digest.hexToByteArray(),
+                        PackageManager.CERT_INPUT_SHA256,
+                    )
+                }
+            } catch (_: PackageManager.NameNotFoundException) {
+                false
+            }
+        }
+        return matchesPinnedSigner(
             signingCertificatesOf(pm, packageName).map { sha256Hex(it.toByteArray()) },
         )
+    }
 
     /**
      * True when [packageName] (an installed hardcode partner) shares at least one signing
@@ -188,6 +202,10 @@ object PartnerApps {
     fun installedPartnerPackages(context: Context): Set<String> {
         val pm = context.packageManager
         val installedHardcode = installedHardcodePackages(pm)
+            .filterTo(mutableSetOf()) { packageName ->
+                hasPinnedSigner(pm, packageName) ||
+                    sharesTrustedSignature(pm, packageName, context.packageName)
+            }
         val trustedSigners = installedHardcode + context.packageName
         return mergePartnerPackages(
             installedHardcode = installedHardcode,
@@ -297,6 +315,11 @@ object PartnerApps {
      */
     internal fun matchesPinnedSigner(certificateDigests: Collection<String>): Boolean =
         certificateDigests.any { it.lowercase() in trustedSignerSha256 }
+
+    private fun String.hexToByteArray(): ByteArray =
+        ByteArray(length / 2) { index ->
+            substring(index * 2, index * 2 + 2).toInt(16).toByte()
+        }
 
     /** Lowercase hex SHA-256, matching the digest `apksigner verify --print-certs` reports. */
     internal fun sha256Hex(bytes: ByteArray): String =
