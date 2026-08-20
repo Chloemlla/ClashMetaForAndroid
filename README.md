@@ -142,7 +142,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 |------|-------------------|
 | **`:app`** | 首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限 UX · 沉浸式本次更新说明 · ADB 审计报告导入与能力缺口展示 |
 | **`:design`** | 渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 活跃连接管理 · undraw 动态色空状态 · 无障碍与 48dp 触控 |
-| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen） |
+| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen/Zhihu++/Aura/CDict） |
 | **`:core`** | 保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力 |
 | **`:common`** | 应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径 |
 | **`:sdk`** | `ClashRuntime` 同 App 嵌入门面（Profile / VPN / 代理组）；非跨应用遥控；见 [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) |
@@ -434,7 +434,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
 体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态 · 活跃连接管理 · undraw 动态色空状态 · 沉浸式更新说明
 订阅流量    默认从 0 本地计已用 · 导入/设置可切换上游 userinfo · 进度条仍用订阅总量 · 菜单可重置本地流量 · 旧版 ×100 虚高自动迁移
-伙伴集成    VPN 自动适配 PiliPlus / NexAI / Project-Lumen · StatusProvider 导出 partner 状态
+伙伴集成    VPN 自动适配 PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict · StatusProvider 导出 partner 状态
 迁移        Alpha → Meta 同签名自动导入配置/节点/设置 · 低 API zip 解压 · 迁移权限 i18n
 SDK         :sdk ClashRuntime 嵌入门面 · Components 可配置 · 同 App 内嵌（非跨 App 遥控） · resetLocalTraffic
 架构        design/service 边界收紧 · 展示层模型与适配器

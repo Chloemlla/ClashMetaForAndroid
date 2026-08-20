@@ -12,6 +12,9 @@ class PartnerAppsTest {
         assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.nexai.debug"))
         assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.projectlumen.dev"))
         assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.zhplus.lite"))
+        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.aura"))
+        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.cdict"))
+        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.cdict.debug"))
         assertFalse(PartnerApps.isPartnerPackage("com.example.unknown"))
     }
 
@@ -20,7 +23,9 @@ class PartnerAppsTest {
         val expected = PartnerApps.piliPlusPackages +
             PartnerApps.nexAiPackages +
             PartnerApps.projectLumenPackages +
-            PartnerApps.zhihuPlusPackages
+            PartnerApps.zhihuPlusPackages +
+            PartnerApps.auraPackages +
+            PartnerApps.cdictPackages
 
         assertEquals(expected, PartnerApps.hardcodePackages)
         assertEquals(PartnerApps.hardcodePackages, PartnerApps.allPackages)

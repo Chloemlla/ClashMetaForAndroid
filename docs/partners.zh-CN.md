@@ -14,7 +14,7 @@
 isPartner = 硬编码 ∪ (元数据标记存在 ∧ 签名与任意已安装的硬编码 partner 或自身匹配)
 ```
 
-- **硬编码白名单**（`PartnerApps.hardcodePackages`）：PiliPlus / NexAI / Project-Lumen / Zhihu++ 的应用 ID 及其常见的 `.debug` / `.dev` / `.lite` 后缀。这是静态信任根，用于排除列表（deny-list），无论是否启用发现机制，始终有效。当某个硬编码应用 ID **实际已安装**时，运行时门禁还要求它与 CMFA 或另一个已安装的硬编码 partner 共享签名证书，从而防止在已知 partner 名下安装的伪造应用读取 `partnerStatus`。
+- **硬编码白名单**（`PartnerApps.hardcodePackages`）：PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict 的应用 ID 及其常见的 `.debug` / `.dev` / `.lite` 后缀。这是静态信任根，用于排除列表（deny-list），无论是否启用发现机制，始终有效。当某个硬编码应用 ID **实际已安装**时，运行时门禁还要求它与 CMFA 或另一个已安装的硬编码 partner 共享签名证书，从而防止在已知 partner 名下安装的伪造应用读取 `partnerStatus`。
 - **元数据发现**：其他已安装的应用可以在其 `AndroidManifest.xml` 中（放在 `<application>` 内，而非 `<activity>`）声明以下内容以加入发现：
 
   ```xml

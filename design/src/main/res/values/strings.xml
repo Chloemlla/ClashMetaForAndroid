@@ -204,7 +204,7 @@
     <string name="allow_bypass">Allow Bypass</string>
     <string name="allow_bypass_summary">Allows all apps to bypass this VPN connection</string>
     <string name="partner_app_auto_adapt">Partner Apps Auto Adapt</string>
-    <string name="partner_app_auto_adapt_summary">Automatically keep partner apps (PiliPlus, NexAI, Project-Lumen, Zhihu++) in VPN access control when installed. Restart VPN after changing.</string>
+    <string name="partner_app_auto_adapt_summary">Automatically keep partner apps (PiliPlus, NexAI, Project-Lumen, Zhihu++, Aura, CDict) in VPN access control when installed. Restart VPN after changing.</string>
     <!-- Legacy aliases kept so older translations still resolve if referenced. -->
     <string name="piliplus_auto_adapt">@string/partner_app_auto_adapt</string>
     <string name="piliplus_auto_adapt_summary">@string/partner_app_auto_adapt_summary</string>
@@ -601,7 +601,7 @@
     <string name="open_source_fork_modules_intro"><![CDATA[Relative to upstream <strong>MetaCubeX/CMFA</strong>, this fork’s first-install splash summarizes production deltas by Android module. Full inventory: README → Branch Improvements.]]></string>
     <string name="open_source_mod_app">First-install open-source gate · Alpha→Meta same-signature migration · LumenCrash host install/report · cold-start order and flash-exit guards · notification permission UX · immersive update-notes gate · Android 16 (API 36) target + edge-to-edge</string>
     <string name="open_source_mod_design">Progressive proxy delay + animation · proxy search · live speed and traffic trend on home · connection aggregation · bounded log filtering · empty-profile / home setup CTAs · clipboard subscription import · undraw optional wallpaper-color empty states · accessibility and 48dp touch targets</string>
-    <string name="open_source_mod_service">Live Update status notification (promoted ongoing) · POST_NOTIFICATIONS guards · sharedpref-only backup · Access Control stop timeout · external VPN control denied by default · partner auto-adapt (PiliPlus/NexAI/Project-Lumen/Zhihu++)</string>
+    <string name="open_source_mod_service">Live Update status notification (promoted ongoing) · POST_NOTIFICATIONS guards · sharedpref-only backup · Access Control stop timeout · external VPN control denied by default · partner auto-adapt (PiliPlus/NexAI/Project-Lumen/Zhihu++/Aura/CDict)</string>
     <string name="open_source_mod_core">Mihomo bridge retained · subscription-userinfo / Go-side fetch and related kernel sync from upstream kept current</string>
     <string name="open_source_mod_common">App-wide CoroutineExceptionHandler · Components / Intent security boundary · internal-only control paths for shortcuts</string>
     <string name="open_source_mod_sdk">:sdk ClashRuntime embed facade — same-app Profile / VPN / proxy-group control without the stock UI (not cross-app remote control)</string>

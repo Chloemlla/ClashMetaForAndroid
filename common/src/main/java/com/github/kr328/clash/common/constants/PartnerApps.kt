@@ -62,9 +62,16 @@ object PartnerApps {
         "com.chloemlla.aura.dev",
     )
 
+    val cdictPackages: Set<String> = setOf(
+        "com.chloemlla.cdict",
+        "com.chloemlla.cdict.debug",
+        "com.chloemlla.cdict.dev",
+    )
+
     /** Statically known partner applicationIds (release + common suffixes); the trust root. */
     val hardcodePackages: Set<String> =
-        piliPlusPackages + nexAiPackages + projectLumenPackages + zhihuPlusPackages + auraPackages
+        piliPlusPackages + nexAiPackages + projectLumenPackages + zhihuPlusPackages +
+            auraPackages + cdictPackages
 
     /**
      * Backward-compatible alias for [hardcodePackages].
