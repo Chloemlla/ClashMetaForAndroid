@@ -22,6 +22,14 @@
         android:text="@string/export_qr_privacy_warning"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
 
+    <CheckBox
+        android:id="@+id/include_name_check"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/item_text_margin"
+        android:checked="true"
+        android:text="@string/export_qr_include_name" />
+
     <ImageView
         android:id="@+id/qr_view"
         android:layout_width="256dp"

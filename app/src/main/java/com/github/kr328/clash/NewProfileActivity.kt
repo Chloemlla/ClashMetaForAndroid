@@ -20,6 +20,7 @@ import com.github.kr328.clash.design.NewProfileDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
 import com.github.kr328.clash.design.util.ClipboardUrl
+import com.github.kr328.clash.design.util.ProfileShareUri
 import com.github.kr328.clash.design.util.QrBitmap
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.design.ui.ToastDuration
@@ -281,25 +282,29 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             ?.coerceToText(this)
             ?.toString()
 
-        val url = ClipboardUrl.extract(raw)
+        val install = ProfileShareUri.parseInstallConfig(raw)
+        val url = install?.url ?: ClipboardUrl.extract(raw)
         if (url == null) {
             design?.showToast(R.string.clipboard_no_url, ToastDuration.Long)
             return
         }
 
+        val name = install?.name?.takeIf { it.isNotBlank() } ?: getString(R.string.new_profile)
+
         withProfile {
             launchProperties(
                 create(
                     type = Profile.Type.Url,
-                    name = getString(R.string.new_profile),
+                    name = name,
                     source = url,
                 )
             )
         }
     }
 
-    private suspend fun createProfileByQrCode(url: String) {
-        val source = ClipboardUrl.extract(url) ?: url.trim()
+    private suspend fun createProfileByQrCode(raw: String) {
+        val install = ProfileShareUri.parseInstallConfig(raw)
+        val source = install?.url ?: (ClipboardUrl.extract(raw) ?: raw.trim())
         if (!source.startsWith("http://", ignoreCase = true) &&
             !source.startsWith("https://", ignoreCase = true)
         ) {
@@ -307,11 +312,13 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             return
         }
 
+        val name = install?.name?.takeIf { it.isNotBlank() } ?: getString(R.string.new_profile)
+
         withProfile {
             launchProperties(
                 create(
                     type = Profile.Type.Url,
-                    name = getString(R.string.new_profile),
+                    name = name,
                     source = source,
                 )
             )

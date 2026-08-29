@@ -188,6 +188,7 @@
     <string name="export_qr_summary">为该订阅 URL 生成二维码，便于其他设备扫码导入</string>
     <string name="export_qr_privacy_warning">分享二维码会暴露订阅链接，请仅与信任的人分享。</string>
     <string name="export_qr_share_image">分享图片</string>
+    <string name="export_qr_include_name">包含配置名称</string>
     <string name="export_qr_unavailable">仅支持带有 http(s) 订阅源的 URL 配置导出二维码</string>
     <string name="export_qr_failed">无法生成二维码</string>
     <string name="export_profile_file">导出配置文件</string>

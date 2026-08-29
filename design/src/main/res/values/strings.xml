@@ -387,6 +387,7 @@
     <string name="export_qr_summary">Show a QR code for this subscription URL so another device can scan and import it</string>
     <string name="export_qr_privacy_warning">Sharing this QR reveals the subscription URL. Only share with people you trust.</string>
     <string name="export_qr_share_image">Share image</string>
+    <string name="export_qr_include_name">Include profile name</string>
     <string name="export_qr_unavailable">QR export is only available for URL profiles with an http(s) subscription source</string>
     <string name="export_qr_failed">Unable to create QR code</string>
     <string name="export_profile_file">Export profile file</string>

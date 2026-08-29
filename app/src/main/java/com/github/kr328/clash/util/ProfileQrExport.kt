@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.view.LayoutInflater
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.FileProvider
@@ -16,7 +17,9 @@ import com.github.kr328.clash.design.util.ProfileShareUri
 import com.github.kr328.clash.design.util.QrBitmap
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -33,31 +36,51 @@ object ProfileQrExport {
             return
         }
 
-        val payload = ProfileShareUri.qrPayload(profile.source)
-        if (payload == null) {
-            design.showToast(R.string.export_qr_unavailable, ToastDuration.Long)
-            return
-        }
-
-        val bitmap = try {
-            withContext(Dispatchers.Default) {
-                QrBitmap.encode(payload)
-            }
-        } catch (e: Exception) {
-            design.showExceptionToast(e)
-            return
-        }
-
         withContext(Dispatchers.Main) {
             val view = LayoutInflater.from(context).inflate(R.layout.dialog_profile_qr, null, false)
             view.findViewById<TextView>(R.id.title_view).text = profile.name
-            view.findViewById<ImageView>(R.id.qr_view).setImageBitmap(bitmap)
+            val qrView = view.findViewById<ImageView>(R.id.qr_view)
+            val includeName = view.findViewById<CheckBox>(R.id.include_name_check).apply {
+                isEnabled = profile.name.isNotBlank()
+            }
+
+            var currentBitmap: Bitmap? = null
+            var encodeJob: Job? = null
+
+            fun updateQr() {
+                encodeJob?.cancel()
+                val payload = ProfileShareUri.qrPayload(
+                    profile.source,
+                    if (includeName.isChecked) profile.name else null,
+                )
+                if (payload == null) {
+                    currentBitmap = null
+                    qrView.setImageBitmap(null)
+                    return
+                }
+
+                encodeJob = design.launch(Dispatchers.Main) {
+                    val bitmap = try {
+                        withContext(Dispatchers.Default) { QrBitmap.encode(payload) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        design.showExceptionToast(e)
+                        null
+                    }
+                    currentBitmap = bitmap
+                    qrView.setImageBitmap(bitmap)
+                }
+            }
+
+            includeName.setOnCheckedChangeListener { _, _ -> updateQr() }
+            updateQr()
 
             MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.export_qr)
                 .setView(view)
                 .setPositiveButton(R.string.export_qr_share_image) { _, _ ->
-                    shareBitmap(context, design, profile.name, bitmap)
+                    currentBitmap?.let { shareBitmap(context, design, profile.name, it) }
                 }
                 .setNegativeButton(R.string.close, null)
                 .show()
