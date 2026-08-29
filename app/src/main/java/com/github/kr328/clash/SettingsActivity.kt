@@ -5,8 +5,10 @@ import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.SettingsDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.dialog.withModelProgressBar
+import com.github.kr328.clash.design.R as DesignR
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.PendingDao
+import com.github.kr328.clash.service.migration.MigrationBundle
 import com.github.kr328.clash.service.util.sendProfileChanged
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.DataBackup
@@ -71,16 +73,16 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
             withModelProgressBar {
                 configure {
                     isIndeterminate = true
-                    text = getString(R.string.backup_exporting)
+                    text = getString(DesignR.string.backup_exporting)
                 }
                 DataBackup.export(this@SettingsActivity, target)
             }
-            design.showToast(R.string.backup_exported, ToastDuration.Long)
+            design.showToast(DesignR.string.backup_exported, ToastDuration.Long)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             design.showToast(
-                getString(R.string.backup_operation_failed, e.message ?: getString(R.string.error)),
+                getString(DesignR.string.backup_operation_failed, e.message ?: getString(DesignR.string.error)),
                 ToastDuration.Long,
             )
         }
@@ -88,16 +90,18 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
 
     private suspend fun restoreBackup(design: SettingsDesign, source: android.net.Uri) {
         try {
-            val result = withModelProgressBar {
+            var restored: MigrationBundle.ImportResult? = null
+            withModelProgressBar {
                 configure {
                     isIndeterminate = true
-                    text = getString(R.string.backup_restoring)
+                    text = getString(DesignR.string.backup_restoring)
                 }
-                DataBackup.import(this@SettingsActivity, source)
+                restored = DataBackup.import(this@SettingsActivity, source)
             }
+            val result = checkNotNull(restored)
 
             if (result.skipped) {
-                design.showToast(R.string.backup_restore_invalid, ToastDuration.Long)
+                design.showToast(DesignR.string.backup_restore_invalid, ToastDuration.Long)
                 return
             }
 
@@ -108,14 +112,14 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
             }
             sendServiceRecreated()
             design.showToast(
-                getString(R.string.backup_restored, result.totalProfiles),
+                getString(DesignR.string.backup_restored, result.totalProfiles),
                 ToastDuration.Long,
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             design.showToast(
-                getString(R.string.backup_operation_failed, e.message ?: getString(R.string.error)),
+                getString(DesignR.string.backup_operation_failed, e.message ?: getString(DesignR.string.error)),
                 ToastDuration.Long,
             )
         }
