@@ -54,16 +54,25 @@ func load(completable unsafe.Pointer, path C.c_string) {
 }
 
 //export updateAdblock
-func updateAdblock(completable unsafe.Pointer, profileDir C.c_string) {
-	go func(profileDir string) {
+func updateAdblock(completable unsafe.Pointer, profileDir C.c_string, proxy C.c_string) {
+	go func(profileDir, proxy string) {
 		defer safeRecover("updateAdblock")
 
-		C.complete(completable, marshalString(config.UpdateAdblockProvider(profileDir)))
+		C.complete(completable, marshalString(config.UpdateAdblockProvider(profileDir, proxy)))
 
 		C.release_object(completable)
 
 		runtime.GC()
-	}(C.GoString(profileDir))
+	}(C.GoString(profileDir), C.GoString(proxy))
+}
+
+//export adblockReady
+func adblockReady(profileDir C.c_string) C.int {
+	if config.AdblockProviderReady(C.GoString(profileDir)) {
+		return 1
+	}
+
+	return 0
 }
 
 //export readOverride

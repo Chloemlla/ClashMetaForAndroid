@@ -38,8 +38,13 @@ type fetchHeader struct {
 	ProfileUpdateInterval string
 }
 
-func openUrl(ctx context.Context, url string) (io.ReadCloser, fetchHeader, error) {
-	response, err := clashHttp.HttpRequest(ctx, url, http.MethodGet, http.Header{"User-Agent": {"ClashMetaForAndroid/" + app.VersionName()}}, nil)
+func openUrl(ctx context.Context, url, proxy string) (io.ReadCloser, fetchHeader, error) {
+	options := []clashHttp.Option{}
+	if proxy != "" {
+		options = append(options, clashHttp.WithSpecialProxy(proxy))
+	}
+
+	response, err := clashHttp.HttpRequest(ctx, url, http.MethodGet, http.Header{"User-Agent": {"ClashMetaForAndroid/" + app.VersionName()}}, nil, options...)
 
 	if err != nil {
 		return nil, fetchHeader{}, err
@@ -55,7 +60,7 @@ func openContent(url string) (io.ReadCloser, error) {
 	return app.OpenContent(url)
 }
 
-func fetch(url *U.URL, file string) (fetchHeader, error) {
+func fetch(url *U.URL, file, proxy string) (fetchHeader, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -65,7 +70,7 @@ func fetch(url *U.URL, file string) (fetchHeader, error) {
 
 	switch url.Scheme {
 	case "http", "https":
-		reader, header, err = openUrl(ctx, url.String())
+		reader, header, err = openUrl(ctx, url.String(), proxy)
 	case "content":
 		reader, err = openContent(url.String())
 	default:
@@ -171,7 +176,7 @@ func FetchAndValid(
 
 		reportStatus(string(bytes))
 
-		header, err := fetch(url, configPath)
+		header, err := fetch(url, configPath, "")
 		if err != nil {
 			return err
 		}
@@ -195,6 +200,14 @@ func FetchAndValid(
 		})
 
 		reportStatus(string(bytes))
+
+		// The built-in adblock rule-set is downloaded on demand after startup
+		// (routed through the active proxy), never during profile import. It is
+		// injected as an empty inline provider while the file is absent, so it
+		// has no url/path to fetch here anyway.
+		if prefix == RULES && name == AdblockProviderName {
+			return
+		}
 
 		u, uok := provider["url"]
 		p, pok := provider["path"]
@@ -235,7 +248,7 @@ func FetchAndValid(
 			}
 		}
 
-		_, _ = fetch(url, ps)
+		_, _ = fetch(url, ps, "")
 	})
 
 	bytes, _ := json.Marshal(&Status{

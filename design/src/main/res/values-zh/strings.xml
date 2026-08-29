@@ -45,6 +45,13 @@
     <string name="adblock_rules_status_updating">正在更新规则…</string>
     <string name="adblock_rules_status_updated">已下载 · 上次更新 %1$s</string>
     <string name="adblock_rules_url">规则下载地址</string>
+    <string name="adblock_prompt_title">下载广告过滤规则？</string>
+    <string name="adblock_prompt_message">广告过滤规则尚未下载。现在下载，或选择通过某个代理下载。</string>
+    <string name="adblock_prompt_download">立即下载</string>
+    <string name="adblock_prompt_choose_proxy">选择代理</string>
+    <string name="adblock_prompt_later">暂不</string>
+    <string name="adblock_proxy_choose_title">选择下载使用的代理</string>
+    <string name="adblock_download_complete">广告过滤规则已更新</string>
     <string name="copy">复制</string>
     <string name="baidu_adblock">百度网盘广告拦截</string>
     <string name="baidu_adblock_summary">使用内置规则列表拦截百度网盘广告</string>

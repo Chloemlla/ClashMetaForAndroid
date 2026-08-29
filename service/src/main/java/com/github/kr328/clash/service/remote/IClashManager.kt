@@ -26,8 +26,15 @@ interface IClashManager {
 
     suspend fun healthCheck(group: String)
     suspend fun updateProvider(type: Provider.Type, name: String)
-    /** Update the built-in adblock rule-set; works even when the tunnel is idle. */
-    suspend fun updateAdblock()
+    /**
+     * Update the built-in adblock rule-set. When [proxy] is non-empty the download
+     * is routed through that outbound (a proxy group/node of the loaded config);
+     * null falls back to the running tunnel's default routing. Works even when the
+     * tunnel is idle.
+     */
+    suspend fun updateAdblock(proxy: String? = null)
+    /** True when the active profile already has the built-in adblock MRS file. */
+    fun isAdblockRulesReady(): Boolean
 
     fun queryOverride(slot: Clash.OverrideSlot): ConfigurationOverride
     fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride)

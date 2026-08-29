@@ -273,6 +273,13 @@
     <string name="adblock_rules_status_updating">Updating rules…</string>
     <string name="adblock_rules_status_updated">Downloaded · last updated %1$s</string>
     <string name="adblock_rules_url">Rule download URL</string>
+    <string name="adblock_prompt_title">Download adblock rules?</string>
+    <string name="adblock_prompt_message">Adblock rules haven\'t been downloaded yet. Download them now, or pick a proxy to download through.</string>
+    <string name="adblock_prompt_download">Download</string>
+    <string name="adblock_prompt_choose_proxy">Choose proxy</string>
+    <string name="adblock_prompt_later">Later</string>
+    <string name="adblock_proxy_choose_title">Download through proxy</string>
+    <string name="adblock_download_complete">Adblock rules updated</string>
     <string name="copy">Copy</string>
     <string name="baidu_adblock">Baidu Netdisk AdBlock</string>
     <string name="baidu_adblock_summary">Block ads in Baidu Netdisk using a built-in rule list</string>

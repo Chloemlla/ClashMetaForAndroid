@@ -14,10 +14,9 @@ import com.github.kr328.clash.service.scene.NodeFailoverController
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendOverrideChanged
+import com.github.kr328.clash.service.util.sendProfileChanged
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
-
-private const val ADBLOCK_PROVIDER_NAME = "cfm-adblock"
 
 class ClashManager(private val context: Context) : IClashManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
@@ -126,20 +125,25 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.updateProvider(type, name).await()
     }
 
-    override suspend fun updateAdblock() {
-        try {
-            // Fast path: the tunnel is running with the provider registered.
-            Clash.updateProvider(Provider.Type.Rule, ADBLOCK_PROVIDER_NAME).await()
-        } catch (e: Exception) {
-            // Only pre-download when the provider isn't registered (tunnel idle,
-            // or adblock was just toggled so the loaded config lacks it). A real
-            // fetch failure while the tunnel is running must surface instead of
-            // triggering a second download.
-            if (e.message?.contains("not found") != true) throw e
+    override suspend fun updateAdblock(proxy: String?) {
+        val activeProfile = store.activeProfile
+            ?: throw IllegalStateException("No active profile")
 
-            val activeProfile = store.activeProfile ?: throw e
-            Clash.updateAdblock(context.importedDir.resolve(activeProfile.toString())).await()
-        }
+        // Download the MRS file into the active profile dir. proxy == null routes
+        // through the running tunnel's default outbound; a group/node name forces
+        // that specific outbound.
+        Clash.updateAdblock(context.importedDir.resolve(activeProfile.toString()), proxy).await()
+
+        // The loaded config likely carries the empty inline placeholder (the file
+        // was missing when it was loaded), so reload to swap in the real HTTP
+        // provider, which then reads the freshly-downloaded local file.
+        context.sendProfileChanged(activeProfile)
+    }
+
+    override fun isAdblockRulesReady(): Boolean {
+        val activeProfile = store.activeProfile ?: return false
+
+        return Clash.adblockReady(context.importedDir.resolve(activeProfile.toString()))
     }
 
     override fun setLogObserver(observer: ILogObserver?) {

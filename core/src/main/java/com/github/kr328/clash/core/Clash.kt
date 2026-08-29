@@ -214,10 +214,15 @@ object Clash {
         }
     }
 
-    fun updateAdblock(path: File): CompletableDeferred<Unit> {
+    fun updateAdblock(path: File, proxy: String? = null): CompletableDeferred<Unit> {
         return CompletableDeferred<Unit>().apply {
-            Bridge.nativeUpdateAdblock(this, path.absolutePath)
+            Bridge.nativeUpdateAdblock(this, path.absolutePath, proxy.orEmpty())
         }
+    }
+
+    /** True when the built-in adblock MRS file is already present in [path]'s providers dir. */
+    fun adblockReady(path: File): Boolean {
+        return Bridge.nativeAdblockReady(path.absolutePath)
     }
 
     fun queryProviders(): List<Provider> {

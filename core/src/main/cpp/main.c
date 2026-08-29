@@ -346,13 +346,25 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeUpdateProvider(JNIEnv *env,
 JNIEXPORT void JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeUpdateAdblock(JNIEnv *env, jobject thiz,
                                                                    jobject completable,
-                                                                   jstring profile_dir) {
+                                                                   jstring profile_dir,
+                                                                   jstring proxy) {
     TRACE_METHOD();
 
     jobject _completable = new_global(completable);
     scoped_string _profile_dir = get_string(profile_dir);
+    scoped_string _proxy = get_string(proxy);
 
-    updateAdblock(_completable, _profile_dir);
+    updateAdblock(_completable, _profile_dir, _proxy);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeAdblockReady(JNIEnv *env, jobject thiz,
+                                                                  jstring profile_dir) {
+    TRACE_METHOD();
+
+    scoped_string _profile_dir = get_string(profile_dir);
+
+    return adblockReady(_profile_dir) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jstring JNICALL

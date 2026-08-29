@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 
@@ -30,6 +31,12 @@ const (
 // path is rewritten to profileDir/providers/, and never overwrites an
 // existing user-defined provider of the same name.
 //
+// The remote rules are NOT fetched while the config is being loaded. When the
+// local MRS file is still absent, an empty inline provider is injected instead,
+// so the config loads without an auto-download and the RULE-SET stays resolved
+// (matching nothing). After the app downloads the file with the user's consent,
+// the provider becomes an HTTP one on the next load.
+//
 // Performance: the provider uses the precompiled MRS rule-set format
 // (adblockmihomo.mrs, ~1.65 MiB vs ~5.0 MiB for the 185k-line YAML), giving
 // smaller transfer and faster load. Matching is behavior:domain (trie), not
@@ -37,7 +44,7 @@ const (
 // deliberately avoided). The injected rule carries no-resolve, which only
 // clears helper.ResolveIP for a domain-behavior rule-set, preventing any
 // unnecessary IP resolution.
-func patchAdblock(cfg *config.RawConfig, _ string) error {
+func patchAdblock(cfg *config.RawConfig, profileDir string) error {
 	if !adblockEnabled() {
 		return nil
 	}
@@ -49,12 +56,22 @@ func patchAdblock(cfg *config.RawConfig, _ string) error {
 	if cfg.RuleProvider == nil {
 		cfg.RuleProvider = make(map[string]map[string]any)
 	}
-	cfg.RuleProvider[AdblockProviderName] = map[string]any{
-		"type":     "http",
-		"behavior": "domain",
-		"format":   "mrs",
-		"url":      adblockProviderURL,
-		"interval": adblockUpdateInterval,
+	if AdblockProviderReady(profileDir) {
+		cfg.RuleProvider[AdblockProviderName] = map[string]any{
+			"type":     "http",
+			"behavior": "domain",
+			"format":   "mrs",
+			"url":      adblockProviderURL,
+			"interval": adblockUpdateInterval,
+		}
+	} else {
+		// Placeholder until the app downloads the rules after startup; keeps the
+		// RULE-SET resolvable without triggering a network fetch at load time.
+		cfg.RuleProvider[AdblockProviderName] = map[string]any{
+			"type":     "inline",
+			"behavior": "domain",
+			"payload":  []any{},
+		}
 	}
 
 	cfg.Rule = append([]string{"RULE-SET," + AdblockProviderName + ",REJECT,no-resolve"}, cfg.Rule...)
@@ -158,21 +175,39 @@ func adblockEnabled() bool {
 	return overrideAppFlag(adblockKey, true)
 }
 
+// adblockProviderPath is the local file mihomo maps the injected provider to
+// (profileDir/providers/rules/<md5 of url>); it must match patchProviders,
+// otherwise the core would re-fetch the file on the next config load.
+func adblockProviderPath(profileDir string) string {
+	hash := utils.MakeHash([]byte(adblockProviderURL)).String()
+	return path.Join(profileDir, "providers", "rules", hash)
+}
+
+// AdblockProviderReady reports whether the built-in adblock rule-set has been
+// downloaded into the profile directory (i.e. the user consented and the fetch
+// succeeded), so the config loader can decide between an HTTP provider and the
+// offline placeholder.
+func AdblockProviderReady(profileDir string) bool {
+	_, err := os.Stat(adblockProviderPath(profileDir))
+	return err == nil
+}
+
 // UpdateAdblockProvider downloads the built-in adblock rule-set into the
 // profile's providers directory without requiring a running tunnel, so the
 // rules can be pre-warmed before the first VPN start. The target path must
 // match patchProviders (profileDir/providers/rules/<md5 of url>), otherwise
 // the core would re-fetch the file on the next config load.
-func UpdateAdblockProvider(profileDir string) error {
+//
+// When proxy is non-empty the fetch is routed through that outbound (a proxy
+// group or node of the loaded config); an empty proxy falls back to the
+// default tunnel routing / direct connection.
+func UpdateAdblockProvider(profileDir, proxy string) error {
 	u, err := url.Parse(adblockProviderURL)
 	if err != nil {
 		return err
 	}
 
-	hash := utils.MakeHash([]byte(adblockProviderURL)).String()
-	target := path.Join(profileDir, "providers", "rules", hash)
-
-	_, err = fetch(u, target)
+	_, err = fetch(u, adblockProviderPath(profileDir), proxy)
 	return err
 }
 

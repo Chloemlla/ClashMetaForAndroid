@@ -17,9 +17,11 @@ import com.chloemlla.lumen.crash.LumenCrash
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
+import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.PartnerPairingNotifier
 import com.github.kr328.clash.service.store.PartnerGrantStore
 import com.github.kr328.clash.store.AppStore
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import com.github.kr328.clash.design.R as DesignR
@@ -41,6 +44,7 @@ import com.github.kr328.clash.design.R as DesignR
 class MainActivity : BaseActivity<MainDesign>() {
     private var clashStarting = false
     private val promptedPairings = mutableSetOf<String>()
+    private val promptedAdblockProfiles = mutableSetOf<UUID>()
     private val notificationPermissionLauncher =
         registerForActivityResult(RequestPermission()) { granted ->
             if (!granted) {
@@ -77,6 +81,9 @@ class MainActivity : BaseActivity<MainDesign>() {
                             clashStarting = false
                             design.setClashStarting(false)
                             design.fetch()
+                            if (it == Event.ClashStart) {
+                                maybePromptAdblockDownload()
+                            }
                         }
                         Event.ActivityStart,
                         Event.ServiceRecreated,
@@ -86,6 +93,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             if (it == Event.ActivityStart) {
                                 promptPendingPairing()
                             }
+                            maybePromptAdblockDownload()
                         }
                         else -> Unit
                     }
@@ -154,6 +162,69 @@ class MainActivity : BaseActivity<MainDesign>() {
         promptedPairings += next.packageName
 
         startActivity(PartnerPairingNotifier.pairingIntent(next.packageName, next.sha256))
+    }
+
+    /**
+     * Prompts once per profile per activity instance to download the built-in adblock
+     * rule-set. Skipped when the rules are already on disk, adblock is disabled, or the
+     * tunnel isn't running. The download routes through the running config by default;
+     * the user may instead pick a specific proxy group from the loaded config.
+     */
+    private suspend fun maybePromptAdblockDownload() {
+        if (!clashRunning || !activityStarted) return
+
+        val active = withProfile { queryActive() } ?: return
+        if (!active.imported || active.uuid in promptedAdblockProfiles) return
+
+        val override = withClash { queryOverride(Clash.OverrideSlot.Persist) }
+        if (override.app.adblock == false) return
+
+        if (withClash { isAdblockRulesReady() }) return
+
+        promptedAdblockProfiles += active.uuid
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(DesignR.string.adblock_prompt_title)
+            .setMessage(DesignR.string.adblock_prompt_message)
+            .setPositiveButton(DesignR.string.adblock_prompt_download) { _, _ ->
+                downloadAdblockRules(null)
+            }
+            .setNeutralButton(DesignR.string.adblock_prompt_choose_proxy) { _, _ ->
+                showAdblockProxyPicker()
+            }
+            .setNegativeButton(DesignR.string.adblock_prompt_later, null)
+            .show()
+    }
+
+    private fun showAdblockProxyPicker() {
+        launch {
+            val groups = withClash { queryProxyGroupNames(false) }
+
+            if (groups.isEmpty()) {
+                downloadAdblockRules(null)
+                return@launch
+            }
+
+            MaterialAlertDialogBuilder(this@MainActivity)
+                .setTitle(DesignR.string.adblock_proxy_choose_title)
+                .setItems(groups.toTypedArray()) { _, which -> downloadAdblockRules(groups[which]) }
+                .setNegativeButton(DesignR.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun downloadAdblockRules(proxy: String?) {
+        launch {
+            try {
+                withClash { updateAdblock(proxy) }
+                design?.showToast(DesignR.string.adblock_download_complete, ToastDuration.Short)
+            } catch (e: Exception) {
+                recordBreadcrumbSafe("Adblock download failed: ${e::class.java.simpleName}")
+                design?.showExceptionToast(
+                    getString(DesignR.string.format_update_provider_failure, ADBLOCK_PROVIDER_NAME, e.message)
+                )
+            }
+        }
     }
 
     private suspend fun maybeShowAlphaMigrationToast(design: MainDesign) {
@@ -412,5 +483,9 @@ class MainActivity : BaseActivity<MainDesign>() {
             .build()
 
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+    }
+
+    private companion object {
+        const val ADBLOCK_PROVIDER_NAME = "cfm-adblock"
     }
 }

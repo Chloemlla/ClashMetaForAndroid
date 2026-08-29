@@ -47,8 +47,10 @@ object Bridge {
     )
     external fun nativeUpdateAdblock(
         completable: CompletableDeferred<Unit>,
-        profileDir: String
+        profileDir: String,
+        proxy: String
     )
+    external fun nativeAdblockReady(profileDir: String): Boolean
 
     external fun nativeReadOverride(slot: Int): String
     external fun nativeWriteOverride(slot: Int, content: String)
