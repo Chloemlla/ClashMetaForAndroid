@@ -159,7 +159,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.trafficSparkline.contentDescription =
             context.getString(R.string.a11y_traffic_trend_empty)
 
-        binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        binding.colorClashStarted =
+            context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)
         refreshStatusAccessibility()
     }

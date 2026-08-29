@@ -37,9 +37,9 @@ class PartnerAppAdapter(
     private val iconLoads = Semaphore(AppAdapter.ICON_LOAD_CONCURRENCY)
     private val iconCache = object : LruCache<String, Drawable>(AppAdapter.ICON_CACHE_ENTRIES) {}
     private val allowedColor =
-        context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
     private val deniedColor =
-        context.resolveThemedColor(com.google.android.material.R.attr.colorError)
+        context.resolveThemedColor(androidx.appcompat.R.attr.colorError)
 
     var apps: List<PartnerAppInfo> = emptyList()
 

@@ -26,10 +26,10 @@ class TrafficSparklineView @JvmOverloads constructor(
     private val uploadPath = Path()
     private val downloadPath = Path()
     private val uploadPaint = linePaint(
-        context.resolveThemedColor(com.google.android.material.R.attr.colorControlNormal),
+        context.resolveThemedColor(androidx.appcompat.R.attr.colorControlNormal),
     )
     private val downloadPaint = linePaint(
-        context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary),
+        context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary),
     )
 
     fun append(uploadBytesPerSecond: Long, downloadBytesPerSecond: Long) {
