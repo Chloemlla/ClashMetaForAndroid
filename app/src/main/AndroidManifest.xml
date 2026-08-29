@@ -209,10 +209,17 @@
             android:configChanges="uiMode"
             android:exported="false"
             android:label="@string/partner_apps" />
+        <!--
+          Exported so a recognized partner app can raise the pairing prompt directly over its own
+          UI on first status read — a background activity start from the service side is refused by
+          the platform, which is why that path degrades to a notification. The activity re-validates
+          the caller (see PartnerPairingActivity): the identity under scrutiny is the launching
+          package, never the extras, so a non-partner launcher is dropped silently.
+        -->
         <activity
             android:name=".PartnerPairingActivity"
             android:excludeFromRecents="true"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTop"
             android:noHistory="true"
             android:taskAffinity=""

@@ -434,7 +434,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
 体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态 · 活跃连接管理 · undraw 动态色空状态 · 沉浸式更新说明
 订阅流量    默认从 0 本地计已用 · 导入/设置可切换上游 userinfo · 进度条仍用订阅总量 · 菜单可重置本地流量 · 旧版 ×100 虚高自动迁移
-伙伴集成    VPN 自动适配 PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict · StatusProvider 导出 partner 状态
+伙伴集成    VPN 自动适配 PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict · StatusProvider 导出 partner 状态 · 配对确认弹窗由伙伴应用在前台直接拉起（盖于应用之上），CMFA 校验发起者身份
 迁移        Alpha → Meta 同签名自动导入配置/节点/设置 · 低 API zip 解压 · 迁移权限 i18n
 SDK         :sdk ClashRuntime 嵌入门面 · Components 可配置 · 同 App 内嵌（非跨 App 遥控） · resetLocalTraffic
 架构        design/service 边界收紧 · 展示层模型与适配器
