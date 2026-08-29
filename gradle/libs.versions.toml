@@ -4,7 +4,10 @@ kotlin = "2.3.21"
 ksp = "2.3.11"
 golang = "1.0.4"
 coroutine = "1.11.0"
-coreKtx = "1.19.0"
+# androidx.core 1.19.0 and Compose 1.12.0 raise their AAR minAndroidGradlePluginVersion
+# to 9.1.0; core 1.18.0 (8.9.1) and compose-bom 2026.06.01 -> ui 1.11.4 (8.6.0) are the
+# newest releases AGP 8.13.2 accepts.
+coreKtx = "1.18.0"
 activity = "1.13.0"
 fragment = "1.9.0"
 appcompat = "1.8.0"
@@ -20,7 +23,7 @@ multiprocess = "1.0.0"
 quickie = "1.12.0"
 zxing = "3.5.4"
 biometric = "1.1.0"
-composeBom = "2026.08.00"
+composeBom = "2026.06.01"
 desugarJdkLibs = "2.1.5"
 junit = "4.13.2"
 
