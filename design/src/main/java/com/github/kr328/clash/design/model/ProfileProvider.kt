@@ -43,6 +43,15 @@ sealed class ProfileProvider {
             get() = context.getDrawableCompat(R.drawable.baseline_qr_code_scanner)
     }
 
+    class Album(private val context: Context) : ProfileProvider() {
+        override val name: String
+            get() = context.getString(R.string.album)
+        override val summary: String
+            get() = context.getString(R.string.import_from_album)
+        override val icon: Drawable?
+            get() = context.getDrawableCompat(R.drawable.ic_baseline_photo_library)
+    }
+
     class External(
         override val name: String,
         override val summary: String,

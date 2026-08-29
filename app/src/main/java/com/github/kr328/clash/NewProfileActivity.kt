@@ -5,8 +5,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.ComponentName
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
@@ -16,6 +20,7 @@ import com.github.kr328.clash.design.NewProfileDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
 import com.github.kr328.clash.design.util.ClipboardUrl
+import com.github.kr328.clash.design.util.QrBitmap
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile
@@ -38,6 +43,13 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         get() = this
 
     private val scanLauncher = registerForActivityResult(ScanQRCode(), ::scanResultHandler)
+
+    private val albumLauncher = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null)
+            albumResultHandler(uri)
+    }
 
     override suspend fun main() {
         val design = NewProfileDesign(this)
@@ -65,7 +77,8 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                                         create(Profile.Type.Url, name)
 
                                     is ProfileProvider.Clipboard,
-                                    is ProfileProvider.QR -> {
+                                    is ProfileProvider.QR,
+                                    is ProfileProvider.Album -> {
                                         null
                                     }
 
@@ -97,6 +110,12 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
                         is NewProfileDesign.Request.LaunchScanner -> {
                             scanLauncher.launch(null)
+                        }
+
+                        is NewProfileDesign.Request.LaunchAlbum -> {
+                            albumLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
                         }
 
                         NewProfileDesign.Request.ImportClipboard -> {
@@ -173,7 +192,8 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 ProfileProvider.File(self),
                 ProfileProvider.Url(self),
                 ProfileProvider.Clipboard(self),
-                ProfileProvider.QR(self)
+                ProfileProvider.QR(self),
+                ProfileProvider.Album(self)
             ) + providers
         }
     }
@@ -193,6 +213,64 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 is QRError -> design?.showExceptionToast(getString(R.string.import_from_qr_exception))
             }
         }
+    }
+
+    private fun albumResultHandler(uri: Uri) {
+        lifecycleScope.launch {
+            val url = decodeQrFromUri(uri)
+            if (url == null) {
+                design?.showToast(R.string.import_from_album_invalid, ToastDuration.Long)
+                return@launch
+            }
+
+            createProfileByQrCode(url)
+        }
+    }
+
+    private suspend fun decodeQrFromUri(uri: Uri): String? = withContext(Dispatchers.IO) {
+        val bitmap = loadSampledBitmap(uri) ?: return@withContext null
+        try {
+            var url = QrBitmap.decode(bitmap)
+            if (url == null) {
+                for (degrees in floatArrayOf(90f, 180f, 270f)) {
+                    val rotated = rotate(bitmap, degrees) ?: continue
+                    url = QrBitmap.decode(rotated)
+                    if (url != null) break
+                }
+            }
+            url
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    private fun loadSampledBitmap(uri: Uri, maxDimension: Int = 2048): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        runCatching {
+            contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, bounds)
+            }
+        }.getOrNull()
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        var sampleSize = 1
+        while (bounds.outWidth / sampleSize > maxDimension || bounds.outHeight / sampleSize > maxDimension) {
+            sampleSize *= 2
+        }
+
+        val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        return runCatching {
+            contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, options)
+            }
+        }.getOrNull()
+    }
+
+    private fun rotate(bitmap: Bitmap, degrees: Float): Bitmap? {
+        return runCatching {
+            val matrix = Matrix().apply { postRotate(degrees) }
+            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }.getOrNull()
     }
 
     private suspend fun importFromClipboard() {

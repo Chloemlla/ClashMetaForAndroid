@@ -123,6 +123,9 @@
     <string name="import_from_file">从文件导入</string>
     <string name="import_from_url">从 URL 导入</string>
     <string name="import_from_qr">从二维码导入</string>
+    <string name="album">相册</string>
+    <string name="import_from_album">从相册选择二维码图片</string>
+    <string name="import_from_album_invalid">无法从所选图片识别二维码</string>
     <string name="interface_">界面</string>
     <string name="invalid_url">无效的 URL</string>
     <string name="logcat">Logcat</string>

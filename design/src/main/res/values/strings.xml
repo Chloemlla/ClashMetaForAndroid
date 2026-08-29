@@ -110,6 +110,9 @@
     <string name="qr" translatable="false">QR Code</string>
     <string name="import_from_url">Import from URL</string>
     <string name="import_from_qr">Import from QR Code</string>
+    <string name="album">Album</string>
+    <string name="import_from_album">Pick a QR code image from your gallery</string>
+    <string name="import_from_album_invalid">No QR code found in the selected image</string>
     <string name="external">External</string>
     <string name="format_type_unsaved">%s (Unsaved)</string>
 
