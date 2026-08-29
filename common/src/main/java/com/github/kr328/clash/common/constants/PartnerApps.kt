@@ -2,6 +2,7 @@ package com.github.kr328.clash.common.constants
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.os.Build
@@ -12,17 +13,18 @@ import java.security.MessageDigest
 data class PartnerSignerDigests(val sha256: String, val sha1: String)
 
 /**
- * Why a caller is (not) recognized as a partner. Callers use this instead of a bare boolean so a
- * rejection can be explained to the user rather than surfacing as an unexplained "no status".
+ * Why a caller is (not) recognized as a partner. Only [Verified] grants anything; the two
+ * `*Unverified` values exist so a rejection can be explained to the user rather than surfacing as
+ * an unexplained "no status".
  */
 enum class PartnerTrust {
-    /** Neither a hardcoded applicationId nor declaring the partner meta-data flag. */
+    /** Not signed with the pinned release certificate, and makes no partner claim either. */
     NotPartner,
 
-    /** Declares the partner flag but is not signed with the pinned release certificate. */
+    /** Declares the partner meta-data flag but is not signed with the pinned certificate. */
     DeclaredUnverified,
 
-    /** Holds a hardcoded applicationId but is not signed with the pinned release certificate. */
+    /** Holds a hardcoded applicationId but is not signed with the pinned certificate. */
     HardcodedUnverified,
 
     /** Signed with the pinned release certificate. */
@@ -30,20 +32,20 @@ enum class PartnerTrust {
 }
 
 /**
- * Known partner apps that should be auto-included in VPN access control
- * and allowed to query lightweight Clash running status.
+ * Partner apps that are auto-included in VPN access control and allowed to query lightweight
+ * Clash running status.
  *
- * ### Registry rule (v4)
+ * ### Registry rule (v5)
  *
  * ```
- * isPartner = (hardcode ∪ meta-data present) ∧ signedWith(trustedSignerSha1)
+ * isPartner = signedWith(trustedSignerSha1)
  * ```
  *
- * The whole suite is signed with one shared release key, so a single pinned fingerprint is the
- * entire trust root: an app that does not present that certificate is not a partner, whatever
- * applicationId it claims and whatever meta-data it declares. Neither the [hardcodePackages]
- * allowlist nor the [META_DATA_PARTNER_KEY] flag can stand in for it — both only decide *which*
- * apps are asked for the certificate.
+ * The whole suite is signed with one shared release key, so that key is the entire registry: every
+ * installed app presenting the pinned certificate is a partner, including apps this build has never
+ * heard of, and no app without it is a partner whatever applicationId it claims and whatever
+ * meta-data it declares. [hardcodePackages] and [META_DATA_PARTNER_KEY] survive only to label
+ * *claimants* in the partner list — neither grants access.
  *
  * Recognition never widens what a partner can do (still read-only status + VPN access-control
  * auto-include, never start/stop/toggle of the VPN — see F-12 in `SECURITY.md`), it only decides
@@ -103,8 +105,8 @@ object PartnerApps {
     )
 
     /**
-     * Statically known partner applicationIds (release + common suffixes). This only nominates a
-     * package for the certificate check — see [trustedSignerSha1] for the actual trust root.
+     * Applications the partner list labels as *claiming* partner status, so a wrongly signed app is
+     * shown and explained instead of silently missing. Claiming grants nothing — see the class KDoc.
      */
     val hardcodePackages: Set<String> =
         piliPlusPackages + nexAiPackages + projectLumenPackages + zhihuPlusPackages +
@@ -114,45 +116,26 @@ object PartnerApps {
         packageName in piliPlusPackages
 
     /**
-     * Hardcode-only membership check (no [Context], no dynamic discovery).
+     * Classifies [packageName] against the registry rule described in the class KDoc: the pinned
+     * certificate alone decides [PartnerTrust.Verified].
      *
-     * This answers "is this a known applicationId", not "is this a partner": it cannot see the
-     * certificate. Prefer [isPartnerPackage] with a [Context] anywhere the answer gates access.
-     */
-    fun isPartnerPackage(packageName: String): Boolean =
-        packageName in hardcodePackages
-
-    /**
-     * Full partner membership check used by the runtime (StatusProvider / TunService):
-     * a recognized applicationId or meta-data flag **plus** the pinned release certificate. See
-     * the class KDoc for the exact rule.
-     */
-    fun isPartnerPackage(context: Context, packageName: String): Boolean =
-        trustOf(context, packageName) == PartnerTrust.Verified
-
-    /**
-     * Classifies [packageName] against the registry rule described in the class KDoc.
-     *
-     * A package that is not installed keeps static membership (used for deny-list exclusion) since
-     * there is no app to impersonate at runtime. An installed app that borrows a hardcoded partner
-     * applicationId without the pinned signer is reported as [PartnerTrust.HardcodedUnverified]
-     * rather than silently rejected, so the caller can explain the refusal instead of reporting an
-     * unexplained "no status".
+     * An installed app that presents a different key is reported as
+     * [PartnerTrust.HardcodedUnverified] or [PartnerTrust.DeclaredUnverified] when it claims partner
+     * status, so the caller can explain the refusal instead of reporting an unexplained "no status".
      */
     fun trustOf(context: Context, packageName: String): PartnerTrust {
         val pm = context.packageManager
-        val hardcoded = packageName in hardcodePackages
         if (!isInstalled(pm, packageName)) {
-            return if (hardcoded) PartnerTrust.Verified else PartnerTrust.NotPartner
-        }
-        val declared = hardcoded || declaresPartnerMetaData(pm, packageName)
-        if (!declared) {
             return PartnerTrust.NotPartner
         }
         if (hasPinnedSigner(pm, packageName)) {
             return PartnerTrust.Verified
         }
-        return if (hardcoded) PartnerTrust.HardcodedUnverified else PartnerTrust.DeclaredUnverified
+        return when {
+            packageName in hardcodePackages -> PartnerTrust.HardcodedUnverified
+            declaresPartnerMetaData(pm, packageName) -> PartnerTrust.DeclaredUnverified
+            else -> PartnerTrust.NotPartner
+        }
     }
 
     /**
@@ -175,35 +158,23 @@ object PartnerApps {
         )
 
     /**
-     * Merged registry of partner packages currently installed on the device: every installed
-     * hardcode applicationId and every app declaring [META_DATA_PARTNER_KEY], kept only when it
-     * presents the pinned release certificate. Safe to call from access-control / status paths —
-     * failures during discovery are swallowed and only shrink the result.
+     * Every installed application presenting the pinned release certificate, whether or not this
+     * build has ever heard of its applicationId. Safe to call from access-control / status paths —
+     * a PackageManager failure is swallowed and only shrinks the result.
      */
-    fun installedPartnerPackages(context: Context): Set<String> {
-        val pm = context.packageManager
-        return mergePartnerPackages(
-            installedHardcode = installedHardcodePackages(pm),
-            candidateMetaDataPackages = declaredPartnerCandidates(pm),
-            isTrustedSigner = { candidate -> hasPinnedSigner(pm, candidate) },
-        )
-    }
-
-    /** Backward-compatible alias used by older call sites. */
-    fun installedPiliPlusPackages(context: Context): Set<String> =
-        installedPartnerPackages(context)
+    fun installedPartnerPackages(context: Context): Set<String> =
+        partnerPackagesFrom(installedSignerSha1s(context.packageManager))
 
     /**
-     * Installed apps that *claim* partner status: the installed subset of [hardcodePackages] plus
-     * every app declaring [META_DATA_PARTNER_KEY], regardless of how they are signed.
-     *
-     * Unlike [installedPartnerPackages] this deliberately includes claimants that fail the
-     * certificate check, because the partner list UI has to show them — an app presenting the wrong
-     * key is exactly what needs to be surfaced.
+     * Installed apps the partner list has to show: everything signed with the pinned certificate,
+     * plus the claimants ([hardcodePackages] and [META_DATA_PARTNER_KEY] declarers) that fail the
+     * certificate check — an app presenting the wrong key is exactly what needs to be surfaced.
      */
     fun installedCandidatePackages(context: Context): Set<String> {
         val pm = context.packageManager
-        return installedHardcodePackages(pm) + declaredPartnerCandidates(pm)
+        return installedPartnerPackages(context) +
+            installedHardcodePackages(pm) +
+            declaredPartnerCandidates(pm)
     }
 
     private fun installedHardcodePackages(pm: PackageManager): Set<String> =
@@ -247,22 +218,47 @@ object PartnerApps {
     @Suppress("DEPRECATION")
     private fun signingCertificatesOf(pm: PackageManager, packageName: String): Set<Signature> {
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val info = pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-                val signingInfo = info.signingInfo ?: return emptySet()
-                val history = if (signingInfo.hasMultipleSigners()) {
-                    signingInfo.apkContentsSigners
-                } else {
-                    signingInfo.signingCertificateHistory ?: signingInfo.apkContentsSigners
-                }
-                history?.toSet() ?: emptySet()
-            } else {
-                val info = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
-                info.signatures?.toSet() ?: emptySet()
-            }
+            signaturesOf(pm.getPackageInfo(packageName, signingCertificatesFlag()))
         } catch (_: PackageManager.NameNotFoundException) {
             emptySet()
         }
+    }
+
+    /** SHA-1 fingerprints of every installed package's signing certificates, keyed by package. */
+    private fun installedSignerSha1s(pm: PackageManager): Map<String, List<String>> {
+        return try {
+            @Suppress("DEPRECATION")
+            pm.getInstalledPackages(signingCertificatesFlag()).associate { info ->
+                info.packageName to signaturesOf(info).map { sha1Hex(it.toByteArray()) }
+            }
+        } catch (t: Throwable) {
+            // The registry is additive only; a PackageManager failure (e.g. transient binder
+            // death, OEM restriction) must never block VPN startup or status queries.
+            Log.w("PartnerApps: failed to enumerate installed signing certificates", t)
+            emptyMap()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun signingCertificatesFlag(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            PackageManager.GET_SIGNATURES
+        }
+
+    @Suppress("DEPRECATION")
+    private fun signaturesOf(info: PackageInfo): Set<Signature> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return info.signatures?.toSet() ?: emptySet()
+        }
+        val signingInfo = info.signingInfo ?: return emptySet()
+        val history = if (signingInfo.hasMultipleSigners()) {
+            signingInfo.apkContentsSigners
+        } else {
+            signingInfo.signingCertificateHistory ?: signingInfo.apkContentsSigners
+        }
+        return history?.toSet() ?: emptySet()
     }
 
     /**
@@ -297,15 +293,12 @@ object PartnerApps {
             .joinToString(separator = "") { byte -> "%02x".format(byte) }
 
     /**
-     * Pure registry set-math, extracted for unit testing with fakes (no PackageManager
-     * or android.content.pm.Signature needed). Mirrors the merge performed by
-     * [installedPartnerPackages]: hardcode membership and the meta-data flag only nominate a
-     * candidate, and [isTrustedSigner] alone decides whether it stays.
+     * Pure registry rule, extracted for unit testing with fakes (no PackageManager or
+     * android.content.pm.Signature needed): of every installed package, keyed to the SHA-1
+     * fingerprints of its signing certificates, the partners are exactly those presenting the
+     * pinned one — applicationId and meta-data play no part.
      */
-    internal fun mergePartnerPackages(
-        installedHardcode: Set<String>,
-        candidateMetaDataPackages: Set<String>,
-        isTrustedSigner: (candidate: String) -> Boolean,
-    ): Set<String> =
-        (installedHardcode + candidateMetaDataPackages).filterTo(mutableSetOf(), isTrustedSigner)
+    internal fun partnerPackagesFrom(
+        signerSha1ByPackage: Map<String, Collection<String>>,
+    ): Set<String> = signerSha1ByPackage.filterValues(::matchesPinnedSignerSha1).keys
 }

@@ -1,6 +1,7 @@
 package com.github.kr328.clash.service.store
 
 import android.content.Context
+import com.github.kr328.clash.common.constants.PartnerApps
 import com.github.kr328.clash.common.store.Store
 import com.github.kr328.clash.common.store.asStoreProvider
 import com.github.kr328.clash.service.PreferenceProvider
@@ -42,9 +43,10 @@ enum class PartnerGrantDecision { Unknown, Allowed, Denied }
  * Cross-process record of which partner apps the device owner let read Clash status, plus the
  * queue of apps still waiting for an answer.
  *
- * This governs the read-only status surface only. Carrying an app's traffic is gated solely on the
- * pinned shared release certificate (`PartnerApps.trustedSignerSha1`) — a grant recorded here never
- * gets an app into the tunnel.
+ * This is the second trust source next to the pinned shared release certificate
+ * (`PartnerApps.trustedSignerSha1`): an approval recorded here reaches the read-only status surface
+ * *and* puts the app into the tunnel, which is what lets the owner adopt an app whose key was never
+ * pinned. It is bound to the certificate the app presented, so re-signing invalidates it.
  */
 class PartnerGrantStore(context: Context) {
     private val store = Store(
@@ -127,7 +129,17 @@ class PartnerGrantStore(context: Context) {
         return valid
     }
 
-    fun grantedPackages(): Set<String> = grants().mapTo(mutableSetOf()) { it.packageName }
+    /**
+     * Approved packages that still present the certificate the owner approved, i.e. the ones an
+     * approval may put into the tunnel. Re-checking the certificate matters here because a package
+     * name can be reused by a different signer after an uninstall, and an approval must not carry
+     * over to it.
+     */
+    fun tunnelablePackages(context: Context): Set<String> =
+        grants().asSequence()
+            .filter { PartnerApps.signerDigestsOf(context, it.packageName)?.sha256 == it.sha256 }
+            .map { it.packageName }
+            .toSet()
 
     /**
      * Queues [packageName] for an approval prompt. Returns true only when this is a new request,

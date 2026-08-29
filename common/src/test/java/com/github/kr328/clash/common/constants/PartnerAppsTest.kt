@@ -7,18 +7,6 @@ import org.junit.Test
 
 class PartnerAppsTest {
     @Test
-    fun isPartnerPackage_hardcodeOnly_matchesKnownPackagesOnly() {
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.piliplus"))
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.nexai.debug"))
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.projectlumen.dev"))
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.zhplus.lite"))
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.aura"))
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.cdict"))
-        assertTrue(PartnerApps.isPartnerPackage("com.chloemlla.cdict.debug"))
-        assertFalse(PartnerApps.isPartnerPackage("com.example.unknown"))
-    }
-
-    @Test
     fun hardcodePackages_isUnionOfAllKnownPartnerFamilies() {
         val expected = PartnerApps.piliPlusPackages +
             PartnerApps.nexAiPackages +
@@ -97,35 +85,22 @@ class PartnerAppsTest {
     }
 
     @Test
-    fun mergePartnerPackages_dropsHardcodePackageWithoutThePinnedCertificate() {
-        val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = setOf("com.chloemlla.piliplus"),
-            candidateMetaDataPackages = emptySet(),
-            isTrustedSigner = { false },
+    fun partnerPackagesFrom_acceptsAnyPackageSignedWithThePinnedCertificate() {
+        val pinned = PartnerApps.trustedSignerSha1.first()
+        val other = "00" + pinned.drop(2)
+
+        val partners = PartnerApps.partnerPackagesFrom(
+            mapOf(
+                // Unknown applicationId, right key: a partner.
+                "com.example.unlisted" to listOf(pinned),
+                // Hardcoded applicationId, wrong key: not a partner.
+                "com.chloemlla.piliplus" to listOf(other),
+                // Multiple signers, one of them pinned.
+                "com.chloemlla.cdict" to listOf(other, pinned.uppercase()),
+                "com.example.unsigned" to emptyList(),
+            ),
         )
 
-        assertEquals(emptySet<String>(), merged)
-    }
-
-    @Test
-    fun mergePartnerPackages_keepsOnlyCandidatesPresentingThePinnedCertificate() {
-        val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = setOf("com.chloemlla.piliplus", "com.chloemlla.cdict"),
-            candidateMetaDataPackages = setOf("com.example.discovered", "com.example.untrusted"),
-            isTrustedSigner = { it != "com.example.untrusted" && it != "com.chloemlla.cdict" },
-        )
-
-        assertEquals(setOf("com.chloemlla.piliplus", "com.example.discovered"), merged)
-    }
-
-    @Test
-    fun mergePartnerPackages_doesNotDoubleCountCandidateAlreadyInHardcode() {
-        val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = setOf("com.chloemlla.piliplus"),
-            candidateMetaDataPackages = setOf("com.chloemlla.piliplus"),
-            isTrustedSigner = { true },
-        )
-
-        assertEquals(setOf("com.chloemlla.piliplus"), merged)
+        assertEquals(setOf("com.example.unlisted", "com.chloemlla.cdict"), partners)
     }
 }

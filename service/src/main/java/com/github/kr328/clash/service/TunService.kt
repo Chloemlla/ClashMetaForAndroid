@@ -190,18 +190,18 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control (optional auto-include for installed partner apps). Carrying an
-            // app's traffic is gated on one thing only: the pinned shared release certificate.
-            // Neither a known applicationId, the partner meta-data flag, nor a device-owner
-            // status grant substitutes for it — see PartnerApps KDoc for the rule.
+            // Access Control (optional auto-include for installed partner apps). Two trust
+            // sources put an app in the tunnel: the pinned shared release certificate, and an
+            // explicit device-owner approval from the pairing prompt. A known applicationId or
+            // the partner meta-data flag alone does not — see PartnerApps KDoc for the rule.
             val grants = PartnerGrantStore(self)
             val partnerPackages = if (store.partnerAppAutoAdapt) {
-                PartnerApps.installedPartnerPackages(self)
+                PartnerApps.installedPartnerPackages(self) + grants.tunnelablePackages(self)
             } else {
                 emptySet()
             }
-            // Deny-list exclusion covers the same certificate-verified set, so an impostor
-            // squatting a partner applicationId stays excluded from the tunnel.
+            // Deny-list exclusion covers the same set, so an impostor squatting a partner
+            // applicationId stays excluded from the tunnel.
             val partnerDenyExclude = partnerPackages
             when (store.accessControlMode) {
                 AccessControlMode.AcceptAll -> Unit

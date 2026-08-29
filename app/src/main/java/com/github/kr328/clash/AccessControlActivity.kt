@@ -176,6 +176,7 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
             val pm = packageManager
             val packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
             val browserPackages = resolveBrowserPackages(pm)
+            val partnerPackages = PartnerApps.installedPartnerPackages(this@AccessControlActivity)
 
             packages.asSequence()
                 .filter {
@@ -191,7 +192,7 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
                     systemApp || !it.isSystemApp
                 }
                 .map {
-                    it.toAppInfo(this@AccessControlActivity, browserPackages)
+                    it.toAppInfo(this@AccessControlActivity, browserPackages, partnerPackages)
                 }
                 .filter {
                     !onlySelected || it.packageName in selected
@@ -213,6 +214,7 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
         withContext(Dispatchers.IO) {
             val pm = packageManager
             val browserPackages = resolveBrowserPackages(pm)
+            val partnerPackages = PartnerApps.installedPartnerPackages(this@AccessControlActivity)
             val packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
 
             packages.asSequence()
@@ -229,7 +231,7 @@ class AccessControlActivity : BaseActivity<AccessControlDesign>() {
                 .filter { pkg ->
                     pkg in browserPackages ||
                             isKnownBrowserPackage(pkg) ||
-                            PartnerApps.isPartnerPackage(pkg)
+                            pkg in partnerPackages
                 }
                 .toSet()
         }

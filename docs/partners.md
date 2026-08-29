@@ -13,41 +13,38 @@
 recognizes a package as a partner using:
 
 ```
-isPartner = (hardcode ∪ meta-data present) ∧ signedWith(trustedSignerSha1)
+isPartner = signedWith(trustedSignerSha1)
 ```
 
 - **One pinned certificate** (`PartnerApps.trustedSignerSha1`): the SHA-1 fingerprint (lowercase
   hex, no separators) of the shared release signing key used by CMFA and every partner app. This
-  is the entire trust root. An app that does not present that certificate is not a partner —
-  whatever applicationId it claims, whatever meta-data it declares, and whatever the device owner
-  answered in the partner list. Read the fingerprint with `keytool -list -v -keystore <keystore>`
-  (`SHA1:`, colons removed) or `apksigner verify --print-certs <apk>` (`Signer #1 certificate
-  SHA-1 digest`). When the shared key is rotated, **replace** the value; a second entry would
-  reintroduce the multi-key trust this gate exists to remove.
-- **Hardcode allowlist** (`PartnerApps.hardcodePackages`): the PiliPlus / NexAI /
-  Project-Lumen / Zhihu++ / Aura / CDict applicationIds and their common `.debug` / `.dev` /
-  `.lite` suffixes. This only nominates packages for the certificate check; it grants nothing on
-  its own, so a spoofed install under a known partner name reads no `partnerStatus` and gets no
-  tunnel coverage.
-- **Meta-data discovery**: any other installed app may declare the following in its
-  `AndroidManifest.xml` (inside `<application>`, not `<activity>`) to opt into
-  discovery:
+  is the entire registry. Every installed app presenting that certificate is a partner, including
+  apps this build has never heard of, and no app without it is a partner — whatever applicationId
+  it claims and whatever meta-data it declares. Read the fingerprint with
+  `keytool -list -v -keystore <keystore>` (`SHA1:`, colons removed) or
+  `apksigner verify --print-certs <apk>` (`Signer #1 certificate SHA-1 digest`). When the shared
+  key is rotated, **replace** the value; a second entry would reintroduce the multi-key trust this
+  gate exists to remove.
+- **Hardcode allowlist** (`PartnerApps.hardcodePackages`) and the **meta-data flag** below grant
+  nothing. They only mark an app as *claiming* partner status, so the partner list can show a
+  wrongly signed app and explain it instead of leaving it invisible:
 
   ```xml
   <meta-data android:name="com.github.kr328.clash.partner" android:value="true" />
   ```
 
-  The flag alone is **never trusted** — it only nominates the app for the same certificate check.
-  This keeps discovery strictly additive: it can only widen *who* reaches the existing read-only
-  surface, never *what* a partner can do.
+  (inside `<application>`, not `<activity>`.)
 
 `PartnerApps.installedPartnerPackages(context)` returns the certificate-verified set and is what
 `TunService` uses for VPN access-control auto-include (`ServiceStore.partnerAppAutoAdapt`), for
-both the allow list and deny-list exclusion. `PartnerApps.isPartnerPackage(context, packageName)`
-is the equivalent single-package check used by `StatusProvider` to gate callers.
+both the allow list and deny-list exclusion. `PartnerApps.trustOf(context, packageName)` is the
+equivalent single-package classification used by `PartnerAccessResolver` to gate `StatusProvider`
+callers.
 
-A device-owner grant recorded in `PartnerGrantStore` governs the read-only status surface only. It
-never puts an app into the tunnel: traffic coverage is decided by the certificate alone.
+A device-owner approval recorded in `PartnerGrantStore` is the second trust source: it reaches the
+read-only status surface **and** puts the app into the tunnel, which is how the owner adopts an app
+whose key was never pinned. It is bound to the certificate the app presented, so re-signing
+invalidates it.
 
 ## 2. `partnerStatus` (StatusProvider)
 
@@ -83,11 +80,10 @@ cross-app status.
 
 ## 4. Adding a new partner
 
-- Sign the partner app with the shared release key. That is the only requirement the runtime
-  gate enforces, and no code change is needed on every partner release.
-- Add the applicationId (and its `.debug`/`.dev` suffixes) to the relevant set in
-  `PartnerApps.kt`, or have the app declare the meta-data flag. Either route only nominates the
-  app for the certificate check.
+- Sign the partner app with the shared release key. That is the only requirement the runtime gate
+  enforces: no code change, no applicationId registration, no meta-data flag.
+- An app signed with a different key can still be adopted by the device owner through the pairing
+  prompt, which covers both status reads and tunnel coverage for that exact certificate.
 - Never add a new exported method, deep link, or provider column that would let a
   partner (or a spoofed meta-data-only package) request VPN start/stop, read the
   subscription URL, or read `ageSecretKey`.

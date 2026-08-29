@@ -26,12 +26,11 @@ data class PartnerAccess(
 /**
  * Decides what a caller of [StatusProvider] may read.
  *
- * Two trust sources are combined: the static registry in [PartnerApps] (hardcoded applicationIds
- * and pinned certificate digests) and the device owner's own answer recorded in
- * [PartnerGrantStore]. The owner always has the last word — an explicit denial outranks a pinned
- * certificate — and an app holding a known applicationId with an unregistered key is served the
- * low-sensitivity tier instead of nothing, so a stale digest can no longer take a partner's
- * proxy-following feature offline.
+ * Two trust sources are combined: the pinned release certificate in [PartnerApps] and the device
+ * owner's own answer recorded in [PartnerGrantStore]. The owner always has the last word — an
+ * explicit denial outranks the pinned certificate — and an app holding a known applicationId with a
+ * different key is served the low-sensitivity tier instead of nothing, so a rotated key can no
+ * longer take a partner's proxy-following feature offline.
  */
 object PartnerAccessResolver {
     const val REASON_NOT_PARTNER = "not_partner"
@@ -85,8 +84,8 @@ object PartnerAccessResolver {
             PartnerGrantDecision.Unknown -> {
                 PartnerPairingNotifier.request(context, packageName, digests)
                 when (trust) {
-                    // A pinned or co-signed key already proves identity, so the prompt only asks
-                    // the owner to confirm; access is not withheld while it is unanswered.
+                    // The pinned key already proves identity, so the prompt only asks the owner to
+                    // confirm; access is not withheld while it is unanswered.
                     PartnerTrust.Verified ->
                         PartnerAccess(PartnerAccessTier.Full, null, packageName, digests)
                     PartnerTrust.HardcodedUnverified ->

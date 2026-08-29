@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.content.getSystemService
-import com.github.kr328.clash.common.constants.PartnerApps
 import com.github.kr328.clash.design.model.AppInfo
 
 /**
@@ -78,7 +77,11 @@ fun queryIgnoringBatteryOptimizations(context: Context, packageName: String): Bo
     return runCatching { powerManager.isIgnoringBatteryOptimizations(packageName) }.getOrNull()
 }
 
-fun PackageInfo.toAppInfo(context: Context, browserPackages: Set<String> = emptySet()): AppInfo {
+fun PackageInfo.toAppInfo(
+    context: Context,
+    browserPackages: Set<String> = emptySet(),
+    partnerPackages: Set<String> = emptySet(),
+): AppInfo {
     val pm = context.packageManager
 
     return AppInfo(
@@ -86,7 +89,7 @@ fun PackageInfo.toAppInfo(context: Context, browserPackages: Set<String> = empty
         label = applicationInfo!!.loadLabel(pm).toString(),
         installTime = firstInstallTime,
         updateDate = lastUpdateTime,
-        isPartner = PartnerApps.isPartnerPackage(packageName),
+        isPartner = packageName in partnerPackages,
         isBrowser = packageName in browserPackages || isKnownBrowserPackage(packageName),
         batteryOptimizationIgnored = queryIgnoringBatteryOptimizations(context, packageName),
     )
