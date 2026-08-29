@@ -20,6 +20,16 @@
     <string name="audit_consent_message">Android will show its VPN permission screen. Granting permission only records your approval for this audit workflow; this page does not install a certificate, start a capture, modify the system proxy, or inject another app.</string>
     <string name="audit_open_vpn_settings">Open Android VPN settings</string>
     <string name="audit_vpn_settings_unavailable">Android VPN settings are unavailable on this device.</string>
+    <string name="backup_before_uninstall">Backup before uninstall</string>
+    <string name="backup_before_uninstall_summary">Export profiles and settings to a ZIP file before removing the app. Store it securely.</string>
+    <string name="restore_after_reinstall">Restore after reinstall</string>
+    <string name="restore_after_reinstall_summary">Import a previously exported ZIP backup. Existing data is preserved.</string>
+    <string name="backup_exporting">Creating backup…</string>
+    <string name="backup_exported">Backup exported</string>
+    <string name="backup_restoring">Restoring backup…</string>
+    <string name="backup_restored">Backup restored; %d profile(s) added</string>
+    <string name="backup_restore_invalid">The selected file is not a compatible Clash backup.</string>
+    <string name="backup_operation_failed">Backup operation failed: %s</string>
     <string name="launch_name_meta">Clash Meta</string>
     <string name="launch_name_alpha">Clash Meta Alpha</string>
     <string name="application_name_meta">Clash Meta for Android</string>

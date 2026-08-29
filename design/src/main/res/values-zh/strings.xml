@@ -21,6 +21,16 @@
     <string name="audit_consent_message">Android 将显示 VPN 权限页面。授予权限只会记录你对本次审计流程的批准；此页面不会安装证书、启动抓包、修改系统代理或向其他应用注入代码。</string>
     <string name="audit_open_vpn_settings">打开 Android VPN 设置</string>
     <string name="audit_vpn_settings_unavailable">此设备无法打开 Android VPN 设置。</string>
+    <string name="backup_before_uninstall">卸载前备份</string>
+    <string name="backup_before_uninstall_summary">卸载应用前将配置和设置导出为 ZIP 文件，请妥善保管。</string>
+    <string name="restore_after_reinstall">重装后恢复</string>
+    <string name="restore_after_reinstall_summary">导入之前导出的 ZIP 备份，现有数据不会被覆盖。</string>
+    <string name="backup_exporting">正在创建备份…</string>
+    <string name="backup_exported">备份已导出</string>
+    <string name="backup_restoring">正在恢复备份…</string>
+    <string name="backup_restored">备份已恢复，新增 %d 个配置</string>
+    <string name="backup_restore_invalid">所选文件不是兼容的 Clash 备份。</string>
+    <string name="backup_operation_failed">备份操作失败：%s</string>
     <string name="access_control_packages_summary">为应用配置访问权限</string>
     <string name="about">关于</string>
     <string name="access_control_mode">访问控制模式</string>

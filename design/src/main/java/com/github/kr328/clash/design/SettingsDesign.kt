@@ -11,6 +11,7 @@ import com.github.kr328.clash.design.util.root
 class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context) {
     enum class Request {
         StartApp, StartNetwork, StartAutomation, StartOverride, StartMetaFeature, StartAuditReport,
+        BackupBeforeUninstall, RestoreAfterReinstall,
     }
 
     private val binding = DesignSettingsBinding

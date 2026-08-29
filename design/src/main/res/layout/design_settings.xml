@@ -70,6 +70,22 @@
                     app:icon="@drawable/ic_baseline_adb"
                     app:text="@string/audit_title" />
 
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.BackupBeforeUninstall)}"
+                    app:icon="@drawable/ic_baseline_save"
+                    app:subtext="@string/backup_before_uninstall_summary"
+                    app:text="@string/backup_before_uninstall" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.RestoreAfterReinstall)}"
+                    app:icon="@drawable/ic_baseline_restore"
+                    app:subtext="@string/restore_after_reinstall_summary"
+                    app:text="@string/restore_after_reinstall" />
+
             </LinearLayout>
         </com.github.kr328.clash.design.view.ObservableScrollView>
 
