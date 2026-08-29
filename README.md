@@ -238,7 +238,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 | Commit | Summary |
 |--------|---------|
 | `f848db8` / `de0e6f3` / `a3235ef` | PiliPlus → NexAI / Project-Lumen；网络设置开关；StatusProvider `partnerStatus` |
-| `cbc57eba` | 配对确认窗由伙伴应用在前台直接拉起：导出 `PartnerPairingActivity`，伙伴应用以显式 `setClassName` + `NEW_TASK` 自启，透明确认窗直接盖在伙伴应用之上（服务侧后台自启被 BAL 拦截，原路径退化为通知）；身份按发起者解析——CMFA 自启走 extras，外部伙伴从 `getLaunchedFromPackage` 解析并经 `PartnerApps.trustOf` 校验为已识别伙伴，extras 不可伪造；已作答（`decisionOf` 非 Unknown）静默关闭，展示前 `requestPairing` 占位 pending 防服务侧重复弹；跨进程 prefs 读写保持 IO 线程 |
+| `cbc57eba` | 配对确认窗由伙伴应用在前台直接拉起：导出 `PartnerPairingActivity`，伙伴应用以显式 `setClassName` + `startActivityForResult` 自启，透明确认窗直接盖在伙伴应用之上（服务侧后台自启被 BAL 拦截，原路径退化为通知）；身份按发起者解析——CMFA 自启走 extras，外部伙伴优先取 `getCallingPackage`（API 34 以下唯一不可伪造的来源，故要求 `startActivityForResult` 而非 `NEW_TASK`），API 34+ 回落 `getLaunchedFromPackage`，再经 `PartnerApps.trustOf` 校验为已识别伙伴，extras 不可伪造；已作答（`decisionOf` 非 Unknown）静默关闭，展示前 `requestPairing` 占位 pending 防服务侧重复弹；跨进程 prefs 读写保持 IO 线程 |
 
 #### Track M · 外部 Windows ADB 审计桥
 | Commit | Summary |

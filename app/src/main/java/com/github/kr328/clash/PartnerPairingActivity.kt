@@ -78,7 +78,7 @@ class PartnerPairingActivity : AppCompatActivity() {
      * package and is honoured only for a recognized partner.
      */
     private fun resolveRequest(): Pair<String, String>? {
-        val launcher = launchedFromPackage()
+        val launcher = callerPackage()
         if (launcher == null || launcher == packageName) {
             val target = intent?.getStringExtra(PartnerPairingNotifier.EXTRA_PACKAGE)
             val sha256 = intent?.getStringExtra(PartnerPairingNotifier.EXTRA_SHA256)
@@ -91,10 +91,14 @@ class PartnerPairingActivity : AppCompatActivity() {
         return launcher to digests.sha256
     }
 
-    @Suppress("DEPRECATION")
-    private fun launchedFromPackage(): String? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) getLaunchedFromPackage()
-        else getCallingPackage()
+    /**
+     * The launching package as reported by the platform, never from extras. [getCallingPackage] is
+     * filled in when the partner launches via `startActivityForResult` and is the only unforgeable
+     * identity below API 34; [getLaunchedFromPackage] covers plain launches from there on.
+     */
+    private fun callerPackage(): String? = callingPackage
+        ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) launchedFromPackage
+        else null
 
     private fun labelOf(target: String): String = runCatching {
         val pm: PackageManager = packageManager
