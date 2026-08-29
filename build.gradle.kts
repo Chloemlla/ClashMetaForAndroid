@@ -135,7 +135,10 @@ subprojects {
                 else "com.github.kr328.clash.$name"
             }
 
-            minSdk = 21
+            // The only consumer of these libraries is :app, which ships minSdk 26, so a lower
+            // library floor buys nothing and only makes lint flag API 23..25 calls that can
+            // never run on an unsupported device.
+            minSdk = 26
             // Android 17 (API 37). Runtime behaviors are handled via edge-to-edge,
             // predictive back, FGS specialUse, and INTERACT_ACROSS_USERS.
             targetSdk = 37
