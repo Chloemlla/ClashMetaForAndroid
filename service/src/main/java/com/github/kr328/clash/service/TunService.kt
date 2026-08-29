@@ -13,6 +13,7 @@ import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
 import com.github.kr328.clash.common.constants.PartnerApps
 import com.github.kr328.clash.service.model.AccessControlMode
+import com.github.kr328.clash.service.store.PartnerGrantStore
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.cancelAndJoinBlocking
 import com.github.kr328.clash.service.util.parseCIDR
@@ -118,6 +119,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         StatusProvider.vpnRunning = false
         StatusProvider.lastError = reason
 
+        PartnerGrantStore(self).tunneledPackages = emptySet()
+
         sendClashStopped(reason)
 
         // TunService is not a BaseService; cancel its scope without joining on the main thread.
@@ -132,6 +135,26 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         super.onTrimMemory(level)
 
         runtime.requestGc()
+    }
+
+    /**
+     * Partner apps whose traffic the tunnel being built actually carries. Recorded so the partner
+     * list states coverage as a fact instead of re-deriving it from access-control settings, which
+     * can change while the tunnel keeps running with the configuration it was started with.
+     */
+    private fun tunneledPartners(
+        store: ServiceStore,
+        partnerPackages: Set<String>,
+        partnerDenyExclude: Set<String>,
+    ): Set<String> {
+        val candidates = PartnerApps.installedCandidatePackages(self) + partnerPackages
+        return when (store.accessControlMode) {
+            AccessControlMode.AcceptAll -> candidates
+            AccessControlMode.AcceptSelected ->
+                candidates.intersect(store.accessControlPackages + partnerPackages)
+            AccessControlMode.DenySelected ->
+                candidates - (store.accessControlPackages - partnerDenyExclude)
+        }
     }
 
     private fun TunModule.open() {
@@ -170,8 +193,12 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             // Access Control (optional auto-include for installed partner apps: hardcoded
             // PiliPlus/NexAI/Project-Lumen/Zhihu++ plus any signature-verified discovered
             // partner — see PartnerApps KDoc for the merge rule).
+            val grants = PartnerGrantStore(self)
             val partnerPackages = if (store.partnerAppAutoAdapt) {
-                PartnerApps.installedPartnerPackages(self)
+                // A device-owner grant counts the same as a verified signer here: suite apps are
+                // signed with independent keys, so an explicit pairing is the only trust source
+                // that works for a partner whose certificate is not pinned in this build.
+                PartnerApps.installedPartnerPackages(self) + grants.grantedPackages()
             } else {
                 emptySet()
             }
@@ -195,6 +222,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                     }
                 }
             }
+            grants.tunneledPackages = tunneledPartners(store, partnerPackages, partnerDenyExclude)
 
             // Blocking
             setBlocking(false)

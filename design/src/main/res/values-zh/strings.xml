@@ -605,4 +605,25 @@
     <string name="five_minutes">5 分钟</string>
     <string name="failover_candidate_order">候选顺序</string>
     <string name="failover_tip">故障转移默认关闭，仅响应可选择代理组的健康检查，并按此处选择的候选顺序切换。</string>
+    <string name="partner_apps">伙伴应用</string>
+    <string name="format_partner_tunneled">隧道正在接管 %1$d 个伙伴应用的流量</string>
+    <string name="partner_tunnel_stopped">隧道未运行，当前没有接管任何伙伴应用流量</string>
+    <string name="partner_apps_empty_title">没有伙伴应用</string>
+    <string name="partner_apps_empty_tips">安装伙伴应用，或等它发起一次配对请求，就会出现在这里。</string>
+    <string name="partner_status_tunneled">流量已接管</string>
+    <string name="partner_status_not_tunneled">流量未接管</string>
+    <string name="partner_status_allowed">已授权读取状态</string>
+    <string name="partner_status_denied">已拒绝</string>
+    <string name="partner_status_pending">等待你确认</string>
+    <string name="partner_status_undecided">尚未授权</string>
+    <string name="partner_signer_verified">证书已登记</string>
+    <string name="partner_signer_unverified">证书未登记</string>
+    <string name="format_partner_certificate">证书 %1$s</string>
+    <string name="partner_action_allow">允许读取状态</string>
+    <string name="partner_action_deny">拒绝</string>
+    <string name="partner_action_revoke">撤销授权</string>
+    <string name="partner_pairing_title">伙伴应用配对请求</string>
+    <string name="format_partner_pairing_message">%1$s 想读取 Clash 的运行状态（模式、当前节点、流量）。是否允许？</string>
+    <string name="partner_pairing_remember">记住我的选择</string>
+    <string name="partner_pairing_unverified_hint">该应用的签名证书未登记在本版本中，只能由你来为它担保。</string>
 </resources>

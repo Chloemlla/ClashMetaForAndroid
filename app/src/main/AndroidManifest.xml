@@ -205,6 +205,19 @@
             android:exported="false"
             android:label="@string/access_control_packages" />
         <activity
+            android:name=".PartnerAppsActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/partner_apps" />
+        <activity
+            android:name=".PartnerPairingActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/PartnerPairingTheme" />
+        <activity
             android:name=".HelpActivity"
             android:configChanges="uiMode"
             android:exported="false"

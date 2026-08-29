@@ -60,6 +60,39 @@ class PartnerAppsTest {
     }
 
     @Test
+    fun sha1Hex_producesLowercaseHexDigest() {
+        assertEquals(
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            PartnerApps.sha1Hex(ByteArray(0)),
+        )
+    }
+
+    @Test
+    fun trustedSignerSha1_pinsCDictReleaseCertificateAsLowercaseHex() {
+        assertTrue(
+            "c4914a907e577301c616cfb30f222b4402a4ecc3" in PartnerApps.trustedSignerSha1,
+        )
+        assertTrue(PartnerApps.trustedSignerSha1.all { Regex("[0-9a-f]{40}").matches(it) })
+    }
+
+    @Test
+    fun matchesPinnedSignerSha1_acceptsPinnedFingerprintIgnoringCase() {
+        val pinned = PartnerApps.trustedSignerSha1.first()
+
+        assertTrue(PartnerApps.matchesPinnedSignerSha1(listOf(pinned)))
+        assertTrue(PartnerApps.matchesPinnedSignerSha1(listOf(pinned.uppercase())))
+        assertFalse(PartnerApps.matchesPinnedSignerSha1(emptyList()))
+        assertFalse(PartnerApps.matchesPinnedSignerSha1(listOf("00" + pinned.drop(2))))
+    }
+
+    @Test
+    fun trustedSignerSha1_neverAcceptsASha256Digest() {
+        // Guards against pasting the wrong fingerprint format into the SHA-1 registry, which
+        // would silently never match instead of failing loudly.
+        assertFalse(PartnerApps.trustedSignerSha256.any { it in PartnerApps.trustedSignerSha1 })
+    }
+
+    @Test
     fun trustedSignerSha256_pinsCDictReleaseCertificateAsLowercaseHex() {
         assertTrue(
             "8d9b6c640b027d7439e594f56682b9e31c38c7588a0c0cc02189da8c1fe91862"

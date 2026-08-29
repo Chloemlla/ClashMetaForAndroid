@@ -37,4 +37,7 @@
     <string name="scene_applied_summary">当前网络和时间条件与此场景匹配。</string>
     <string name="proxy_failover_applied">连续失败后已切换代理</string>
     <string name="format_proxy_failover">%1$s：%2$s → %3$s</string>
+    <string name="partner_pairing_channel">伙伴应用配对</string>
+    <string name="partner_pairing_title">有伙伴应用请求读取 Clash 状态</string>
+    <string name="format_partner_pairing_request">%1$s 请求只读访问 Clash 状态，证书 %2$s…</string>
 </resources>

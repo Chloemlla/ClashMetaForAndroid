@@ -8,15 +8,39 @@ import android.os.Build
 import com.github.kr328.clash.common.log.Log
 import java.security.MessageDigest
 
+/** Observed signing-certificate digests of one package, lowercase hex without separators. */
+data class PartnerSignerDigests(val sha256: String, val sha1: String)
+
+/**
+ * Why a caller is (not) recognized as a partner. Callers use this instead of a bare boolean so
+ * a rejection can be explained to the user and so a partly-trusted caller can be served a
+ * reduced surface rather than nothing at all.
+ */
+enum class PartnerTrust {
+    /** Neither a hardcoded applicationId nor declaring the partner meta-data flag. */
+    NotPartner,
+
+    /** Declares the partner flag but presents no trusted signer: needs an explicit user grant. */
+    DeclaredUnverified,
+
+    /** Holds a hardcoded applicationId but no trusted signer: low-sensitivity surface only. */
+    HardcodedUnverified,
+
+    /** Pinned certificate digest, or shares a certificate with CMFA / an installed partner. */
+    Verified,
+}
+
 /**
  * Known partner apps that should be auto-included in VPN access control
  * and allowed to query lightweight Clash running status.
  *
- * ### Registry rule (v2)
+ * ### Registry rule (v3)
  *
  * `isPartner = hardcode ∪ (meta-data present ∧ trustedSigner)`, where a signer is trusted when
- * its certificate digest is pinned in [trustedSignerSha256] **or** it matches an already
- * installed hardcode partner / this app itself.
+ * its certificate digest is pinned in [trustedSignerSha256] / [trustedSignerSha1] **or** it
+ * matches an already installed hardcode partner / this app itself. Callers may additionally
+ * honour a device-owner grant recorded against an observed digest — see [trustOf] and
+ * `PartnerGrantStore`.
  *
  * The hardcoded [hardcodePackages] allowlist remains the trust root. Any other app is only
  * recognized as a partner when **both** of the following hold:
@@ -58,6 +82,21 @@ object PartnerApps {
         "0fa11497243b9a4375035c540709ff8f7d59c6ac67624319027990707ffbcac4",
         // Aura release key
         "a54881fbaf114dc0ca4c40e6644ca2b4c289b8de0bfe44b706981dcda1a51374",
+    )
+
+    /**
+     * Pinned SHA-1 digests (lowercase hex, no separators) of the same release certificates.
+     *
+     * SHA-256 stays the preferred format because [PackageManager.hasSigningCertificate] can match
+     * it natively (rotation lineage included). SHA-1 exists purely as a registration convenience:
+     * `keytool -list -v`, the Android Studio signing report and the Play Console all print it
+     * directly, so a partner key can be registered without an apksigner install. Second-preimage
+     * attacks on an already generated certificate remain infeasible, but prefer SHA-256 when both
+     * are available.
+     */
+    val trustedSignerSha1: Set<String> = setOf(
+        // CDict release key (CN=cdict)
+        "c4914a907e577301c616cfb30f222b4402a4ecc3",
     )
 
     val piliPlusPackages: Set<String> = setOf(
@@ -135,31 +174,53 @@ object PartnerApps {
      * package that is not installed keeps static membership (used for deny-list exclusion) since
      * there is no app to impersonate at runtime.
      */
-    fun isPartnerPackage(context: Context, packageName: String): Boolean {
+    fun isPartnerPackage(context: Context, packageName: String): Boolean =
+        trustOf(context, packageName) == PartnerTrust.Verified
+
+    /**
+     * Classifies [packageName] against the registry rule described in the class KDoc.
+     *
+     * A package that is not installed keeps static membership (used for deny-list exclusion) since
+     * there is no app to impersonate at runtime. An installed app that borrows a hardcoded partner
+     * applicationId without a trusted signer is reported as [PartnerTrust.HardcodedUnverified]
+     * rather than silently rejected, so the caller can decide between a reduced surface, a user
+     * pairing prompt, and a hard denial.
+     */
+    fun trustOf(context: Context, packageName: String): PartnerTrust {
         val pm = context.packageManager
-        if (packageName in hardcodePackages) {
-            if (isInstalled(pm, packageName) &&
-                !hasPinnedSigner(pm, packageName) &&
-                !sharesTrustedSignature(pm, packageName, context.packageName)
-            ) {
-                return false
-            }
-            return true
+        val hardcoded = packageName in hardcodePackages
+        if (!isInstalled(pm, packageName)) {
+            return if (hardcoded) PartnerTrust.Verified else PartnerTrust.NotPartner
         }
-        if (!declaresPartnerMetaData(pm, packageName)) {
-            return false
+        val declared = hardcoded || declaresPartnerMetaData(pm, packageName)
+        if (!declared) {
+            return PartnerTrust.NotPartner
         }
-        if (hasPinnedSigner(pm, packageName)) {
-            return true
+        if (hasPinnedSigner(pm, packageName) ||
+            sharesTrustedSignature(pm, packageName, context.packageName)
+        ) {
+            return PartnerTrust.Verified
         }
-        val trustedSigners = installedHardcodePackages(pm) + context.packageName
-        return trustedSigners.any { signer -> signaturesMatch(pm, packageName, signer) }
+        return if (hardcoded) PartnerTrust.HardcodedUnverified else PartnerTrust.DeclaredUnverified
+    }
+
+    /**
+     * Observed signing-certificate digests of [packageName], or null when the package is absent or
+     * exposes no certificate. When an APK carries several signers the lexicographically smallest
+     * SHA-256 is chosen so the value is stable across queries (grants are keyed by it).
+     */
+    fun signerDigestsOf(context: Context, packageName: String): PartnerSignerDigests? {
+        val canonical = signingCertificatesOf(context.packageManager, packageName)
+            .map { it.toByteArray() }
+            .minByOrNull { sha256Hex(it) }
+            ?: return null
+        return PartnerSignerDigests(sha256 = sha256Hex(canonical), sha1 = sha1Hex(canonical))
     }
 
     /** True when any signing certificate of [packageName] matches a pinned release certificate. */
     private fun hasPinnedSigner(pm: PackageManager, packageName: String): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            return try {
+            val pinned = try {
                 trustedSignerSha256.any { digest ->
                     pm.hasSigningCertificate(
                         packageName,
@@ -170,10 +231,13 @@ object PartnerApps {
             } catch (_: PackageManager.NameNotFoundException) {
                 false
             }
+            if (pinned) {
+                return true
+            }
         }
-        return matchesPinnedSigner(
-            signingCertificatesOf(pm, packageName).map { sha256Hex(it.toByteArray()) },
-        )
+        val certificates = signingCertificatesOf(pm, packageName).map { it.toByteArray() }
+        return matchesPinnedSigner(certificates.map { sha256Hex(it) }) ||
+            matchesPinnedSignerSha1(certificates.map { sha1Hex(it) })
     }
 
     /**
@@ -220,6 +284,19 @@ object PartnerApps {
     /** Backward-compatible alias used by older call sites. */
     fun installedPiliPlusPackages(context: Context): Set<String> =
         installedPartnerPackages(context)
+
+    /**
+     * Installed apps that *claim* partner status: the installed subset of [hardcodePackages] plus
+     * every app declaring [META_DATA_PARTNER_KEY], regardless of whether their signer is trusted.
+     *
+     * Unlike [installedPartnerPackages] this deliberately includes unverified claimants, because the
+     * partner list UI has to show them — an app the owner has not decided about yet is exactly what
+     * needs to be surfaced.
+     */
+    fun installedCandidatePackages(context: Context): Set<String> {
+        val pm = context.packageManager
+        return installedHardcodePackages(pm) + declaredPartnerCandidates(pm)
+    }
 
     private fun installedHardcodePackages(pm: PackageManager): Set<String> =
         hardcodePackages.filterTo(mutableSetOf()) { isInstalled(pm, it) }
@@ -316,14 +393,23 @@ object PartnerApps {
     internal fun matchesPinnedSigner(certificateDigests: Collection<String>): Boolean =
         certificateDigests.any { it.lowercase() in trustedSignerSha256 }
 
+    /** SHA-1 counterpart of [matchesPinnedSigner], for keys registered by their SHA-1 fingerprint. */
+    internal fun matchesPinnedSignerSha1(certificateDigests: Collection<String>): Boolean =
+        certificateDigests.any { it.lowercase() in trustedSignerSha1 }
+
     private fun String.hexToByteArray(): ByteArray =
         ByteArray(length / 2) { index ->
             substring(index * 2, index * 2 + 2).toInt(16).toByte()
         }
 
     /** Lowercase hex SHA-256, matching the digest `apksigner verify --print-certs` reports. */
-    internal fun sha256Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes)
+    internal fun sha256Hex(bytes: ByteArray): String = hex("SHA-256", bytes)
+
+    /** Lowercase hex SHA-1, matching the fingerprint `keytool -list -v` reports (colons removed). */
+    internal fun sha1Hex(bytes: ByteArray): String = hex("SHA-1", bytes)
+
+    private fun hex(algorithm: String, bytes: ByteArray): String =
+        MessageDigest.getInstance(algorithm).digest(bytes)
             .joinToString(separator = "") { byte -> "%02x".format(byte) }
 
     /**

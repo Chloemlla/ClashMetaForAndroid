@@ -674,4 +674,25 @@
     <string name="five_minutes">5 minutes</string>
     <string name="failover_candidate_order">Candidate order</string>
     <string name="failover_tip">Failover is off by default. It only reacts to health checks for selectable groups and observes the candidate order chosen here.</string>
+    <string name="partner_apps">Partner Apps</string>
+    <string name="format_partner_tunneled">Tunnel is carrying traffic of %1$d partner app(s)</string>
+    <string name="partner_tunnel_stopped">Tunnel is not running, no partner traffic is being carried</string>
+    <string name="partner_apps_empty_title">No partner apps</string>
+    <string name="partner_apps_empty_tips">Install a partner app, or let it request pairing once, and it will show up here.</string>
+    <string name="partner_status_tunneled">Traffic carried</string>
+    <string name="partner_status_not_tunneled">Traffic not carried</string>
+    <string name="partner_status_allowed">Allowed to read status</string>
+    <string name="partner_status_denied">Denied</string>
+    <string name="partner_status_pending">Waiting for your decision</string>
+    <string name="partner_status_undecided">Not authorized yet</string>
+    <string name="partner_signer_verified">Certificate registered</string>
+    <string name="partner_signer_unverified">Certificate not registered</string>
+    <string name="format_partner_certificate">Certificate %1$s</string>
+    <string name="partner_action_allow">Allow reading status</string>
+    <string name="partner_action_deny">Deny</string>
+    <string name="partner_action_revoke">Revoke authorization</string>
+    <string name="partner_pairing_title">Partner pairing request</string>
+    <string name="format_partner_pairing_message">%1$s wants to read Clash status (mode, selected node, traffic). Allow it?</string>
+    <string name="partner_pairing_remember">Remember my choice</string>
+    <string name="partner_pairing_unverified_hint">This app\'s signing certificate is not registered in this build, so only you can vouch for it.</string>
 </resources>

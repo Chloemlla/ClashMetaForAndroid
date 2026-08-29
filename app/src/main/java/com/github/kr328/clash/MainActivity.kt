@@ -20,6 +20,8 @@ import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.service.PartnerPairingNotifier
+import com.github.kr328.clash.service.store.PartnerGrantStore
 import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
@@ -38,6 +40,7 @@ import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
     private var clashStarting = false
+    private val promptedPairings = mutableSetOf<String>()
     private val notificationPermissionLauncher =
         registerForActivityResult(RequestPermission()) { granted ->
             if (!granted) {
@@ -80,6 +83,9 @@ class MainActivity : BaseActivity<MainDesign>() {
                         Event.ProfileLoaded, Event.ProfileChanged -> {
                             design.fetch()
                             maybeShowAlphaMigrationToast(design)
+                            if (it == Event.ActivityStart) {
+                                promptPendingPairing()
+                            }
                         }
                         else -> Unit
                     }
@@ -113,6 +119,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                         }
                         MainDesign.Request.OpenConnections ->
                             startActivity(ConnectionsActivity::class.intent)
+                        MainDesign.Request.OpenPartners ->
+                            startActivity(PartnerAppsActivity::class.intent)
                         MainDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
                         MainDesign.Request.OpenHelp ->
@@ -131,6 +139,22 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
+
+    /**
+     * Raises the pairing dialog for a request that arrived while CMFA was in the background, where
+     * the platform refuses an activity start. Each package is offered once per activity instance so
+     * dismissing the dialog without answering cannot loop on every return to the home screen.
+     */
+    private suspend fun promptPendingPairing() {
+        val pending = withContext(Dispatchers.IO) {
+            PartnerGrantStore(this@MainActivity).pendingRequests()
+        }
+        val next = pending.firstOrNull { it.packageName !in promptedPairings } ?: return
+
+        promptedPairings += next.packageName
+
+        startActivity(PartnerPairingNotifier.pairingIntent(next.packageName, next.sha256))
+    }
 
     private suspend fun maybeShowAlphaMigrationToast(design: MainDesign) {
         val store = AppStore(this)

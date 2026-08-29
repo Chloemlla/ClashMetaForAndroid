@@ -41,4 +41,7 @@
     <string name="scene_applied_summary">Network and time conditions matched this scene.</string>
     <string name="proxy_failover_applied">Proxy switched after repeated failures</string>
     <string name="format_proxy_failover">%1$s: %2$s → %3$s</string>
+    <string name="partner_pairing_channel">Partner app pairing</string>
+    <string name="partner_pairing_title">A partner app wants to read Clash status</string>
+    <string name="format_partner_pairing_request">%1$s requests read-only access to Clash status. Certificate %2$s…</string>
 </resources>
