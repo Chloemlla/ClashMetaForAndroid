@@ -142,7 +142,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 |------|-------------------|
 | **`:app`** | 首装开源门闸 · Alpha→Meta 同签名迁移 · LumenCrash 宿主安装/报告 · 冷启动顺序与闪退防护 · 通知权限 UX · 沉浸式本次更新说明 · ADB 审计报告导入与能力缺口展示 |
 | **`:design`** | 渐进测速动画 · 代理搜索 · 首页实时上下行与当前节点 · 空配置/首启 CTA · 剪贴板导入订阅 · 活跃连接管理 · undraw 动态色空状态 · 无障碍与 48dp 触控 |
-| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴应用自动适配（PiliPlus/NexAI/Project-Lumen/Zhihu++/Aura/CDict） |
+| **`:service`** | Live Update 状态通知（promoted ongoing）· `POST_NOTIFICATIONS` 门禁 · 备份仅 sharedpref · Access Control 退出超时 · 外部 VPN 控制默认拒绝 · 从 0 本地订阅流量双模式计费 · 伙伴自动适配（**白名单=共享发布密钥**，凡出示该证书的已安装应用即 partner；配对授权为第二信任来源并兼送隧道） |
 | **`:core`** | 保留 mihomo 桥接 · 持续同步上游订阅信息 Go 侧拉取等内核相关能力 |
 | **`:common`** | 应用级协程异常隔离 · Components/Intent 安全边界 · 快捷方式仅走内部控制路径 |
 | **`:sdk`** | `ClashRuntime` 同 App 嵌入门面（Profile / VPN / 代理组）；非跨应用遥控；见 [§11](#11-runtime--service-sdk方向-b嵌入式-cmfa) |
@@ -239,6 +239,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 |--------|---------|
 | `f848db8` / `de0e6f3` / `a3235ef` | PiliPlus → NexAI / Project-Lumen；网络设置开关；StatusProvider `partnerStatus` |
 | `cbc57eba` | 配对确认窗由伙伴应用在前台直接拉起：导出 `PartnerPairingActivity`，伙伴应用以显式 `setClassName` + `startActivityForResult` 自启，透明确认窗直接盖在伙伴应用之上（服务侧后台自启被 BAL 拦截，原路径退化为通知）；身份按发起者解析——CMFA 自启走 extras，外部伙伴优先取 `getCallingPackage`（API 34 以下唯一不可伪造的来源，故要求 `startActivityForResult` 而非 `NEW_TASK`），API 34+ 回落 `getLaunchedFromPackage`，再经 `PartnerApps.trustOf` 校验为已识别伙伴，extras 不可伪造；已作答（`decisionOf` 非 Unknown）静默关闭，展示前 `requestPairing` 占位 pending 防服务侧重复弹；跨进程 prefs 读写保持 IO 线程 |
+| `4a1474fa` | **伙伴白名单改为仅认共享发布密钥的 SHA-1**：`isPartner = signedWith(trustedSignerSha1)`，凡出示该证书的已安装应用即 partner（**包括本版本从未听说过的应用**），不再要求出现在硬编码列表或声明 meta-data——硬编码包名与 meta-data 标记降级为仅供伙伴列表标注"自称者"；配对弹窗授权成为第二信任来源并**兼送隧道**（`PartnerGrantStore.tunnelablePackages` 复查当前签名，包名被换签重装不会继承授权）；`getInstalledPackages(signingCertificates)` 单次枚举 + `partnerPackagesFrom` 纯函数，删除 `isPartnerPackage`/`allPackages`/`mergePartnerPackages` |
 
 #### Track M · 外部 Windows ADB 审计桥
 | Commit | Summary |
@@ -436,7 +437,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 性能        测速节流/渐进延迟 · 应用图标懒加载 · 日志 I/O 离主线程
 体验        48dp 触控 · 删除确认 · 更新 single-flight · 通知权限说明 · 代理无障碍 · 代理搜索 · 配置空状态 · 自动定位当前节点 · 首页首启引导 · 启动中反馈 · 剪贴板导入订阅 · 日志空状态 · 活跃连接管理 · undraw 动态色空状态 · 沉浸式更新说明
 订阅流量    默认从 0 本地计已用 · 导入/设置可切换上游 userinfo · 进度条仍用订阅总量 · 菜单可重置本地流量 · 旧版 ×100 虚高自动迁移
-伙伴集成    VPN 自动适配 PiliPlus / NexAI / Project-Lumen / Zhihu++ / Aura / CDict · StatusProvider 导出 partner 状态 · 配对确认弹窗由伙伴应用在前台直接拉起（盖于应用之上），CMFA 校验发起者身份
+伙伴集成    自动适配白名单=共享发布密钥（凡出示该证书的已安装应用即 partner，含未收录包名）· StatusProvider 导出 partner 状态 · 配对确认弹窗由伙伴应用在前台直接拉起（盖于应用之上），CMFA 校验发起者身份，授权兼送隧道
 迁移        Alpha → Meta 同签名自动导入配置/节点/设置 · 低 API zip 解压 · 迁移权限 i18n
 SDK         :sdk ClashRuntime 嵌入门面 · Components 可配置 · 同 App 内嵌（非跨 App 遥控） · resetLocalTraffic
 架构        design/service 边界收紧 · 展示层模型与适配器
