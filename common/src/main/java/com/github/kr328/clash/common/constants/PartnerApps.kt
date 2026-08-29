@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.os.Build
+import android.os.Bundle
 import com.github.kr328.clash.common.log.Log
 import java.security.MessageDigest
 
@@ -195,7 +196,7 @@ object PartnerApps {
             @Suppress("DEPRECATION")
             val apps: List<ApplicationInfo> = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             apps.asSequence()
-                .filter { isTruthyPartnerMetaDataValue(it.metaData?.get(META_DATA_PARTNER_KEY)) }
+                .filter { isTruthyPartnerMetaDataValue(partnerMetaDataValue(it.metaData)) }
                 .map { it.packageName }
                 .toSet()
         } catch (t: Throwable) {
@@ -209,11 +210,20 @@ object PartnerApps {
     private fun declaresPartnerMetaData(pm: PackageManager, packageName: String): Boolean {
         return try {
             val info = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
-            isTruthyPartnerMetaDataValue(info.metaData?.get(META_DATA_PARTNER_KEY))
+            isTruthyPartnerMetaDataValue(partnerMetaDataValue(info.metaData))
         } catch (_: PackageManager.NameNotFoundException) {
             false
         }
     }
+
+    /**
+     * Reads the partner flag from [metaData] as a raw [Any?] — the value may legitimately be a
+     * boolean, an int, or a string depending on how the app declared it, so the deprecated
+     * untyped [android.os.Bundle.get] is exactly the accessor needed here.
+     */
+    @Suppress("DEPRECATION")
+    private fun partnerMetaDataValue(metaData: Bundle?): Any? =
+        metaData?.get(META_DATA_PARTNER_KEY)
 
     @Suppress("DEPRECATION")
     private fun signingCertificatesOf(pm: PackageManager, packageName: String): Set<Signature> {
