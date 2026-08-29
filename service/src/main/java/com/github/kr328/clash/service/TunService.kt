@@ -190,25 +190,19 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control (optional auto-include for installed partner apps: hardcoded
-            // PiliPlus/NexAI/Project-Lumen/Zhihu++ plus any signature-verified discovered
-            // partner — see PartnerApps KDoc for the merge rule).
+            // Access Control (optional auto-include for installed partner apps). Carrying an
+            // app's traffic is gated on one thing only: the pinned shared release certificate.
+            // Neither a known applicationId, the partner meta-data flag, nor a device-owner
+            // status grant substitutes for it — see PartnerApps KDoc for the rule.
             val grants = PartnerGrantStore(self)
             val partnerPackages = if (store.partnerAppAutoAdapt) {
-                // A device-owner grant counts the same as a verified signer here: suite apps are
-                // signed with independent keys, so an explicit pairing is the only trust source
-                // that works for a partner whose certificate is not pinned in this build.
-                PartnerApps.installedPartnerPackages(self) + grants.grantedPackages()
+                PartnerApps.installedPartnerPackages(self)
             } else {
                 emptySet()
             }
-            val partnerDenyExclude = if (store.partnerAppAutoAdapt) {
-                // Static hardcode names (even if not installed) plus the merged installed set,
-                // so discovered (meta-data + signature verified) partners are excluded too.
-                PartnerApps.allPackages + partnerPackages
-            } else {
-                emptySet()
-            }
+            // Deny-list exclusion covers the same certificate-verified set, so an impostor
+            // squatting a partner applicationId stays excluded from the tunnel.
+            val partnerDenyExclude = partnerPackages
             when (store.accessControlMode) {
                 AccessControlMode.AcceptAll -> Unit
                 AccessControlMode.AcceptSelected -> {

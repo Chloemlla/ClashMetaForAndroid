@@ -42,10 +42,9 @@ enum class PartnerGrantDecision { Unknown, Allowed, Denied }
  * Cross-process record of which partner apps the device owner let read Clash status, plus the
  * queue of apps still waiting for an answer.
  *
- * This is the trust source that replaces "must share CMFA's signing key": every suite app is
- * signed with its own key, so a signature match never holds in practice, and pinning digests
- * couples every new partner to a CMFA release. An explicit grant needs neither, and it is
- * strictly narrower than the hardcoded allowlist because it is bound to one certificate.
+ * This governs the read-only status surface only. Carrying an app's traffic is gated solely on the
+ * pinned shared release certificate (`PartnerApps.trustedSignerSha1`) — a grant recorded here never
+ * gets an app into the tunnel.
  */
 class PartnerGrantStore(context: Context) {
     private val store = Store(

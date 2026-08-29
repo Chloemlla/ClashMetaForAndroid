@@ -28,7 +28,6 @@ class PartnerAppsTest {
             PartnerApps.cdictPackages
 
         assertEquals(expected, PartnerApps.hardcodePackages)
-        assertEquals(PartnerApps.hardcodePackages, PartnerApps.allPackages)
     }
 
     @Test
@@ -68,9 +67,10 @@ class PartnerAppsTest {
     }
 
     @Test
-    fun trustedSignerSha1_pinsCDictReleaseCertificateAsLowercaseHex() {
-        assertTrue(
-            "c4914a907e577301c616cfb30f222b4402a4ecc3" in PartnerApps.trustedSignerSha1,
+    fun trustedSignerSha1_pinsExactlyTheSharedReleaseCertificate() {
+        assertEquals(
+            setOf("295443559574b12e12a0e49f6c92692ca0dc307a"),
+            PartnerApps.trustedSignerSha1,
         )
         assertTrue(PartnerApps.trustedSignerSha1.all { Regex("[0-9a-f]{40}").matches(it) })
     }
@@ -86,96 +86,46 @@ class PartnerAppsTest {
     }
 
     @Test
-    fun trustedSignerSha1_neverAcceptsASha256Digest() {
-        // Guards against pasting the wrong fingerprint format into the SHA-1 registry, which
-        // would silently never match instead of failing loudly.
-        assertFalse(PartnerApps.trustedSignerSha256.any { it in PartnerApps.trustedSignerSha1 })
-    }
-
-    @Test
-    fun trustedSignerSha256_pinsCDictReleaseCertificateAsLowercaseHex() {
-        assertTrue(
-            "8d9b6c640b027d7439e594f56682b9e31c38c7588a0c0cc02189da8c1fe91862"
-                in PartnerApps.trustedSignerSha256,
+    fun matchesPinnedSignerSha1_rejectsTheSha256FormOfTheSameCertificate() {
+        // Guards against pasting the wrong fingerprint format into the registry, which would
+        // silently never match instead of failing loudly.
+        assertFalse(
+            PartnerApps.matchesPinnedSignerSha1(
+                listOf("0403621f0e4b18e3b47049d3eea73f8df841b19e17acb7f83213e1a394d75d03"),
+            ),
         )
-        assertTrue(PartnerApps.trustedSignerSha256.all { Regex("[0-9a-f]{64}").matches(it) })
     }
 
     @Test
-    fun matchesPinnedSigner_acceptsPinnedDigestIgnoringCase() {
-        val pinned = PartnerApps.trustedSignerSha256.first()
-
-        assertTrue(PartnerApps.matchesPinnedSigner(listOf(pinned)))
-        assertTrue(PartnerApps.matchesPinnedSigner(listOf(pinned.uppercase())))
-    }
-
-    @Test
-    fun matchesPinnedSigner_rejectsUnknownOrMissingDigests() {
-        val pinned = PartnerApps.trustedSignerSha256.first()
-
-        assertFalse(PartnerApps.matchesPinnedSigner(emptyList()))
-        assertFalse(PartnerApps.matchesPinnedSigner(listOf("00" + pinned.drop(2))))
-    }
-
-    @Test
-    fun mergePartnerPackages_keepsInstalledHardcodeUnconditionally() {
-        val installedHardcode = setOf("com.chloemlla.piliplus")
-
+    fun mergePartnerPackages_dropsHardcodePackageWithoutThePinnedCertificate() {
         val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = installedHardcode,
+            installedHardcode = setOf("com.chloemlla.piliplus"),
             candidateMetaDataPackages = emptySet(),
-            trustedSigners = installedHardcode,
-            signatureMatches = { _, _ -> false },
+            isTrustedSigner = { false },
         )
 
-        assertEquals(installedHardcode, merged)
+        assertEquals(emptySet<String>(), merged)
     }
 
     @Test
-    fun mergePartnerPackages_addsCandidateOnlyWhenSignatureMatchesATrustedSigner() {
-        val installedHardcode = setOf("com.chloemlla.piliplus")
-        val trustedSigners = installedHardcode + "com.github.kr328.clash"
-
+    fun mergePartnerPackages_keepsOnlyCandidatesPresentingThePinnedCertificate() {
         val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = installedHardcode,
-            candidateMetaDataPackages = setOf("com.example.discovered"),
-            trustedSigners = trustedSigners,
-            signatureMatches = { candidate, signer ->
-                candidate == "com.example.discovered" && signer == "com.github.kr328.clash"
-            },
+            installedHardcode = setOf("com.chloemlla.piliplus", "com.chloemlla.cdict"),
+            candidateMetaDataPackages = setOf("com.example.discovered", "com.example.untrusted"),
+            isTrustedSigner = { it != "com.example.untrusted" && it != "com.chloemlla.cdict" },
         )
 
-        assertEquals(installedHardcode + "com.example.discovered", merged)
-    }
-
-    @Test
-    fun mergePartnerPackages_dropsCandidateWhenNoSignerMatches() {
-        val installedHardcode = setOf("com.chloemlla.piliplus")
-        val trustedSigners = installedHardcode + "com.github.kr328.clash"
-
-        val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = installedHardcode,
-            candidateMetaDataPackages = setOf("com.example.untrusted"),
-            trustedSigners = trustedSigners,
-            signatureMatches = { _, _ -> false },
-        )
-
-        assertEquals(installedHardcode, merged)
+        assertEquals(setOf("com.chloemlla.piliplus", "com.example.discovered"), merged)
     }
 
     @Test
     fun mergePartnerPackages_doesNotDoubleCountCandidateAlreadyInHardcode() {
-        val installedHardcode = setOf("com.chloemlla.piliplus")
-
         val merged = PartnerApps.mergePartnerPackages(
-            installedHardcode = installedHardcode,
+            installedHardcode = setOf("com.chloemlla.piliplus"),
             candidateMetaDataPackages = setOf("com.chloemlla.piliplus"),
-            trustedSigners = installedHardcode,
-            // A match here would still be harmless (union), but proves the "already
-            // included" skip path also short-circuits before calling the matcher.
-            signatureMatches = { _, _ -> throw AssertionError("should not be evaluated") },
+            isTrustedSigner = { true },
         )
 
-        assertEquals(installedHardcode, merged)
+        assertEquals(setOf("com.chloemlla.piliplus"), merged)
     }
 }

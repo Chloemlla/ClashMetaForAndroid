@@ -13,23 +13,22 @@
 recognizes a package as a partner using:
 
 ```
-isPartner = hardcode ∪ (meta-data present ∧ trustedSigner)
-trustedSigner = pinned certificate digest ∨ sharesSignatureWith(any installed hardcode partner OR self)
+isPartner = (hardcode ∪ meta-data present) ∧ signedWith(trustedSignerSha1)
 ```
 
+- **One pinned certificate** (`PartnerApps.trustedSignerSha1`): the SHA-1 fingerprint (lowercase
+  hex, no separators) of the shared release signing key used by CMFA and every partner app. This
+  is the entire trust root. An app that does not present that certificate is not a partner —
+  whatever applicationId it claims, whatever meta-data it declares, and whatever the device owner
+  answered in the partner list. Read the fingerprint with `keytool -list -v -keystore <keystore>`
+  (`SHA1:`, colons removed) or `apksigner verify --print-certs <apk>` (`Signer #1 certificate
+  SHA-1 digest`). When the shared key is rotated, **replace** the value; a second entry would
+  reintroduce the multi-key trust this gate exists to remove.
 - **Hardcode allowlist** (`PartnerApps.hardcodePackages`): the PiliPlus / NexAI /
   Project-Lumen / Zhihu++ / Aura / CDict applicationIds and their common `.debug` / `.dev` /
-  `.lite` suffixes. This is the static trust root for deny-list exclusion and works with or
-  without discovery. When a hardcoded applicationId is actually **installed**, the
-  runtime gate additionally requires a trusted signer, so a spoofed install under a known
-  partner name cannot read `partnerStatus`.
-- **Pinned signer digests** (`PartnerApps.trustedSignerSha256`): SHA-256 digests (lowercase
-  hex) of the partner release signing certificates. Each suite app ships its own signing key,
-  so "same signer as CMFA or another installed hardcode partner" matches no real install —
-  without pinning, the anti-spoofing gate rejects the genuine partner apps. Read a digest with
-  `apksigner verify --print-certs <apk>` (`Signer #1 certificate SHA-256 digest`) and add it
-  when a partner key is introduced or rotated. Zhihu++ has no published release yet, so no
-  digest is pinned for it.
+  `.lite` suffixes. This only nominates packages for the certificate check; it grants nothing on
+  its own, so a spoofed install under a known partner name reads no `partnerStatus` and gets no
+  tunnel coverage.
 - **Meta-data discovery**: any other installed app may declare the following in its
   `AndroidManifest.xml` (inside `<application>`, not `<activity>`) to opt into
   discovery:
@@ -38,17 +37,17 @@ trustedSigner = pinned certificate digest ∨ sharesSignatureWith(any installed 
   <meta-data android:name="com.github.kr328.clash.partner" android:value="true" />
   ```
 
-  The flag alone is **never trusted**. A package is only accepted as a discovered
-  partner when it also presents a trusted signer: a pinned certificate digest, the same
-  certificate as an installed hardcode partner, or the same certificate as this app (CMFA)
-  itself. This keeps discovery strictly additive: it can only widen *who* reaches the
-  existing read-only surface, never *what* a partner can do.
+  The flag alone is **never trusted** — it only nominates the app for the same certificate check.
+  This keeps discovery strictly additive: it can only widen *who* reaches the existing read-only
+  surface, never *what* a partner can do.
 
-`PartnerApps.installedPartnerPackages(context)` returns the merged set (installed
-hardcode ∪ verified discovered) and is what `TunService` uses for VPN access-control
-auto-include (`ServiceStore.partnerAppAutoAdapt`). `PartnerApps.isPartnerPackage(context,
-packageName)` is the equivalent single-package check used by `StatusProvider` to gate
-callers.
+`PartnerApps.installedPartnerPackages(context)` returns the certificate-verified set and is what
+`TunService` uses for VPN access-control auto-include (`ServiceStore.partnerAppAutoAdapt`), for
+both the allow list and deny-list exclusion. `PartnerApps.isPartnerPackage(context, packageName)`
+is the equivalent single-package check used by `StatusProvider` to gate callers.
+
+A device-owner grant recorded in `PartnerGrantStore` governs the read-only status surface only. It
+never puts an app into the tunnel: traffic coverage is decided by the certificate alone.
 
 ## 2. `partnerStatus` (StatusProvider)
 
@@ -84,13 +83,11 @@ cross-app status.
 
 ## 4. Adding a new partner
 
-- Prefer adding the applicationId (and its `.debug`/`.dev` suffixes) to the relevant
-  set in `PartnerApps.kt` when CMFA controls the release process end-to-end, and pin the
-  release certificate digest in `PartnerApps.trustedSignerSha256` so the runtime gate
-  recognizes it.
-- Use meta-data discovery instead when the partner app is built and signed
-  independently but shares CMFA's signing certificate (or a hardcode partner's), so no
-  code change is required on every partner release.
+- Sign the partner app with the shared release key. That is the only requirement the runtime
+  gate enforces, and no code change is needed on every partner release.
+- Add the applicationId (and its `.debug`/`.dev` suffixes) to the relevant set in
+  `PartnerApps.kt`, or have the app declare the meta-data flag. Either route only nominates the
+  app for the certificate check.
 - Never add a new exported method, deep link, or provider column that would let a
   partner (or a spoofed meta-data-only package) request VPN start/stop, read the
   subscription URL, or read `ageSecretKey`.
