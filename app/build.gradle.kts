@@ -26,16 +26,13 @@ dependencies {
 
     // Lumen Crash SDK (Project-Lumen/lumen-crash README).
     // Prefer lumen-crash.resolved.version from CI (.github/scripts/resolve-lumen-crash-version.sh) or scripts/Resolve-LumenCrashLatest.ps1; fallback 0.1.0.
-    // Keep activity/core forced below to avoid AGP 8.9.1 + compileSdk 36 AAR metadata.
     val lumenCrashVersion = rootProject.file("lumen-crash.resolved.version")
         .takeIf { it.exists() }
         ?.readText()
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
         ?: "0.1.0"
-    implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion") {
-        exclude(group = "androidx.navigationevent")
-    }
+    implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion")
 
     implementation(libs.kotlin.coroutine)
     implementation(libs.androidx.core)
@@ -48,41 +45,26 @@ dependencies {
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.biometric)
-    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation(libs.androidx.activity.compose)
 
     // lumen-crash publishes Compose Material3 as api deps without resolved versions in its POM.
     // Supply a BOM (and pin the api surface) so consumer resolution does not get empty versions.
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material3)
     // Required by LumenCrashReportScreen (Icons.Outlined.* + calculateWindowSizeClass).
     // Keep explicit pins under the Compose BOM so release minify/R8 cannot drop them.
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.material3:material3-window-size-class")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.animation:animation")
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.compose.material3.windowSizeClass)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.animation)
 
     // Keep java.time usable on API < 26 for the crash SDK report timestamps.
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
 
     testImplementation(libs.test.junit)
-}
-
-// Keep AndroidX activity/core on the AGP 8.8-compatible line even when
-// lumen-crash transitively asks for newer AARs (activity 1.13 / core 1.18 / navigationevent).
-// compileSdk is 36; core 1.16 still valid. Lift only after AGP/lumen-crash allow it.
-configurations.configureEach {
-    resolutionStrategy {
-        force(
-            "androidx.activity:activity:1.9.0",
-            "androidx.activity:activity-ktx:1.9.0",
-            "androidx.activity:activity-compose:1.9.0",
-            "androidx.core:core:1.16.0",
-            "androidx.core:core-ktx:1.16.0",
-        )
-    }
 }
 
 android {

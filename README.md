@@ -263,7 +263,8 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 #### Track P · Android 16 / 17 平台适配
 | Commit | Summary |
 |--------|---------|
-| *(this)* | `targetSdk`/`compileSdk` → **36**（Android 16）；强制 edge-to-edge + displayCutout insets；predictive back (`enableOnBackInvokedCallback`)；receiver 默认 NOT_EXPORTED；清单已声明 `INTERACT_ACROSS_USERS`（Android 17+ 跨 profile loopback，需 ADB 授予） |
+| *(this)* | `targetSdk`/`compileSdk` → **37**（Android 17）；强制 edge-to-edge + displayCutout insets；predictive back (`enableOnBackInvokedCallback`)；receiver 默认 NOT_EXPORTED；清单已声明 `INTERACT_ACROSS_USERS`（Android 17+ 跨 profile loopback，需 ADB 授予） |
+| *(this)* | 构建工具链与依赖全面升级：AGP 8.13.2 / Gradle 8.14.5 / Kotlin 2.3.21 / KSP 2.3.11；androidx、Material、Room、kotlinx、Compose BOM 同步到当前稳定版，全部收敛进 `gradle/libs.versions.toml` |
 
 > [!TIP]
 > 详细机制见 **[§11 Runtime / Service SDK](#11-runtime--service-sdk方向-b嵌入式-cmfa)**；逐步嵌入见 [`docs/sdk/runtime-embed.md`](docs/sdk/runtime-embed.md)。

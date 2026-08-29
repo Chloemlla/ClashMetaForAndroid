@@ -1,7 +1,7 @@
 import org.gradle.api.file.DuplicatesStrategy
 
 plugins {
-    kotlin("jvm") version "2.1.0"
+    kotlin("jvm") version "2.3.21"
 }
 
 group = "com.github.kr328.kaidl.patched"
@@ -18,7 +18,7 @@ dependencies {
         isTransitive = false
     }
 
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.0-1.0.29")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.3.11")
     implementation("com.squareup:kotlinpoet:1.9.0")
 }
 

@@ -16,8 +16,9 @@ import kotlin.math.max
  * promotion via the promoted-ongoing extras, plus the non-runtime
  * [android.Manifest.permission.POST_PROMOTED_NOTIFICATIONS] permission.
  *
- * Host keeps androidx.core on the AGP 8.8 / compileSdk 35 line (1.16.x), so
- * request/promoted APIs are written through extras instead of newer Builder helpers.
+ * Promotion is requested through the promoted-ongoing extras rather than the newer
+ * NotificationCompat.Builder helpers, so the same code path stays valid on hosts
+ * whose androidx.core predates those helpers.
  *
  * @see <a href="https://developer.android.google.cn/develop/ui/views/notifications/live-update">Create live update notifications</a>
  */

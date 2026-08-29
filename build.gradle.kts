@@ -69,7 +69,7 @@ buildscript {
         classpath(libs.build.kotlin.serialization)
         classpath(libs.build.ksp)
         classpath(libs.build.golang)
-        classpath("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.1.0")
+        classpath(libs.build.kotlin.compose.compiler)
     }
 }
 
@@ -136,10 +136,9 @@ subprojects {
             }
 
             minSdk = 21
-            // Android 16 (API 36). Android 17 (API 37) runtime behaviors are handled
-            // via edge-to-edge, predictive back, FGS specialUse, and INTERACT_ACROSS_USERS.
-            // Keep compile/target aligned; AGP 8.8 ships platform-36 tooling.
-            targetSdk = 36
+            // Android 17 (API 37). Runtime behaviors are handled via edge-to-edge,
+            // predictive back, FGS specialUse, and INTERACT_ACROSS_USERS.
+            targetSdk = 37
 
             versionName = "2.11.33"
             versionCode = 211033
@@ -178,8 +177,10 @@ subprojects {
         ndkVersion = "29.0.14206865"
 
         // compileSdk must cover targetSdk; pin explicitly so library modules
-            // cannot silently lag when target is bumped for platform work.
-            compileSdkVersion(36)
+        // cannot silently lag when target is bumped for platform work.
+        // AGP 8.13 tops out at platform 36.1, so gradle.properties carries
+        // android.suppressUnsupportedCompileSdk=37 for the 37 tooling gap.
+        compileSdkVersion(37)
 
         if (isApp) {
             packagingOptions {
