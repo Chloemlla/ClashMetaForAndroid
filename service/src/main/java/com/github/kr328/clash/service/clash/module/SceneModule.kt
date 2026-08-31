@@ -35,6 +35,7 @@ class SceneModule(
     private val sceneStore = SceneStore(service)
     private val requested = Channel<Unit>(Channel.CONFLATED)
     private var lastApplied: AppliedScene? = null
+    private var sessionModeBackup: SessionModeBackup? = null
 
     fun requestEvaluation() {
         requested.trySend(Unit)
@@ -92,6 +93,7 @@ class SceneModule(
             ssidMatchingEnabled = ssidMatchingEnabled,
         )
         if (match == null) {
+            restoreSessionMode()
             lastApplied = null
             return
         }
@@ -114,6 +116,9 @@ class SceneModule(
         var modeChanged = false
         if (Clash.queryTunnelState().mode != expectedMode) {
             val override = Clash.queryOverride(Clash.OverrideSlot.Session)
+            if (sessionModeBackup == null) {
+                sessionModeBackup = SessionModeBackup(override.mode)
+            }
             override.mode = expectedMode
             Clash.patchOverride(Clash.OverrideSlot.Session, override)
             modeChanged = true
@@ -149,6 +154,19 @@ class SceneModule(
         }
     }
 
+    private fun restoreSessionMode() {
+        val backup = sessionModeBackup ?: return
+        sessionModeBackup = null
+
+        // Session slot is shared with the manual mode switch, so restore only the mode field
+        // instead of clearing the whole slot.
+        val override = Clash.queryOverride(Clash.OverrideSlot.Session)
+        override.mode = backup.mode
+        Clash.patchOverride(Clash.OverrideSlot.Session, override)
+
+        service.sendOverrideChanged()
+    }
+
     private fun SceneMode.toTunnelMode(): TunnelState.Mode = when (this) {
         SceneMode.Direct -> TunnelState.Mode.Direct
         SceneMode.Global -> TunnelState.Mode.Global
@@ -173,4 +191,6 @@ class SceneModule(
         val id: String,
         val action: SceneAction,
     )
+
+    private class SessionModeBackup(val mode: TunnelState.Mode?)
 }

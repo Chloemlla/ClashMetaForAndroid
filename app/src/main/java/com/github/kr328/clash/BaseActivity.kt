@@ -13,6 +13,7 @@ import androidx.core.content.getSystemService
 import androidx.core.view.WindowCompat
 import com.github.kr328.clash.util.AppLockController
 import com.github.kr328.clash.util.AppLockGate
+import com.github.kr328.clash.util.isLumenCrashReportPending
 import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.common.compat.isAllowForceDarkCompat
 import com.github.kr328.clash.common.compat.isLightNavigationBarCompat
@@ -35,7 +36,6 @@ import kotlinx.coroutines.channels.Channel
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import com.github.kr328.clash.design.R
 
 abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
@@ -63,6 +63,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     protected val uiStore by lazy { UiStore(this) }
     protected val events = Channel<Event>(Channel.UNLIMITED)
     protected var activityStarted: Boolean = false
+    private var crashGateDeferred: Boolean = false
     protected val clashRunning: Boolean
         get() = Remote.broadcasts.clashRunning
     protected var design: D? = null
@@ -117,8 +118,11 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     ): O = withContext(Dispatchers.Main) {
         val requestKey = nextRequestKey.getAndIncrement().toString()
 
+        // Cancellable: the caller can be torn down while the child Activity is on top. A
+        // non-cancellable suspension would never let ActivityResultLifecycle.use reach its
+        // DESTROYED cleanup, stranding this coroutine and the registered launcher for good.
         ActivityResultLifecycle().use { lifecycle, start ->
-            suspendCoroutine { c ->
+            suspendCancellableCoroutine { c ->
                 activityResultRegistry.register(requestKey, lifecycle, contracts) {
                     c.resume(it)
                 }.apply { start() }.launch(input)
@@ -127,7 +131,7 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     }
 
     suspend fun setContentDesign(design: D) {
-        suspendCoroutine<Unit> {
+        suspendCancellableCoroutine<Unit> {
             window.decorView.post {
                 this.design = design
                 it.resume(Unit)
@@ -142,6 +146,10 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         // Fail-soft: a broken gate must never abort Activity creation.
         val gated = runCatching { presentPendingLumenCrashReportIfNeeded() }.getOrDefault(false)
         if (gated) {
+            // presentPendingLumenCrashReportIfNeeded deliberately does not finish() us, so this
+            // window now exists with no content view and no main(). Without this flag it would
+            // stay blank forever after the crash surface is dismissed.
+            crashGateDeferred = true
             return
         }
 
@@ -164,13 +172,43 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
                 return@launch
             }
 
-            main()
+            try {
+                main()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.github.kr328.clash.common.log.Log.w("main() failed: $e", e)
+
+                // A screen that already drew stays usable and just reports the error; one that
+                // never attached a Design is an unresponsive blank window, so close it instead.
+                val attached = design
+                if (attached == null) {
+                    finish()
+                } else {
+                    attached.showExceptionToast(e)
+                }
+            }
         }
     }
 
 
     override fun onStart() {
         super.onStart()
+
+        if (crashGateDeferred) {
+            // Stay dormant while the crash surface still owns the screen; rebuilding now would
+            // re-trigger the gate and loop. Once the report is consumed, rebuild for real.
+            if (isLumenCrashReportPending()) {
+                return
+            }
+
+            crashGateDeferred = false
+
+            recreate()
+
+            return
+        }
+
         activityStarted = true
         Remote.broadcasts.addObserver(this)
         events.trySend(Event.ActivityStart)

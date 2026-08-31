@@ -9,12 +9,9 @@ import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.core.content.ContextCompat
-import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.graphics.drawable.IconCompat
 import com.chloemlla.lumen.crash.CrashBreadcrumbs
 import com.chloemlla.lumen.crash.LumenCrash
-import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.constants.Adblock
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
@@ -25,12 +22,15 @@ import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.PartnerPairingNotifier
 import com.github.kr328.clash.service.store.PartnerGrantStore
 import com.github.kr328.clash.store.AppStore
+import com.github.kr328.clash.util.applyDynamicShortcuts
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -43,6 +43,7 @@ import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
     private var clashStarting = false
+    private var clashStartWatchdog: Job? = null
     private val promptedPairings = mutableSetOf<String>()
     private val promptedAdblockProfiles = mutableSetOf<UUID>()
     private val notificationPermissionLauncher =
@@ -78,6 +79,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 events.onReceive {
                     when (it) {
                         Event.ClashStart, Event.ClashStop -> {
+                            clashStartWatchdog?.cancel()
                             clashStarting = false
                             design.setClashStarting(false)
                             design.fetch()
@@ -102,6 +104,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                     when (it) {
                         MainDesign.Request.ToggleStatus -> {
                             if (clashRunning) {
+                                clashStartWatchdog?.cancel()
                                 clashStarting = false
                                 design.setClashStarting(false)
                                 recordBreadcrumbSafe("Clash stop requested")
@@ -221,7 +224,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             } catch (e: Exception) {
                 recordBreadcrumbSafe("Adblock download failed: ${e::class.java.simpleName}")
                 design?.showExceptionToast(
-                    getString(DesignR.string.format_update_provider_failure, ADBLOCK_PROVIDER_NAME, e.message)
+                    getString(DesignR.string.format_update_provider_failure, Adblock.PROVIDER_NAME, e.message)
                 )
             }
         }
@@ -366,14 +369,39 @@ class MainActivity : BaseActivity<MainDesign>() {
                     this@MainActivity.clashStarting = false
                     setClashStarting(false)
                     recordBreadcrumbSafe("Clash start cancelled: VPN permission denied")
+                    return
                 }
             }
+
+            armClashStartWatchdog()
         } catch (e: Exception) {
             this@MainActivity.clashStarting = false
             setClashStarting(false)
             recordBreadcrumbSafe("Clash start failed: ${e::class.java.simpleName}")
             runCatching { LumenCrash.record(e) }
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
+        }
+    }
+
+    /**
+     * The start/stop broadcasts are the only thing that clears [clashStarting], and neither
+     * arrives when :background is killed while the core is still initializing. Without this the
+     * toggle stays in "starting" forever and refuses every further tap.
+     */
+    private fun MainDesign.armClashStartWatchdog() {
+        clashStartWatchdog?.cancel()
+        clashStartWatchdog = this@MainActivity.launch {
+            delay(CLASH_START_TIMEOUT_MILLIS)
+
+            if (!this@MainActivity.clashStarting) return@launch
+
+            this@MainActivity.clashStarting = false
+            setClashStarting(false)
+            recordBreadcrumbSafe("Clash start timed out")
+
+            if (activityStarted) {
+                showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
+            }
         }
     }
 
@@ -386,7 +414,7 @@ class MainActivity : BaseActivity<MainDesign>() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         recordBreadcrumbSafe("MainActivity.onCreate")
-        setupShortcuts()
+        applyDynamicShortcuts(uiStore.hideAppIcon)
     }
 
     private fun recordBreadcrumbSafe(event: String) {
@@ -438,54 +466,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         startActivity(intent)
     }
 
-    private fun setupShortcuts() {
-        // Skip dynamic shortcut setup when the app icon is hidden.
-        if (uiStore.hideAppIcon) return
-
-        val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
-            Intent.FLAG_ACTIVITY_NO_ANIMATION
-
-        val toggle = ShortcutInfoCompat.Builder(this, "toggle_clash")
-            .setShortLabel(getString(DesignR.string.shortcut_toggle_short))
-            .setLongLabel(getString(DesignR.string.shortcut_toggle_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_all))
-            .setIntent(
-                Intent(Intents.ACTION_TOGGLE_CLASH)
-                    .setClassName(this, InternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(0)
-            .build()
-
-        val start = ShortcutInfoCompat.Builder(this, "start_clash")
-            .setShortLabel(getString(DesignR.string.shortcut_start_short))
-            .setLongLabel(getString(DesignR.string.shortcut_start_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_on))
-            .setIntent(
-                Intent(Intents.ACTION_START_CLASH)
-                    .setClassName(this, InternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(1)
-            .build()
-
-        val stop = ShortcutInfoCompat.Builder(this, "stop_clash")
-            .setShortLabel(getString(DesignR.string.shortcut_stop_short))
-            .setLongLabel(getString(DesignR.string.shortcut_stop_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_off))
-            .setIntent(
-                Intent(Intents.ACTION_STOP_CLASH)
-                    .setClassName(this, InternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(2)
-            .build()
-
-        ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
-    }
-
     private companion object {
-        const val ADBLOCK_PROVIDER_NAME = "cfm-adblock"
+        const val CLASH_START_TIMEOUT_MILLIS = 25_000L
     }
 }

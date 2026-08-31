@@ -232,7 +232,25 @@ class ClashManager(private val context: Context) : IClashManager,
                     launch {
                         try {
                             while (isActive) {
-                                observer.onHit(c.receive())
+                                // Ad-heavy pages burst faster than a Binder round trip per hit
+                                // can keep up with, so drain the whole upstream queue, keep only
+                                // the newest hits and forward them in one batch per window.
+                                // Exact totals come from queryAdblockStats, not from this stream.
+                                val batch = ArrayDeque<AdblockHit>()
+
+                                batch.addLast(c.receive())
+
+                                while (true) {
+                                    batch.addLast(c.tryReceive().getOrNull() ?: break)
+
+                                    if (batch.size > ADBLOCK_BATCH_SIZE) {
+                                        batch.removeFirst()
+                                    }
+                                }
+
+                                batch.forEach { observer.onHit(it) }
+
+                                delay(ADBLOCK_BATCH_INTERVAL)
                             }
                         } catch (e: CancellationException) {
                             // intended behavior
@@ -257,5 +275,10 @@ class ClashManager(private val context: Context) : IClashManager,
 
     override fun closeAllConnections() {
         Clash.closeAllConnections()
+    }
+
+    companion object {
+        private const val ADBLOCK_BATCH_SIZE = 64
+        private const val ADBLOCK_BATCH_INTERVAL = 500L
     }
 }

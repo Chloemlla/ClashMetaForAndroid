@@ -1,6 +1,7 @@
 package com.github.kr328.clash.util
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
@@ -184,10 +185,28 @@ object AuditReportImporter {
         }
     }
 
-    private fun createTarget(context: Context): File =
-        File(context.filesDir, "audit-reports/${UUID.randomUUID()}").apply {
+    private fun createTarget(context: Context): File {
+        val root = File(context.filesDir, "audit-reports")
+
+        removeStaleReports(root)
+
+        return File(root, UUID.randomUUID().toString()).apply {
             check(mkdirs()) { "Unable to create audit report directory" }
         }
+    }
+
+    /**
+     * Extracted reports are never reopened — [import] returns everything the UI shows — so an
+     * un-pruned root just accumulates evidence text in the app's private directory.
+     * Mirrors `ProfileFileExport.removeStaleExports`.
+     */
+    private fun removeStaleReports(root: File) {
+        val cutoff = System.currentTimeMillis() - STALE_REPORT_AGE_MILLIS
+
+        root.listFiles()
+            ?.filter { it.lastModified() < cutoff }
+            ?.forEach { it.deleteRecursively() }
+    }
 
     private fun validateRecords(
         file: File,
@@ -216,7 +235,7 @@ object AuditReportImporter {
                     ?: error("Standalone audit report is empty")
                 val reportManifest = JSONObject(reportManifestLine.removePrefix("\uFEFF"))
                 validateManifest(reportManifest)
-                require(reportManifest.toString() == manifest.toString()) {
+                require(sameJson(reportManifest, manifest)) {
                     "Standalone audit manifest does not match the ZIP manifest"
                 }
 
@@ -228,6 +247,20 @@ object AuditReportImporter {
                 }
             }
         }
+    }
+
+    /**
+     * Structural JSON equality. `JSONObject.toString()` preserves insertion order, so comparing
+     * serialized forms would reject two manifests that differ only in key order.
+     */
+    private fun sameJson(left: Any?, right: Any?): Boolean = when {
+        left is JSONObject && right is JSONObject ->
+            left.length() == right.length() &&
+                left.keys().asSequence().all { right.has(it) && sameJson(left.get(it), right.get(it)) }
+        left is JSONArray && right is JSONArray ->
+            left.length() == right.length() &&
+                (0 until left.length()).all { sameJson(left.get(it), right.get(it)) }
+        else -> left == right
     }
 
     private fun nextNonBlankLine(reader: BufferedReader): String? {
@@ -368,5 +401,7 @@ object AuditReportImporter {
     )
 
     private val REQUIRED_ZIP_FILES = setOf("manifest.json", "records.jsonl", "report.jsonl")
+
+    private const val STALE_REPORT_AGE_MILLIS = 24L * 60L * 60L * 1000L
 }
 

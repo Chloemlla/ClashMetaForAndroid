@@ -1,5 +1,6 @@
 package com.github.kr328.clash.service.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -19,10 +20,17 @@ data class SceneTrigger(
     val ssid: String? = null,
 )
 
+// Names are pinned to what is already stored in SharedPreferences, so a constant may be renamed
+// without invalidating saved scenes.
 @Serializable
 enum class SceneNetworkType {
+    @SerialName("UnmeteredWifi")
     UnmeteredWifi,
+
+    @SerialName("Metered")
     Metered,
+
+    @SerialName("Any")
     Any,
 }
 
@@ -45,8 +53,13 @@ data class SceneAction(
 
 @Serializable
 enum class SceneMode {
+    @SerialName("Direct")
     Direct,
+
+    @SerialName("Global")
     Global,
+
+    @SerialName("Rule")
     Rule,
 }
 

@@ -14,6 +14,7 @@ import com.github.kr328.clash.util.verifyApk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object Remote {
     val broadcasts: Broadcasts = Broadcasts(Global.application)
@@ -69,17 +70,21 @@ object Remote {
         val store = AppStore(context)
         val updatedAt = getLastUpdated(context)
 
-        if (store.updatedAt != updatedAt) {
-            if (!context.verifyApk()) {
-                ApplicationObserver.createdActivities.forEach { it.finish() }
+        if (store.updatedAt == updatedAt) return
 
-                val intent = ApkBrokenActivity::class.intent
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (context.verifyApk()) {
+            store.updatedAt = updatedAt
+            return
+        }
 
-                return context.startActivity(intent)
-            } else {
-                store.updatedAt = updatedAt
-            }
+        // finish() and startActivity() are only safe from the main thread; verifyApk() itself
+        // must stay off it because it walks the whole APK signature chain.
+        withContext(Dispatchers.Main) {
+            ApplicationObserver.createdActivities.toList().forEach { it.finish() }
+
+            context.startActivity(
+                ApkBrokenActivity::class.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
         }
     }
 

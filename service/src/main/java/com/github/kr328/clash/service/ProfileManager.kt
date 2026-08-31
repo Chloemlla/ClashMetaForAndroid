@@ -1,6 +1,7 @@
 package com.github.kr328.clash.service
 
 import android.content.Context
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.data.Database
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
@@ -16,23 +17,47 @@ import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.service.util.profileContentModified
 import com.github.kr328.clash.service.util.sendProfileChanged
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.util.*
 
+// This scope backs every method of the manager for the whole RemoteService lifetime: an
+// uncaught failure would kill the :background process, and a cancelled scope would make all
+// later launches silently do nothing.
+private val profileManagerExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+    Log.w("ProfileManager: uncaught exception", throwable)
+}
+
 class ProfileManager(private val context: Context) : IProfileManager,
-    CoroutineScope by CoroutineScope(Dispatchers.IO) {
+    CoroutineScope by CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + profileManagerExceptionHandler
+    ) {
     private val store = ServiceStore(context)
     private val localTraffic = LocalSubscriptionTrafficStore(context)
 
     init {
         launch {
-            Database.database //.init
+            try {
+                Database.database //.init
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w("ProfileManager: open database failed", e)
+            }
 
-            ProfileReceiver.rescheduleAll(context)
+            try {
+                ProfileReceiver.rescheduleAll(context)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w("ProfileManager: reschedule profiles failed", e)
+            }
         }
     }
 

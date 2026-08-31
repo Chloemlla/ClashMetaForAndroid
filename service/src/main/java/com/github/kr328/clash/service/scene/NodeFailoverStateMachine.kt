@@ -4,6 +4,7 @@ const val MIN_FAILOVER_THRESHOLD = 2
 const val MAX_FAILOVER_THRESHOLD = 5
 const val MIN_FAILOVER_COOLDOWN_MILLIS = 30_000L
 const val MAX_FAILOVER_COOLDOWN_MILLIS = 300_000L
+const val FAILOVER_CLOCK_JUMP_COOLDOWN_FACTOR = 4L
 
 fun normalizeFailoverThreshold(value: Int): Int {
     return value.coerceIn(MIN_FAILOVER_THRESHOLD, MAX_FAILOVER_THRESHOLD)
@@ -54,17 +55,18 @@ object NodeFailoverStateMachine {
         nowMillis: Long,
     ): NodeFailoverTransition {
         val node = FailoverNode(group, selectedNode)
+        val current = state.retainKnownNodes(group, selectedNode, orderedCandidates)
         if (selectedNodeHealthy) {
-            val streaks = state.failureStreaks - node
+            val streaks = current.failureStreaks - node
             return NodeFailoverTransition(
-                state = state.copy(failureStreaks = streaks),
+                state = current.copy(failureStreaks = streaks),
                 decision = NodeFailoverDecision.NoSwitch(failureCount = 0),
             )
         }
 
-        val failureCount = (state.failureStreaks[node] ?: 0) + 1
-        val failedState = state.copy(
-            failureStreaks = state.failureStreaks + (node to failureCount),
+        val failureCount = (current.failureStreaks[node] ?: 0) + 1
+        val failedState = current.copy(
+            failureStreaks = current.failureStreaks + (node to failureCount),
         )
         if (failureCount < normalizeFailoverThreshold(threshold)) {
             return NodeFailoverTransition(
@@ -73,17 +75,26 @@ object NodeFailoverStateMachine {
             )
         }
 
-        val lastSwitch = state.lastSwitchAt[group]
+        val lastSwitch = current.lastSwitchAt[group]
         val cooldown = normalizeFailoverCooldownMillis(cooldownMillis)
         if (lastSwitch != null) {
             val elapsed = nowMillis - lastSwitch
-            if (elapsed < 0L || elapsed < cooldown) {
-                val remaining = if (elapsed < 0L) cooldown else cooldown - elapsed
+            val plausibleElapsedMax = cooldown * FAILOVER_CLOCK_JUMP_COOLDOWN_FACTOR
+            // nowMillis comes from a wall clock: a backwards or implausibly large gap means the
+            // clock moved rather than the cooldown expiring, so re-anchor and keep waiting.
+            val clockJumped = elapsed < 0L || elapsed > plausibleElapsedMax
+            if (clockJumped || elapsed < cooldown) {
                 return NodeFailoverTransition(
-                    state = failedState,
+                    state = if (clockJumped) {
+                        failedState.copy(
+                            lastSwitchAt = failedState.lastSwitchAt + (group to nowMillis),
+                        )
+                    } else {
+                        failedState
+                    },
                     decision = NodeFailoverDecision.NoSwitch(
                         failureCount = failureCount,
-                        cooldownRemainingMillis = remaining,
+                        cooldownRemainingMillis = if (clockJumped) cooldown else cooldown - elapsed,
                     ),
                 )
             }
@@ -108,6 +119,19 @@ object NodeFailoverStateMachine {
                 to = target,
                 failureCount = failureCount,
             ),
+        )
+    }
+
+    private fun NodeFailoverState.retainKnownNodes(
+        group: String,
+        selectedNode: String,
+        orderedCandidates: List<String>,
+    ): NodeFailoverState {
+        val known = orderedCandidates.toSet()
+        return copy(
+            failureStreaks = failureStreaks.filterKeys {
+                it.group != group || it.node == selectedNode || it.node in known
+            },
         )
     }
 

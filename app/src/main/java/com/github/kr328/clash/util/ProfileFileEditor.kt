@@ -56,8 +56,11 @@ class ProfileFileEditor private constructor(
             original: Uri,
             editedSource: Uri = original,
         ): ProfileFileEditor = withContext(Dispatchers.IO) {
-            val directory = context.cacheDir
-                .resolve("profile-editor")
+            val root = context.cacheDir.resolve("profile-editor")
+
+            removeStaleSessions(root)
+
+            val directory = root
                 .resolve(UUID.randomUUID().toString())
                 .apply { mkdirs() }
             val originalFile = directory.resolve("original.yaml").apply { createNewFile() }
@@ -96,6 +99,21 @@ class ProfileFileEditor private constructor(
                 addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
         }
+
+        /**
+         * A session holds the profile in plaintext. [close] is the fast path, but it never runs if
+         * the process is reclaimed while the external editor is in the foreground, so leftovers are
+         * swept on the next prepare.
+         */
+        private fun removeStaleSessions(root: File) {
+            val cutoff = System.currentTimeMillis() - STALE_SESSION_AGE_MILLIS
+
+            root.listFiles()
+                ?.filter { it.lastModified() < cutoff }
+                ?.forEach { it.deleteRecursively() }
+        }
+
+        private const val STALE_SESSION_AGE_MILLIS = 24L * 60L * 60L * 1000L
     }
 }
 

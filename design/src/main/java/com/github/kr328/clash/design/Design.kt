@@ -3,17 +3,28 @@ package com.github.kr328.clash.design
 import android.content.Context
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.design.ui.Surface
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.setOnInsertsChangedListener
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 
-abstract class Design<R>(val context: Context) :
-    CoroutineScope by CoroutineScope(Dispatchers.Unconfined) {
+abstract class Design<R>(val context: Context) : CoroutineScope {
+    // SupervisorJob + handler: a dialog or view call failing during teardown must not cancel
+    // sibling coroutines nor reach the default handler, which would kill the process.
+    private val designJob = SupervisorJob()
+    private val designExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.w("Uncaught exception in ${javaClass.simpleName}: $throwable", throwable)
+    }
+    override val coroutineContext =
+        Dispatchers.Main.immediate + designJob + designExceptionHandler
+
     abstract val root: View
 
     val surface = Surface()

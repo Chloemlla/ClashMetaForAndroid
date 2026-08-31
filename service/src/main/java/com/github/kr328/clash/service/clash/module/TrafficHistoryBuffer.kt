@@ -18,6 +18,10 @@ data class TrafficHistorySample(
  *
  * Default capacity covers ~1h at ~5s (720 points). Dense samples denser than
  * [minIntervalMs] are rejected so producers can poll freely without growth.
+ *
+ * The interval gate runs on a caller-supplied monotonic clock, not on
+ * [TrafficHistorySample.epochMs]: a wall-clock step backwards would otherwise
+ * reject every sample until the wall clock caught up.
  */
 class TrafficHistoryBuffer(
     capacity: Int = DEFAULT_CAPACITY,
@@ -32,23 +36,24 @@ class TrafficHistoryBuffer(
     private val samples = arrayOfNulls<TrafficHistorySample>(capacity)
     private var head: Int = 0
     private var size: Int = 0
-    private var lastAcceptedMs: Long = Long.MIN_VALUE / 2
+    private var lastAcceptedElapsedMs: Long = Long.MIN_VALUE / 2
 
     @Synchronized
-    fun shouldAccept(nowMs: Long, minIntervalMs: Long = this.minIntervalMs): Boolean {
+    fun shouldAccept(elapsedMs: Long, minIntervalMs: Long = this.minIntervalMs): Boolean {
         if (size == 0) return true
-        return nowMs - lastAcceptedMs >= minIntervalMs
+        return elapsedMs - lastAcceptedElapsedMs >= minIntervalMs
     }
 
     /**
-     * Append [sample] if it respects the min-interval gate.
+     * Append [sample] if [elapsedMs] respects the min-interval gate.
      * When full, overwrites the oldest entry.
      *
+     * @param elapsedMs monotonic reading (e.g. `SystemClock.elapsedRealtime()`)
      * @return true if accepted
      */
     @Synchronized
-    fun tryAppend(sample: TrafficHistorySample): Boolean {
-        if (!shouldAccept(sample.epochMs)) {
+    fun tryAppend(sample: TrafficHistorySample, elapsedMs: Long): Boolean {
+        if (!shouldAccept(elapsedMs)) {
             return false
         }
         samples[head] = sample
@@ -56,7 +61,7 @@ class TrafficHistoryBuffer(
         if (size < capacity) {
             size++
         }
-        lastAcceptedMs = sample.epochMs
+        lastAcceptedElapsedMs = elapsedMs
         return true
     }
 
@@ -83,7 +88,7 @@ class TrafficHistoryBuffer(
         }
         head = 0
         size = 0
-        lastAcceptedMs = Long.MIN_VALUE / 2
+        lastAcceptedElapsedMs = Long.MIN_VALUE / 2
     }
 
     companion object {

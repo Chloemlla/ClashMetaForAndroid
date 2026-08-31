@@ -14,7 +14,10 @@ class TimeZoneModule(service: Service) : Module<Unit>(service) {
         while (true) {
             val timeZone = TimeZone.getDefault()
 
-            Clash.notifyTimeZoneChanged(timeZone.id, timeZone.rawOffset / 1000)
+            // rawOffset excludes DST, which would report an hour off in DST regions.
+            val offset = timeZone.getOffset(System.currentTimeMillis())
+
+            Clash.notifyTimeZoneChanged(timeZone.id, offset / 1000)
 
             timeZones.receive()
         }

@@ -1,12 +1,13 @@
 package com.github.kr328.clash
 
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.common.constants.Adblock
 import com.github.kr328.clash.core.model.AdblockHit
 import com.github.kr328.clash.design.AdblockHitsDesign
 import com.github.kr328.clash.service.remote.IAdblockObserver
+import com.github.kr328.clash.util.clashDir
 import com.github.kr328.clash.util.logsDir
 import com.github.kr328.clash.util.withClash
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
@@ -108,7 +109,7 @@ class AdblockHitsActivity : BaseActivity<AdblockHitsDesign>() {
     }
 
     private fun loadHistory(): List<AdblockHit> {
-        val file = File(getFilesDir(), "clash/adblock_hits.jsonl")
+        val file = clashDir.resolve(Adblock.HITS_FILE_NAME)
 
         if (!file.exists()) {
             return emptyList()

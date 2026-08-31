@@ -16,11 +16,11 @@ class FilesClient(private val context: Context) {
         val uri = DC.buildChildDocumentsUri(Authorities.FILES_PROVIDER, parentDocumentId)
 
         context.contentResolver.query(uri, FilesProjection, null, null, null)?.use { cursor ->
-            val idIndex = cursor.getColumnIndex(DC.Document.COLUMN_DOCUMENT_ID)
-            val nameIndex = cursor.getColumnIndex(DC.Document.COLUMN_DISPLAY_NAME)
-            val sizeIndex = cursor.getColumnIndex(DC.Document.COLUMN_SIZE)
-            val lastModified = cursor.getColumnIndex(DC.Document.COLUMN_LAST_MODIFIED)
-            val mimeTypeIndex = cursor.getColumnIndex(DC.Document.COLUMN_MIME_TYPE)
+            val idIndex = cursor.getColumnIndexOrThrow(DC.Document.COLUMN_DOCUMENT_ID)
+            val nameIndex = cursor.getColumnIndexOrThrow(DC.Document.COLUMN_DISPLAY_NAME)
+            val sizeIndex = cursor.getColumnIndexOrThrow(DC.Document.COLUMN_SIZE)
+            val lastModified = cursor.getColumnIndexOrThrow(DC.Document.COLUMN_LAST_MODIFIED)
+            val mimeTypeIndex = cursor.getColumnIndexOrThrow(DC.Document.COLUMN_MIME_TYPE)
 
             cursor.moveToFirst()
 
@@ -84,7 +84,21 @@ class FilesClient(private val context: Context) {
         (context.contentResolver.openInputStream(source)
             ?: throw java.io.FileNotFoundException("$source not found"))
             .bufferedReader(Charsets.UTF_8)
-            .use { it.readText() }
+            .use { reader ->
+                val buffer = CharArray(DEFAULT_BUFFER_SIZE)
+                val text = StringBuilder()
+
+                while (true) {
+                    val count = reader.read(buffer)
+                    if (count < 0) break
+                    if (text.length + count > MAX_TEXT_CHARS) {
+                        throw java.io.IOException("$source larger than $MAX_TEXT_CHARS characters")
+                    }
+                    text.append(buffer, 0, count)
+                }
+
+                text.toString()
+            }
     }
 
     fun buildDocumentUri(documentId: String): Uri {
@@ -92,6 +106,8 @@ class FilesClient(private val context: Context) {
     }
 
     companion object {
+        private const val MAX_TEXT_CHARS = 4 * 1024 * 1024
+
         private val FilesProjection = arrayOf(
             DC.Document.COLUMN_DOCUMENT_ID,
             DC.Document.COLUMN_DISPLAY_NAME,

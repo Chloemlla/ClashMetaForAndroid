@@ -8,6 +8,9 @@ import java.util.UUID
  * Local per-subscription traffic counters that intentionally ignore upstream
  * subscription-userinfo headers. Every profile starts at 0 B and only grows from
  * traffic observed while that profile is active in this app.
+ *
+ * Callers each construct their own instance, so the read-modify-write mutators
+ * hold a class-level lock instead of an instance one.
  */
 class LocalSubscriptionTrafficStore(context: Context) {
     private val preferences = PreferenceProvider.createSharedPreferencesFromContext(context)
@@ -28,43 +31,43 @@ class LocalSubscriptionTrafficStore(context: Context) {
         return getUpload(uuid) + getDownload(uuid)
     }
 
-    @Synchronized
     fun add(uuid: UUID, uploadDelta: Long, downloadDelta: Long) {
         val up = uploadDelta.coerceAtLeast(0L)
         val down = downloadDelta.coerceAtLeast(0L)
         if (up == 0L && down == 0L) return
 
-        preferences.edit()
-            .putLong(uploadKey(uuid), getUpload(uuid) + up)
-            .putLong(downloadKey(uuid), getDownload(uuid) + down)
-            .apply()
+        synchronized(lock) {
+            preferences.edit()
+                .putLong(uploadKey(uuid), getUpload(uuid) + up)
+                .putLong(downloadKey(uuid), getDownload(uuid) + down)
+                .apply()
+        }
     }
 
-    @Synchronized
     fun reset(uuid: UUID) {
-        preferences.edit()
-            .putLong(uploadKey(uuid), 0L)
-            .putLong(downloadKey(uuid), 0L)
-            .apply()
+        synchronized(lock) {
+            preferences.edit()
+                .putLong(uploadKey(uuid), 0L)
+                .putLong(downloadKey(uuid), 0L)
+                .apply()
+        }
     }
 
-    @Synchronized
     fun clear(uuid: UUID) {
-        preferences.edit()
-            .remove(uploadKey(uuid))
-            .remove(downloadKey(uuid))
-            .apply()
+        synchronized(lock) {
+            preferences.edit()
+                .remove(uploadKey(uuid))
+                .remove(downloadKey(uuid))
+                .apply()
+        }
     }
 
     /**
      * Older builds decoded packed core traffic without dividing the ×100 display
      * scale, so persisted counters are ~100× too large. Rewrite them once.
-     *
-     * Class-level lock: ProfileManager and LocalTrafficAccountingModule each
-     * construct their own store instance and would otherwise race on first boot.
      */
     private fun migrateInflatedCountersIfNeeded() {
-        synchronized(migrationLock) {
+        synchronized(lock) {
             if (preferences.getBoolean(SCALE_MIGRATION_KEY, false)) {
                 return
             }
@@ -91,6 +94,6 @@ class LocalSubscriptionTrafficStore(context: Context) {
         const val SCALE_MIGRATION_KEY = "local_sub_traffic_scale_fixed_v1"
         const val LEGACY_INFLATION_FACTOR = 100L
 
-        private val migrationLock = Any()
+        private val lock = Any()
     }
 }

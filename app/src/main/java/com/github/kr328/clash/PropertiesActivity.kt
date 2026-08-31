@@ -18,7 +18,6 @@ import kotlinx.coroutines.selects.select
 import com.github.kr328.clash.design.R
 
 class PropertiesActivity : BaseActivity<PropertiesDesign>() {
-    private var canceled: Boolean = false
     private lateinit var original: Profile
     private lateinit var serviceStore: ServiceStore
     private var originalLocalTrafficBilling: Boolean = true
@@ -39,8 +38,6 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         setContentDesign(design)
 
         defer {
-            canceled = true
-
             withProfile { release(uuid) }
         }
 
@@ -48,17 +45,21 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
-                        Event.ActivityStop -> {
-                            val profile = design.profile
+                        // The :background process is recreated for reasons unrelated to this
+                        // profile (scheduled updates, FilesProvider queries); closing here would
+                        // throw away a half-filled form.
+                        Event.ServiceRecreated -> {
+                            val reloaded = withProfile { queryByUUID(uuid) }?.toDesignProfile()
 
-                            if (!canceled && profile != original) {
-                                withProfile {
-                                    patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
+                            if (reloaded == null) {
+                                finish()
+                            } else {
+                                val pristine = design.profile == original
+                                original = reloaded
+                                if (pristine) {
+                                    design.profile = reloaded
                                 }
                             }
-                        }
-                        Event.ServiceRecreated -> {
-                            finish()
                         }
                         else -> Unit
                     }

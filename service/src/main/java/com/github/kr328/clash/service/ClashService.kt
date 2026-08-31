@@ -106,7 +106,7 @@ class ClashService : BaseService() {
 
         Log.i("ClashService destroyed: ${reason ?: "successfully"}")
 
-        // BaseService.onDestroy cancels the service scope without blocking the main thread.
+        // BaseService.onDestroy cancels the service scope with a time-bounded join.
         super.onDestroy()
     }
 

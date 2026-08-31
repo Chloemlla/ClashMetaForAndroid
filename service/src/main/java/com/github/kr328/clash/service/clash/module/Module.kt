@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import com.github.kr328.clash.common.compat.registerReceiverCompat
 import com.github.kr328.clash.common.constants.Permissions
 import com.github.kr328.clash.common.log.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -62,12 +63,17 @@ abstract class Module<E>(val service: Service) {
             Log.d("$moduleName: initialize")
 
             run()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // A crashing module must degrade alone instead of cancelling the runtime and the VPN.
+            Log.e("$moduleName: crashed", e)
         } finally {
             withContext(NonCancellable) {
                 receivers.forEach {
-                    it.onReceive(null, null)
+                    runCatching { it.onReceive(null, null) }
 
-                    service.unregisterReceiver(it)
+                    runCatching { service.unregisterReceiver(it) }
                 }
 
                 Log.d("$moduleName: destroyed")

@@ -22,16 +22,6 @@
 
 -dontobfuscate
 
--assumenosideeffects class kotlin.jvm.internal.Intrinsics {
-    public static void checkNotNull(...);
-    public static void checkExpressionValueIsNotNull(...);
-    public static void checkNotNullExpressionValue(...);
-    public static void checkReturnedValueIsNotNull(...);
-    public static void checkFieldIsNotNull(...);
-    public static void checkParameterIsNotNull(...);
-    public static void checkNotNullParameter(...);
-}
-
 # Kotlin Coroutine
 # Allow R8 to optimize away the FastServiceLoader.
 # Together with ServiceLoader optimization in R8

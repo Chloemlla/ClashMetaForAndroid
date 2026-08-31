@@ -133,8 +133,17 @@ class ServiceStore(context: Context) {
     /**
      * Keys already notified for subscription expiry (`uuid|bucket|expireMs`).
      * Prevents spam loops across worker runs.
+     *
+     * Every renewal mints a new `expireMs`, so writes keep only the newest expiry per
+     * profile — otherwise the set grows for the lifetime of the install.
      */
-    var subscriptionExpiryNotifiedKeys by store.stringSet(
+    var subscriptionExpiryNotifiedKeys: Set<String>
+        get() = notifiedExpiryKeys
+        set(value) {
+            notifiedExpiryKeys = retainLatestExpiryKeys(value)
+        }
+
+    private var notifiedExpiryKeys by store.stringSet(
         key = "subscription_expiry_notified_keys",
         defaultValue = emptySet()
     )
@@ -184,4 +193,25 @@ class ServiceStore(context: Context) {
         defaultValue = ProxySort.Default,
         values = ProxySort.values(),
     )
+
+    private fun retainLatestExpiryKeys(keys: Set<String>): Set<String> {
+        val latest = HashMap<String, Long>()
+        for (key in keys) {
+            val (uuid, expire) = splitExpiryKey(key) ?: continue
+            if (expire > (latest[uuid] ?: Long.MIN_VALUE)) {
+                latest[uuid] = expire
+            }
+        }
+        return keys.filterTo(HashSet()) { key ->
+            val parsed = splitExpiryKey(key)
+            parsed != null && latest[parsed.first] == parsed.second
+        }
+    }
+
+    private fun splitExpiryKey(key: String): Pair<String, Long>? {
+        val parts = key.split('|')
+        if (parts.size != 3) return null
+        val expire = parts[2].toLongOrNull() ?: return null
+        return parts[0] to expire
+    }
 }

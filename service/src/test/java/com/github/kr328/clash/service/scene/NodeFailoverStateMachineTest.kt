@@ -1,6 +1,7 @@
 package com.github.kr328.clash.service.scene
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -136,6 +137,54 @@ class NodeFailoverStateMachineTest {
 
         val decision = transition.decision as NodeFailoverDecision.NoSwitch
         assertEquals(29_000L, decision.cooldownRemainingMillis)
+    }
+
+    @Test
+    fun dropsFailureStreaksOfNodesMissingFromCurrentGroup() {
+        val state = NodeFailoverState(
+            failureStreaks = mapOf(
+                FailoverNode("group", "node-gone") to 2,
+                FailoverNode("other", "node-gone") to 2,
+                FailoverNode("group", "node-b") to 1,
+            ),
+        )
+
+        val transition = failure(state, nowMillis = 0L)
+
+        assertNull(transition.state.failureStreaks[FailoverNode("group", "node-gone")])
+        assertEquals(2, transition.state.failureStreaks[FailoverNode("other", "node-gone")])
+        assertEquals(1, transition.state.failureStreaks[FailoverNode("group", "node-b")])
+    }
+
+    @Test
+    fun forwardClockJumpKeepsCooldownAndReanchors() {
+        val state = NodeFailoverState(
+            failureStreaks = mapOf(FailoverNode("group", "node-a") to 2),
+            lastSwitchAt = mapOf("group" to 1_000L),
+        )
+
+        val jumped = failure(state, nowMillis = 1_000L + 60_000L * 10)
+        val decision = jumped.decision as NodeFailoverDecision.NoSwitch
+        assertEquals(60_000L, decision.cooldownRemainingMillis)
+        assertEquals(1_000L + 60_000L * 10, jumped.state.lastSwitchAt.getValue("group"))
+
+        val allowed = failure(jumped.state, nowMillis = 1_000L + 60_000L * 11)
+        assertTrue(allowed.decision is NodeFailoverDecision.Switch)
+    }
+
+    @Test
+    fun backwardClockJumpDoesNotBlockFailoverForever() {
+        val state = NodeFailoverState(
+            failureStreaks = mapOf(FailoverNode("group", "node-a") to 2),
+            lastSwitchAt = mapOf("group" to 500_000L),
+        )
+
+        val rolledBack = failure(state, nowMillis = 1_000L)
+        assertTrue(rolledBack.decision is NodeFailoverDecision.NoSwitch)
+        assertEquals(1_000L, rolledBack.state.lastSwitchAt.getValue("group"))
+
+        val allowed = failure(rolledBack.state, nowMillis = 61_000L)
+        assertTrue(allowed.decision is NodeFailoverDecision.Switch)
     }
 
     private fun failure(state: NodeFailoverState, nowMillis: Long): NodeFailoverTransition {

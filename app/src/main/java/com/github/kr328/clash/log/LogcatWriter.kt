@@ -26,7 +26,7 @@ class LogcatWriter(context: Context) : AutoCloseable {
     }
 
     fun appendMessage(message: LogMessage) {
-        val boundedMessage = message.message.take(MAX_MESSAGE_CHARS)
+        val boundedMessage = escape(message.message.take(MAX_MESSAGE_CHARS))
         val line = FORMAT.format(message.time.time, message.level.name, boundedMessage) + '\n'
         val lineBytes = line.toByteArray(StandardCharsets.UTF_8).size.toLong()
 
@@ -91,6 +91,22 @@ class LogcatWriter(context: Context) : AutoCloseable {
     companion object {
         private const val FORMAT = "%d:%s:%s"
         private val LOG_FILE = Regex("clash-\\d+\\.log")
+
+        // A record must stay on one line, or multi line kernel output is read back as extra records.
+        internal fun escape(message: String): String {
+            if (message.none { it == '\\' || it == '\n' || it == '\r' }) return message
+
+            return buildString(message.length + 16) {
+                message.forEach {
+                    when (it) {
+                        '\\' -> append("\\\\")
+                        '\n' -> append("\\n")
+                        '\r' -> append("\\r")
+                        else -> append(it)
+                    }
+                }
+            }
+        }
 
         const val MAX_FILE_BYTES = 8L * 1024 * 1024
         const val TOTAL_QUOTA_BYTES = 32L * 1024 * 1024

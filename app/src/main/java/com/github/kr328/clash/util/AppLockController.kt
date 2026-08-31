@@ -5,6 +5,7 @@ import androidx.biometric.BiometricManager.Authenticators
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.store.UiStore
 import kotlin.coroutines.resume
@@ -47,7 +48,8 @@ object AppLockController {
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    if (cont.isActive) cont.resume(false)
+                    if (!cont.isActive) return
+                    cont.resume(resolveError(activity, uiStore, "$errorCode $errString"))
                 }
 
                 override fun onAuthenticationFailed() {
@@ -69,8 +71,33 @@ object AppLockController {
         runCatching {
             prompt.authenticate(info)
         }.onFailure {
-            if (cont.isActive) cont.resume(false)
+            if (cont.isActive) cont.resume(resolveError(activity, uiStore, "$it"))
         }
+    }
+
+    /**
+     * Decide whether a prompt error means deny or means the gate is unsatisfiable.
+     *
+     * Callers finish() the Activity on false, so answering false to *every* error code bricks the
+     * app when the device has no enrolled biometric and no device credential: there is then no way
+     * to ever pass the gate and the only recovery is clearing app data. A gate that cannot be
+     * satisfied protects nothing, so turn it off and let the user in instead.
+     */
+    private fun resolveError(
+        activity: FragmentActivity,
+        uiStore: UiStore,
+        cause: String,
+    ): Boolean {
+        if (canAuthenticate(activity)) {
+            return false
+        }
+
+        Log.w("App lock unsatisfiable on this device, disabling it: $cause")
+
+        uiStore.appLockEnabled = false
+        uiStore.lastUnlockedAt = System.currentTimeMillis()
+
+        return true
     }
 
     fun markUnlocked(uiStore: UiStore, now: Long = System.currentTimeMillis()) {

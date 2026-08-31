@@ -23,6 +23,7 @@ import com.github.kr328.clash.service.util.sendProfileUpdateCompleted
 import com.github.kr328.clash.service.util.sendProfileUpdateFailed
 import kotlinx.coroutines.*
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class ProfileWorker : BaseService() {
@@ -101,6 +102,8 @@ class ProfileWorker : BaseService() {
     private suspend fun run(uuid: UUID) {
         val imported = ImportedDao().queryByUUID(uuid) ?: return
 
+        var succeeded = false
+
         try {
             processing(imported.name) {
                 ProfileProcessor.update(this, imported.uuid, null)
@@ -108,13 +111,36 @@ class ProfileWorker : BaseService() {
 
             completed(imported.uuid, imported.name)
 
-            ProfileReceiver.scheduleNext(this, imported)
+            succeeded = true
 
             runCatching {
                 SubscriptionExpiryNotifier.checkProfile(this, imported.uuid)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             failed(imported.uuid, imported.name, e.message ?: "Unknown")
+        } finally {
+            withContext(NonCancellable) {
+                // Rescheduling only on success would stop this subscription's automatic
+                // updates forever after a single transient failure, without telling anyone.
+                if (succeeded) {
+                    retries.remove(uuid)
+
+                    ProfileReceiver.scheduleNext(service, imported)
+                } else {
+                    val attempt = retries.merge(uuid, 1) { a, b -> a + b } ?: 1
+                    val minutes = RETRY_BACKOFF_MINUTES[
+                        (attempt - 1).coerceAtMost(RETRY_BACKOFF_MINUTES.lastIndex)
+                    ]
+
+                    ProfileReceiver.scheduleRetry(
+                        service,
+                        imported,
+                        TimeUnit.MINUTES.toMillis(minutes)
+                    )
+                }
+            }
         }
     }
 
@@ -224,6 +250,12 @@ class ProfileWorker : BaseService() {
         private const val SERVICE_CHANNEL = "profile_service_channel"
         private const val STATUS_CHANNEL = "profile_status_channel"
         private const val RESULT_CHANNEL = "profile_result_channel"
+
+        private val RETRY_BACKOFF_MINUTES = longArrayOf(1, 5, 15, 60)
+
+        // Consecutive failures per profile; only meaningful while :background stays alive,
+        // after which the backoff restarts from the first step.
+        private val retries = ConcurrentHashMap<UUID, Int>()
     }
 
     override fun onBind(intent: Intent?): IBinder {

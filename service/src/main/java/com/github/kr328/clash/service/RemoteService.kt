@@ -26,8 +26,9 @@ class RemoteService : BaseService(), IRemoteService {
     }
 
     override fun onDestroy() {
-        // Cancel managers first so their work is not restarted during service teardown.
-        // Do not join on the main thread — cancellation is cooperative.
+        // Cancel managers first so their work is not restarted during service teardown. Both
+        // joins are time-bounded; releasing their state while children still run would let a
+        // restart observe a half-torn-down runtime.
         clash?.cancelAndJoinBlocking()
         profile?.cancelAndJoinBlocking()
 

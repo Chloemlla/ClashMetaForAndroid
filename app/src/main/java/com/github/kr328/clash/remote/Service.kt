@@ -39,8 +39,24 @@ class Service(private val context: Application, val crashed: () -> Unit) {
 
     fun bind() {
         try {
-            context.bindService(RemoteService::class.intent, connection, Context.BIND_AUTO_CREATE)
+            // bindService reports failure by returning false, not by throwing. Ignoring it left
+            // Resource<IRemoteService> empty forever and every remote call awaiting a binder
+            // that will never arrive.
+            if (!context.bindService(
+                    RemoteService::class.intent,
+                    connection,
+                    Context.BIND_AUTO_CREATE
+                )
+            ) {
+                Log.w("Bind RemoteService rejected")
+
+                unbind()
+
+                crashed()
+            }
         } catch (e: Exception) {
+            Log.w("Bind RemoteService: $e", e)
+
             unbind()
 
             crashed()

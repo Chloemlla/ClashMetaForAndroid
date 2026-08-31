@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
 import androidx.recyclerview.widget.RecyclerView
+import com.github.kr328.clash.common.constants.Adblock
 import com.github.kr328.clash.core.model.AdblockHit
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.view.ActionLabel
@@ -39,7 +40,7 @@ class AdblockHitAdapter(
         val time = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
             .format(Date(hit.time))
         val source = when (hit.source) {
-            "cfm-adblock" -> context.getString(R.string.adblock_source_cfm)
+            Adblock.PROVIDER_NAME -> context.getString(R.string.adblock_source_cfm)
             "baidu" -> context.getString(R.string.adblock_source_baidu)
             else -> hit.source
         }

@@ -186,9 +186,11 @@ private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabas
                 }
             }
 
-            legacyFile.delete()
-
             PendingDao().insert(pending)
+
+            // Drop the source only once the new row is durable. migrationFromLegacy keeps the
+            // legacy database for retry when anything throws, and that retry needs this file.
+            legacyFile.delete()
 
             context.sendProfileChanged(pending.uuid)
 

@@ -86,8 +86,8 @@ class AutomationSettingsAdapter(private val context: Context) : AutomationSettin
         context.sendAutomationChanged()
     }
 
-    private inner class SceneSettingAdapter(private val fallback: Scene) : SceneSetting {
-        override val id: String = fallback.id
+    private inner class SceneSettingAdapter(private var snapshot: Scene) : SceneSetting {
+        override val id: String = snapshot.id
 
         override val name: String
             get() = when (id) {
@@ -167,12 +167,14 @@ class AutomationSettingsAdapter(private val context: Context) : AutomationSettin
                 copy(trigger = trigger.copy(ssid = value?.trim()?.takeIf { it.isNotEmpty() }))
             }
 
-        private fun current(): Scene {
-            return sceneStore.scenes.firstOrNull { it.id == id } ?: fallback
-        }
+        // Serving the snapshot keeps building the settings screen at one store read per scene.
+        private fun current(): Scene = snapshot
 
         private fun update(transform: Scene.() -> Scene) {
-            sceneStore.update(current().transform())
+            snapshot = synchronized(sceneStore) {
+                val latest = sceneStore.scenes.firstOrNull { it.id == id } ?: snapshot
+                latest.transform().also(sceneStore::update)
+            }
             context.sendAutomationChanged()
         }
     }

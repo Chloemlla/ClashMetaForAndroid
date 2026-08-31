@@ -2,6 +2,7 @@ package com.github.kr328.clash.widget
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -17,54 +18,66 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.design.R as DesignR
 import com.github.kr328.clash.remote.StatusClient
 import com.github.kr328.clash.service.R as ServiceR
-import com.github.kr328.clash.service.store.WidgetStateStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Run a widget refresh off the main thread, holding the broadcast alive until it finishes.
+ *
+ * [WidgetUiBinder.buildModel] queries StatusProvider, which may cold-start the `:background`
+ * process. Doing that inline in `onReceive` / `onUpdate` blocks the main thread for the whole cold
+ * start against a 10 s receiver budget.
+ */
+internal fun BroadcastReceiver.runWidgetUpdateAsync(block: () -> Unit) {
+    val pending = goAsync()
+
+    WidgetUiBinder.scope.launch {
+        try {
+            block()
+        } finally {
+            pending.finish()
+        }
+    }
+}
 
 /**
  * Builds [WidgetUiModel] and binds RemoteViews for status / control widgets.
  *
- * Data path: StatusProvider (cross-process) first; best-effort [WidgetStateStore]
- * when same process; missing rates show "—".
+ * StatusProvider is the only read channel: the widget code runs in the UI process while the
+ * live state lives in `:background`, so there is nothing in-process to fall back to.
+ * Missing rates show "—".
  */
 object WidgetUiBinder {
-    private val lastModels = mutableMapOf<Int, WidgetUiModel>()
+    // Updates run on a background dispatcher (see runWidgetUpdateAsync) and several receivers can
+    // land at once, so this cannot be a plain map.
+    private val lastModels = ConcurrentHashMap<Int, WidgetUiModel>()
+
+    internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun buildModel(context: Context): WidgetUiModel {
         val snapshot = StatusClient(context).widgetState()
-        val local = WidgetStateStore.current()
 
-        val running = snapshot?.running ?: local?.running ?: false
-        val profileRaw = snapshot?.profileName ?: local?.profileName
+        val running = snapshot?.running ?: false
+        val profileRaw = snapshot?.profileName
         val profileName = if (!profileRaw.isNullOrBlank()) {
             WidgetFormat.truncateProfile(profileRaw)
         } else {
             context.getString(ServiceR.string.profile_not_selected)
         }
 
-        val mode = snapshot?.mode?.takeIf { it.isNotBlank() }
-            ?: local?.mode?.takeIf { it.isNotBlank() }
-            ?: "—"
+        val mode = snapshot?.mode?.takeIf { it.isNotBlank() } ?: "—"
 
         val selectedNodeRaw = snapshot?.selectedNode?.takeIf { it.isNotBlank() }
-            ?: local?.selectedNode?.takeIf { it.isNotBlank() }
-        val selectedNode = if (selectedNodeRaw == null) {
-            "—"
-        } else {
-            WidgetFormat.truncateNode(selectedNodeRaw)
-        }
+        val selectedNode = selectedNodeRaw?.let(WidgetFormat::truncateNode) ?: "—"
 
-        val hasDetail = snapshot?.hasDetail == true || local != null
-        val up = when {
-            snapshot?.hasDetail == true -> snapshot.upRateBytesPerSec
-            local != null -> local.upRateBytesPerSec
-            else -> null
-        }
-        val down = when {
-            snapshot?.hasDetail == true -> snapshot.downRateBytesPerSec
-            local != null -> local.downRateBytesPerSec
-            else -> null
-        }
-        val hasRates = hasDetail && up != null && down != null
-        val ratesText = if (hasRates && up != null && down != null) {
+        val hasDetail = snapshot?.hasDetail == true
+        val up = if (hasDetail) snapshot?.upRateBytesPerSec else null
+        val down = if (hasDetail) snapshot?.downRateBytesPerSec else null
+        val hasRates = up != null && down != null
+        val ratesText = if (up != null && down != null) {
             WidgetFormat.ratesLine(up, down)
         } else {
             "—"
@@ -96,11 +109,13 @@ object WidgetUiBinder {
         if (appWidgetIds.isEmpty()) return
         val model = buildModel(context)
         for (id in appWidgetIds) {
-            if (!force && model.sameAs(lastModels[id])) continue
-            lastModels[id] = model
+            if (!force && model == lastModels[id]) continue
             val views = RemoteViews(context.packageName, layoutId)
             bind(context, views, model, layoutId)
             manager.updateAppWidget(id, views)
+            // Recorded only after the panel actually took the update: with updatePeriodMillis at
+            // 30 minutes, marking a failed push as delivered pins stale state for half an hour.
+            lastModels[id] = model
         }
     }
 

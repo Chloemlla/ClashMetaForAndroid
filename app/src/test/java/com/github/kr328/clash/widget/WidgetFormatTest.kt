@@ -1,6 +1,7 @@
 package com.github.kr328.clash.widget
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class WidgetFormatTest {
@@ -32,7 +33,7 @@ class WidgetFormatTest {
     }
 
     @Test
-    fun sameAs_matchesContent() {
+    fun model_equalityDrivesRedrawSkip() {
         val a = WidgetUiModel(
             running = true,
             profileName = "p",
@@ -41,10 +42,10 @@ class WidgetFormatTest {
             ratesText = "↑1K/s  ↓2K/s",
             hasRates = true,
         )
-        val b = a.copy()
-        val c = a.copy(running = false)
-        assertEquals(true, a.sameAs(b))
-        assertEquals(false, a.sameAs(c))
-        assertEquals(false, a.sameAs(null))
+
+        assertEquals(a, a.copy())
+        assertNotEquals(a, a.copy(running = false))
+        assertNotEquals(a, a.copy(selectedNode = "other"))
+        assertNotEquals(a, a.copy(mode = "Global"))
     }
 }

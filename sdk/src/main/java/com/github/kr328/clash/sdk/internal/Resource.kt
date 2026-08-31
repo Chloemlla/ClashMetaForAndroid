@@ -1,6 +1,8 @@
 package com.github.kr328.clash.sdk.internal
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 internal class Resource<T> {
@@ -11,7 +13,11 @@ internal class Resource<T> {
     private val pending: MutableSet<Callback<T>> = mutableSetOf()
     private var value: T? = null
 
-    suspend fun get(): T {
+    // set(null) intentionally does not wake waiters, so without a deadline a waiter parked while
+    // the service is down never resumes. Embedding hosts must not be wedged by our bind failure.
+    suspend fun get(): T = withTimeout(AWAIT_TIMEOUT) { await() }
+
+    private suspend fun await(): T {
         return suspendCancellableCoroutine { ctx ->
             val callback = object : Callback<T> {
                 override fun accept(value: T) {
@@ -64,5 +70,9 @@ internal class Resource<T> {
     @Synchronized
     private fun cancel(callback: Callback<T>) {
         pending.remove(callback)
+    }
+
+    companion object {
+        private val AWAIT_TIMEOUT = TimeUnit.SECONDS.toMillis(15)
     }
 }

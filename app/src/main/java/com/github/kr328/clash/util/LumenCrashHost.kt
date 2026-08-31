@@ -39,6 +39,19 @@ fun Activity.presentPendingLumenCrashReportIfNeeded(): Boolean {
 }
 
 /**
+ * Whether a crash report is still waiting to be presented.
+ *
+ * Callers that returned early from onCreate use this to tell "crash UI still owns the screen"
+ * apart from "report consumed, safe to rebuild myself". Fail-soft like the presenter above.
+ */
+fun isLumenCrashReportPending(): Boolean {
+    val installed = runCatching { LumenCrash.isInstalled() }.getOrDefault(false)
+    if (!installed) return false
+
+    return runCatching { LumenCrash.loadPendingReport() }.getOrNull() != null
+}
+
+/**
  * Best-effort host hook after a crash report is persisted by the SDK.
  * Keeps upload/telemetry out of the SDK; currently logs + breadcrumb only.
  */

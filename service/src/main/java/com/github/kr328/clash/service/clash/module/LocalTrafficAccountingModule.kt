@@ -2,10 +2,12 @@ package com.github.kr328.clash.service.clash.module
 
 import android.app.Service
 import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.store.LocalSubscriptionTrafficStore
 import com.github.kr328.clash.service.store.ServiceStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
@@ -60,9 +62,17 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
     }
 
     private fun captureBaseline() {
-        val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
-        lastUploadBytes = upload
-        lastDownloadBytes = download
+        try {
+            val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
+            lastUploadBytes = upload
+            lastDownloadBytes = download
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // Re-anchor on a later flush instead of billing against a stale baseline.
+            baselineDirty = true
+            Log.w("LocalTrafficAccountingModule: baseline capture failed: ${e.message}", e)
+        }
     }
 
     private fun trackProfile(uuid: UUID?) {
@@ -70,11 +80,22 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         if (uuid != null) {
             serviceStore.getLocalSubscriptionTraffic(uuid)
         }
-        captureBaseline()
         baselineDirty = false
+        captureBaseline()
     }
 
     private fun flushDelta() {
+        try {
+            accumulateDelta()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // Baseline is left untouched, so the next tick retries the same delta.
+            Log.w("LocalTrafficAccountingModule: flush failed: ${e.message}", e)
+        }
+    }
+
+    private fun accumulateDelta() {
         val uuid = trackedProfile ?: return
         val useLocalTraffic = serviceStore.getLocalSubscriptionTrafficIfPresent(uuid)
         if (useLocalTraffic != true) {
@@ -85,8 +106,8 @@ class LocalTrafficAccountingModule(service: Service) : Module<Unit>(service) {
         }
         if (baselineDirty) {
             // Mode was off; re-anchor to the current totals before computing deltas.
-            captureBaseline()
             baselineDirty = false
+            captureBaseline()
         }
         val (upload, download) = splitTrafficBytes(Clash.queryTrafficTotal())
 

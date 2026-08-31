@@ -29,4 +29,22 @@ class LogcatParserTest {
     fun commentsAreIgnored() {
         assertNull(parseLogLine("# capture", Date(1)).message)
     }
+
+    @Test
+    fun multiLineMessage_survivesWriteThenParse() {
+        val original = "panic: bad config\n\tat proxy.go:42\r\nliteral backslash \\n stays"
+
+        val parsed = parseLogLine("7:Error:${LogcatWriter.escape(original)}", Date(0))
+
+        assertEquals(LogMessage.Level.Error, parsed.message?.level)
+        assertEquals(original, parsed.message?.message)
+    }
+
+    @Test
+    fun escapedRecord_staysOnOneLine() {
+        assertEquals(
+            "a\\nb",
+            LogcatWriter.escape("a\nb"),
+        )
+    }
 }

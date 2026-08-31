@@ -77,10 +77,15 @@ fun queryIgnoringBatteryOptimizations(context: Context, packageName: String): Bo
     return runCatching { powerManager.isIgnoringBatteryOptimizations(packageName) }.getOrNull()
 }
 
+/**
+ * [batteryOptimizationIgnored] is passed in rather than resolved here: it costs a Binder round-trip
+ * per package, and callers that map the same app list repeatedly need to cache it.
+ */
 fun PackageInfo.toAppInfo(
     context: Context,
     browserPackages: Set<String> = emptySet(),
     partnerPackages: Set<String> = emptySet(),
+    batteryOptimizationIgnored: Boolean?,
 ): AppInfo {
     val pm = context.packageManager
 
@@ -91,6 +96,6 @@ fun PackageInfo.toAppInfo(
         updateDate = lastUpdateTime,
         isPartner = packageName in partnerPackages,
         isBrowser = packageName in browserPackages || isKnownBrowserPackage(packageName),
-        batteryOptimizationIgnored = queryIgnoringBatteryOptimizations(context, packageName),
+        batteryOptimizationIgnored = batteryOptimizationIgnored,
     )
 }

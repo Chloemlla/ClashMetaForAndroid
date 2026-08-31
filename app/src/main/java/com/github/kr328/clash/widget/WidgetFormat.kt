@@ -11,7 +11,12 @@ object WidgetFormat {
         if (maxChars <= 0) return ""
         if (text.length <= maxChars) return text
         if (maxChars == 1) return "…"
-        return text.take(maxChars - 1) + "…"
+
+        var kept = maxChars - 1
+        // Cutting between a surrogate pair renders flag emoji node names as tofu.
+        if (Character.isHighSurrogate(text[kept - 1])) kept -= 1
+
+        return text.take(kept) + "…"
     }
 
     fun truncateProfile(text: String, maxChars: Int = DEFAULT_MAX_PROFILE): String =

@@ -13,6 +13,7 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.common.util.setUUID
+import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.model.Profile
@@ -20,6 +21,7 @@ import com.github.kr328.clash.service.util.importedDir
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.TimeUnit
 
 class ProfileReceiver : BroadcastReceiver() {
@@ -33,13 +35,31 @@ class ProfileReceiver : BroadcastReceiver() {
                     val service = Intent(Intents.ACTION_PROFILE_SCHEDULE_UPDATES)
                         .setComponent(ProfileWorker::class.componentName)
 
-                    context.startForegroundServiceCompat(service)
+                    if (!context.startForegroundServiceCompat(service)) {
+                        Log.w("Start profile worker for rescheduling rejected")
+                    }
                 }
             }
             Intents.ACTION_PROFILE_REQUEST_UPDATE -> {
                 val redirect = intent.setComponent(ProfileWorker::class.componentName)
+                val pending = goAsync()
 
-                context.startForegroundServiceCompat(redirect)
+                Global.launch {
+                    try {
+                        withTimeoutOrNull(GO_ASYNC_TIMEOUT) {
+                            if (!context.startForegroundServiceCompat(redirect)) {
+                                // Android 12+ refuses a background foreground-service start; put
+                                // the update back on the alarm queue instead of dropping it.
+                                Log.w("Start profile worker rejected, retry later")
+
+                                intent.uuid?.let { ImportedDao().queryByUUID(it) }
+                                    ?.also { scheduleRetry(context, it, START_RETRY_DELAY) }
+                            }
+                        }
+                    } finally {
+                        pending.finish()
+                    }
+                }
             }
         }
     }
@@ -47,6 +67,10 @@ class ProfileReceiver : BroadcastReceiver() {
     companion object {
         private val lock = Mutex()
         private var initialized: Boolean = false
+
+        private val GO_ASYNC_TIMEOUT = TimeUnit.SECONDS.toMillis(8)
+        private val START_RETRY_DELAY = TimeUnit.MINUTES.toMillis(15)
+        private val MINIMAL_INTERVAL = TimeUnit.MINUTES.toMillis(15)
 
         suspend fun rescheduleAll(context: Context) = lock.withLock {
             if (initialized)
@@ -80,7 +104,7 @@ class ProfileReceiver : BroadcastReceiver() {
 
             context.getSystemService<AlarmManager>()?.cancel(intent)
 
-            if (imported.interval < TimeUnit.MINUTES.toMillis(15))
+            if (imported.interval < MINIMAL_INTERVAL)
                 return
 
             val current = System.currentTimeMillis()
@@ -97,6 +121,21 @@ class ProfileReceiver : BroadcastReceiver() {
 
             context.getSystemService<AlarmManager>()
                 ?.set(AlarmManager.RTC, current + interval, intent)
+        }
+
+        fun scheduleRetry(context: Context, imported: Imported, delay: Long) {
+            val intent = pendingIntentOf(context, imported)
+
+            context.getSystemService<AlarmManager>()?.cancel(intent)
+
+            if (imported.interval < MINIMAL_INTERVAL)
+                return
+
+            // A retry must never be later than the subscription's own update interval.
+            val actual = delay.coerceAtMost(imported.interval)
+
+            context.getSystemService<AlarmManager>()
+                ?.set(AlarmManager.RTC, System.currentTimeMillis() + actual, intent)
         }
 
         private suspend fun reset() = lock.withLock {

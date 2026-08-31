@@ -20,8 +20,13 @@ class WidgetRefreshReceiver : BroadcastReceiver() {
             Intents.ACTION_PROFILE_LOADED,
             Intents.ACTION_SERVICE_RECREATED,
             WidgetStateStore.ACTION_WIDGET_STATE_CHANGED,
-            // Skip-if-unchanged: traffic ticks can fire often; only redraw when UI model differs.
-            -> WidgetUiBinder.updateAll(context.applicationContext, force = false)
+            -> {
+                val applicationContext = context.applicationContext
+                runWidgetUpdateAsync {
+                    // Skip-if-unchanged: traffic ticks fire often; only redraw when the model differs.
+                    WidgetUiBinder.updateAll(applicationContext, force = false)
+                }
+            }
         }
     }
 }

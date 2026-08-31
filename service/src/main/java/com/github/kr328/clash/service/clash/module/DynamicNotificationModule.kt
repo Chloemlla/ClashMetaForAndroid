@@ -8,13 +8,13 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.compat.getColorCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
+import com.github.kr328.clash.common.compat.startForegroundCompat
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.R
 import com.github.kr328.clash.service.StatusProvider
-import com.github.kr328.clash.service.util.notifyIfAllowed
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
@@ -63,7 +63,9 @@ class DynamicNotificationModule(service: Service) : Module<Unit>(service) {
             .applyClashLiveUpdate(shortCriticalText = snapshot.chipText)
             .build()
 
-        service.notifyIfAllowed(R.id.nf_clash_status, notification)
+        // Foreground-service notification: re-post via startForeground so updates still land
+        // when POST_NOTIFICATIONS is denied (notifyIfAllowed would silently drop them).
+        service.startForegroundCompat(R.id.nf_clash_status, notification)
     }
 
     override suspend fun run() = coroutineScope {

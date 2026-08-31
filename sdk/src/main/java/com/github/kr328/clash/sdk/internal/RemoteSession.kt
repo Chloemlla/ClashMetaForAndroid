@@ -40,8 +40,19 @@ internal class RemoteSession(
 
     fun bind() {
         try {
-            context.bindService(RemoteService::class.intent, connection, Context.BIND_AUTO_CREATE)
+            // bindService signals failure with a false return, not an exception.
+            if (!context.bindService(
+                    RemoteService::class.intent,
+                    connection,
+                    Context.BIND_AUTO_CREATE
+                )
+            ) {
+                Log.w("Bind RemoteService rejected")
+                unbind()
+                onCrashed()
+            }
         } catch (e: Exception) {
+            Log.w("Bind RemoteService: $e", e)
             unbind()
             onCrashed()
         }

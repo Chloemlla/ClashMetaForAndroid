@@ -4,31 +4,32 @@ import android.app.Service
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
+import com.github.kr328.clash.core.model.ConnectionSnapshot
+import com.github.kr328.clash.core.model.DnsRecord
+import com.github.kr328.clash.core.model.HttpRecord
 import com.github.kr328.clash.service.util.CaptureStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * ADB-triggered traffic capture module.
+ * Traffic capture module.
  *
- * Listens for [Intents.ACTION_TRAFFIC_CAPTURE] broadcasts (sent via ADB) and
- * manages the [CaptureStore] lifecycle. Subscribes to DNS, connection, and HTTP
- * feeds while capture is active.
- *
- * ADB usage:
- *   adb shell am broadcast -a <pkg>.intent.action.TRAFFIC_CAPTURE \
- *       --es capture_action start_capture \
- *       --ei capture_duration 60
- *   adb shell am broadcast -a <pkg>.intent.action.TRAFFIC_CAPTURE \
- *       --es capture_action stop_capture
+ * Listens for [Intents.ACTION_TRAFFIC_CAPTURE] self-broadcasts and manages the
+ * [CaptureStore] lifecycle. Subscribes to DNS, connection, and HTTP feeds while
+ * capture is active.
  */
 class CaptureModule(service: Service) : Module<Unit>(service) {
 
     override suspend fun run() = coroutineScope {
-        val broadcasts = receiveBroadcast(requireSelf = false) {
+        val broadcasts = receiveBroadcast {
             addAction(Intents.ACTION_TRAFFIC_CAPTURE)
         }
+
+        var captureJob: Job? = null
 
         try {
             for (intent in broadcasts) {
@@ -46,7 +47,7 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
                         )
                         CaptureStore.start(service, durationMs = duration * 1000L)
                         Log.i("CaptureModule: capture started (${duration}s)")
-                        runCapture()
+                        captureJob = launch { runCapture() }
                     }
                     "stop_capture" -> {
                         if (!CaptureStore.isActive) {
@@ -54,6 +55,8 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
                             continue
                         }
                         CaptureStore.stop()
+                        captureJob?.cancelAndJoin()
+                        captureJob = null
                         Log.i("CaptureModule: capture stopped")
                     }
                 }
@@ -63,6 +66,7 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
             if (CaptureStore.isActive) {
                 CaptureStore.stop()
             }
+            captureJob?.cancel()
         }
     }
 
@@ -83,8 +87,10 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
         launch {
             try {
                 for (record in dnsChannel) {
-                    CaptureStore.enqueue("dns", record)
+                    CaptureStore.enqueue("dns", DnsRecord.serializer(), record)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("CaptureModule: DNS channel error: ${e.message}", e)
             }
@@ -94,8 +100,10 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
         launch {
             try {
                 for (snapshot in connectionChannel) {
-                    CaptureStore.enqueue("connection", snapshot)
+                    CaptureStore.enqueue("connection", ConnectionSnapshot.serializer(), snapshot)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("CaptureModule: connection channel error: ${e.message}", e)
             }
@@ -105,8 +113,10 @@ class CaptureModule(service: Service) : Module<Unit>(service) {
         launch {
             try {
                 for (record in httpChannel) {
-                    CaptureStore.enqueue("http", record)
+                    CaptureStore.enqueue("http", HttpRecord.serializer(), record)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("CaptureModule: HTTP channel error: ${e.message}", e)
             }

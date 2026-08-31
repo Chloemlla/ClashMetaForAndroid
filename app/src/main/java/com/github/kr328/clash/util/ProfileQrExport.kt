@@ -80,31 +80,23 @@ object ProfileQrExport {
                 .setTitle(R.string.export_qr)
                 .setView(view)
                 .setPositiveButton(R.string.export_qr_share_image) { _, _ ->
-                    currentBitmap?.let { shareBitmap(context, design, profile.name, it) }
+                    currentBitmap?.let { bitmap ->
+                        design.launch { shareBitmap(context, design, profile.name, bitmap) }
+                    }
                 }
                 .setNegativeButton(R.string.close, null)
                 .show()
         }
     }
 
-    private fun shareBitmap(
+    private suspend fun shareBitmap(
         context: Context,
         design: Design<*>,
         profileName: String,
         bitmap: Bitmap,
     ) {
         try {
-            val cacheDir = File(context.cacheDir, "profile-qr").apply { mkdirs() }
-            val safeName = profileName
-                .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-                .ifBlank { "profile" }
-                .take(40)
-            val file = File(cacheDir, "qr-$safeName-${System.currentTimeMillis()}.png")
-            FileOutputStream(file).use { out ->
-                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
-                    throw IllegalStateException(context.getString(R.string.export_qr_failed))
-                }
-            }
+            val file = withContext(Dispatchers.IO) { writeQrImage(context, profileName, bitmap) }
 
             val uri: Uri = FileProvider.getUriForFile(
                 context,
@@ -122,10 +114,32 @@ object ProfileQrExport {
             context.startActivity(
                 Intent.createChooser(send, context.getString(R.string.share))
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            design.launch {
-                design.showExceptionToast(e)
+            design.showExceptionToast(e)
+        }
+    }
+
+    private fun writeQrImage(context: Context, profileName: String, bitmap: Bitmap): File {
+        val cacheDir = File(context.cacheDir, "profile-qr").apply { mkdirs() }
+
+        // Every exported QR encodes a subscription URL. Drop earlier exports so the cache does not
+        // quietly accumulate credentials for the lifetime of the install.
+        cacheDir.listFiles()?.forEach { it.delete() }
+
+        val safeName = profileName
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .ifBlank { "profile" }
+            .take(40)
+        val file = File(cacheDir, "qr-$safeName-${System.currentTimeMillis()}.png")
+
+        FileOutputStream(file).use { out ->
+            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+                throw IllegalStateException(context.getString(R.string.export_qr_failed))
             }
         }
+
+        return file
     }
 }

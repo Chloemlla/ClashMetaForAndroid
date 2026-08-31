@@ -12,13 +12,15 @@ class ClashStatusWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        WidgetUiBinder.updateIds(
-            context,
-            appWidgetManager,
-            appWidgetIds,
-            R.layout.widget_clash_status,
-            force = true,
-        )
+        runWidgetUpdateAsync {
+            WidgetUiBinder.updateIds(
+                context,
+                appWidgetManager,
+                appWidgetIds,
+                R.layout.widget_clash_status,
+                force = true,
+            )
+        }
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {

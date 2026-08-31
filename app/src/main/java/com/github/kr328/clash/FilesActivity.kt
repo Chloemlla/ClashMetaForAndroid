@@ -10,10 +10,12 @@ import com.github.kr328.clash.design.FilesDesign
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.remote.FilesClient
 import com.github.kr328.clash.service.model.Profile
-import com.github.kr328.clash.util.fileName
+import com.github.kr328.clash.util.queryFileName
 import com.github.kr328.clash.util.withProfile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withContext
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -86,7 +88,10 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                                     val file = it.file
 
                                     if (file == null) {
-                                        val name = design.requestFileName(uri.fileName ?: "File")
+                                        val suggested = withContext(Dispatchers.IO) {
+                                            uri.queryFileName(contentResolver)
+                                        }
+                                        val name = design.requestFileName(suggested ?: "File")
 
                                         client.importDocument(stack.last(), uri, name)
                                     } else if (fileActions.isConfiguration(file)) {

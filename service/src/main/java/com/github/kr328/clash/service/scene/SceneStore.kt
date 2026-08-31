@@ -78,6 +78,9 @@ class SceneStore(context: Context) {
         val JSON = Json {
             ignoreUnknownKeys = true
             encodeDefaults = true
+            // An explicit null on a non-nullable field would otherwise throw and drop the whole
+            // scene list back to templates, losing every user-authored scene at once.
+            coerceInputValues = true
         }
     }
 }

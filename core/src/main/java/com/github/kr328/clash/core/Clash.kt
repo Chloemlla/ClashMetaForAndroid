@@ -4,9 +4,12 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.core.model.*
 import com.github.kr328.clash.core.util.parseInetSocketAddress
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -24,6 +27,12 @@ object Clash {
     private val ConfigurationOverrideJson = Json {
         ignoreUnknownKeys = true
         encodeDefaults = false
+    }
+
+    // Decode-only: event payloads must survive fields the running core adds or renames.
+    private val EventJson = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
     }
 
     fun reset() {
@@ -239,14 +248,17 @@ object Clash {
     }
 
     fun queryOverride(slot: OverrideSlot): ConfigurationOverride {
+        val raw = Bridge.nativeReadOverride(slot.ordinal)
+
         return try {
-            ConfigurationOverrideJson.decodeFromString(
-                ConfigurationOverride.serializer(),
-                Bridge.nativeReadOverride(slot.ordinal)
-            )
-        } catch (e: Exception) {
-            Log.w("queryOverride: decode failed for slot ${slot.name}, returning empty override: ${e.message}")
-            ConfigurationOverride()
+            ConfigurationOverrideJson.decodeFromString(ConfigurationOverride.serializer(), raw)
+        } catch (e: SerializationException) {
+            // Callers edit what they read and write it back with patchOverride, so handing back a
+            // blank override would erase every stored one. IllegalStateException is in the set
+            // Binder can marshal back to the caller process.
+            Log.w("queryOverride: decode failed for slot ${slot.name}: ${e.message}")
+
+            throw IllegalStateException("Malformed override in slot ${slot.name}", e)
         }
     }
 
@@ -282,10 +294,10 @@ object Clash {
         val channel = Channel<LogMessage>(32)
         val token = Bridge.nativeSubscribeLogcat(object : LogcatInterface {
             override fun received(jsonPayload: String): Boolean {
+                val message = decodeEvent("subscribeLogcat", LogMessage.serializer(), jsonPayload)
+                    ?: return true
                 // false stops the native subscriber immediately (no exception abuse).
-                return channel.trySend(
-                    Json.decodeFromString(LogMessage.serializer(), jsonPayload)
-                ).isSuccess
+                return channel.trySend(message).isSuccess
             }
         })
         channel.invokeOnClose {
@@ -311,9 +323,12 @@ object Clash {
         val token = Bridge.nativeSubscribeConnections(
             object : com.github.kr328.clash.core.bridge.ConnectionsInterface {
                 override fun received(jsonPayload: String): Boolean {
-                    return channel.trySend(
-                        Json.decodeFromString(ConnectionSnapshot.serializer(), jsonPayload)
-                    ).isSuccess
+                    val snapshot = decodeEvent(
+                        "subscribeConnections",
+                        ConnectionSnapshot.serializer(),
+                        jsonPayload,
+                    ) ?: return true
+                    return channel.trySend(snapshot).isSuccess
                 }
             },
             intervalMs,
@@ -332,9 +347,9 @@ object Clash {
         val channel = Channel<DnsRecord>(Channel.UNLIMITED)
         val token = Bridge.nativeSubscribeDns(object : DnsInterface {
             override fun received(jsonPayload: String): Boolean {
-                return channel.trySend(
-                    Json.decodeFromString(DnsRecord.serializer(), jsonPayload)
-                ).isSuccess
+                val record = decodeEvent("subscribeDns", DnsRecord.serializer(), jsonPayload)
+                    ?: return true
+                return channel.trySend(record).isSuccess
             }
         })
         channel.invokeOnClose {
@@ -351,9 +366,9 @@ object Clash {
         val channel = Channel<AdblockHit>(Channel.UNLIMITED)
         val token = Bridge.nativeSubscribeAdblock(object : AdblockInterface {
             override fun received(jsonPayload: String): Boolean {
-                return channel.trySend(
-                    Json.decodeFromString(AdblockHit.serializer(), jsonPayload)
-                ).isSuccess
+                val hit = decodeEvent("subscribeAdblock", AdblockHit.serializer(), jsonPayload)
+                    ?: return true
+                return channel.trySend(hit).isSuccess
             }
         })
         channel.invokeOnClose {
@@ -388,9 +403,9 @@ object Clash {
         val channel = Channel<HttpRecord>(Channel.UNLIMITED)
         val token = Bridge.nativeSubscribeHttp(object : HttpCaptureInterface {
             override fun received(jsonPayload: String): Boolean {
-                return channel.trySend(
-                    Json.decodeFromString(HttpRecord.serializer(), jsonPayload)
-                ).isSuccess
+                val record = decodeEvent("subscribeHttp", HttpRecord.serializer(), jsonPayload)
+                    ?: return true
+                return channel.trySend(record).isSuccess
             }
         })
         channel.invokeOnClose {
@@ -427,5 +442,21 @@ object Clash {
 
     private fun parseAgeKeyPair(value: String): AgeKeyPair {
         return Json.Default.decodeFromString(AgeKeyPair.serializer(), value)
+    }
+
+    private fun <T> decodeEvent(
+        source: String,
+        serializer: DeserializationStrategy<T>,
+        jsonPayload: String,
+    ): T? {
+        return try {
+            EventJson.decodeFromString(serializer, jsonPayload)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Runs on a native callback thread: an exception here would unwind through JNI.
+            Log.w("$source: dropped malformed event: ${e.message}")
+            null
+        }
     }
 }

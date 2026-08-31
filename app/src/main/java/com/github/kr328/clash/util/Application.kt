@@ -6,11 +6,14 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipFile
 
 object ApplicationObserver {
-    private val _createdActivities: MutableSet<Activity> = mutableSetOf()
-    private val _visibleActivities: MutableSet<Activity> = mutableSetOf()
+    // Written from the main-thread lifecycle callbacks but read from arbitrary threads
+    // (foreground checks, config-change fan-out), so the sets must publish safely.
+    private val _createdActivities: MutableSet<Activity> = ConcurrentHashMap.newKeySet()
+    private val _visibleActivities: MutableSet<Activity> = ConcurrentHashMap.newKeySet()
 
     private var visibleChanged: (Boolean) -> Unit = {}
 
@@ -39,11 +42,13 @@ object ApplicationObserver {
             appVisible = _visibleActivities.isNotEmpty()
         }
 
+        @Synchronized
         override fun onActivityStarted(activity: Activity) {
             _visibleActivities.add(activity)
             appVisible = true
         }
 
+        @Synchronized
         override fun onActivityStopped(activity: Activity) {
             _visibleActivities.remove(activity)
             appVisible = _visibleActivities.isNotEmpty()

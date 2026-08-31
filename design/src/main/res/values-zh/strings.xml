@@ -451,6 +451,7 @@
     <string name="shortcut_start_long">启动 Clash 服务</string>
     <string name="shortcut_stop_short">停止 Clash</string>
     <string name="shortcut_stop_long">停止 Clash 服务</string>
+    <string name="shortcut_disabled_icon_hidden">隐藏应用图标期间快捷方式已停用</string>
     <string name="delete_profile">删除配置</string>
     <string name="delete_profile_confirmation">确定删除配置“%1$s”吗？此操作无法撤销。</string>
     <string name="update_all_in_progress">正在更新全部配置</string>

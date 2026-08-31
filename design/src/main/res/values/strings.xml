@@ -557,6 +557,7 @@
     <string name="shortcut_start_long">Start Clash service</string>
     <string name="shortcut_stop_short">Stop Clash</string>
     <string name="shortcut_stop_long">Stop Clash service</string>
+    <string name="shortcut_disabled_icon_hidden">Shortcuts are disabled while the app icon is hidden</string>
     <string name="delete_profile">Delete profile</string>
     <string name="delete_profile_confirmation">Delete profile “%1$s”? This cannot be undone.</string>
     <string name="update_all_in_progress">Updating all profiles</string>

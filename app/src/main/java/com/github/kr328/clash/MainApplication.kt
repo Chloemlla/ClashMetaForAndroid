@@ -42,10 +42,11 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Initialize secure storage for sensitive fields (ageSecretKey).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            SecureStorage.init(this)
-        }
+        // Keystore provisioning can fail on OEM builds with a broken/locked-out AndroidKeyStore.
+        // Every other startup step here is fail-soft; a crash loop before onCreate finishes would
+        // brick the app, and SecureStorage has no read/write callers to break.
+        runCatching { SecureStorage.init(this) }
+            .onFailure { Log.w("Init secure storage: $it", it) }
 
         val processName = currentProcessName
 

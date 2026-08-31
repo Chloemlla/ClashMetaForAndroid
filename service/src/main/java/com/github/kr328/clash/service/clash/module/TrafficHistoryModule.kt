@@ -1,7 +1,9 @@
 package com.github.kr328.clash.service.clash.module
 
 import android.app.Service
+import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.os.SystemClock
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
@@ -32,8 +34,11 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
     private var lastUpTotal: Long = Long.MIN_VALUE
     private var lastDownTotal: Long = Long.MIN_VALUE
 
-    /** Last epoch ms at which memory usage was sampled (throttled; see [MEMORY_SAMPLE_INTERVAL_MS]). */
-    private var lastMemorySampleMs: Long = Long.MIN_VALUE
+    /** Last monotonic reading at which memory usage was sampled (throttled; see [MEMORY_SAMPLE_INTERVAL_MS]). */
+    private var lastMemorySampleElapsedMs: Long = Long.MIN_VALUE
+
+    private var lastBroadcastElapsedMs: Long = 0L
+    private var lastBroadcastState: WidgetState? = null
 
     override suspend fun run() = coroutineScope {
         // Process-local buffer may survive a prior runtime in the same process;
@@ -43,7 +48,9 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
         lastDownRate = Long.MIN_VALUE
         lastUpTotal = Long.MIN_VALUE
         lastDownTotal = Long.MIN_VALUE
-        lastMemorySampleMs = Long.MIN_VALUE
+        lastMemorySampleElapsedMs = Long.MIN_VALUE
+        lastBroadcastElapsedMs = 0L
+        lastBroadcastState = null
 
         val ticker = ticker(SAMPLE_INTERVAL_MS)
 
@@ -63,6 +70,8 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
 
     private fun sample(nowMs: Long) {
         try {
+            // Interval gates use the monotonic clock; epochMs stays wall-clock for display.
+            val elapsedMs = SystemClock.elapsedRealtime()
             val (upRate, downRate) = splitTrafficBytes(Clash.queryTrafficNow())
             val (upTotal, downTotal) = splitTrafficBytes(Clash.queryTrafficTotal())
 
@@ -86,6 +95,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                         upTotalBytes = upTotal,
                         downTotalBytes = downTotal,
                     ),
+                    elapsedMs = elapsedMs,
                 )
             }
 
@@ -102,26 +112,26 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                 }.getOrNull()
                 if (delays != null) {
                     for ((_, delay) in delays) {
-                            if (delay > 0) {
-                                aliveProxies++
-                                if (proxyDelay == 0L || delay < proxyDelay) {
-                                    proxyDelay = delay.toLong()
-                                }
+                        if (delay > 0) {
+                            aliveProxies++
+                            if (proxyDelay == 0L || delay < proxyDelay) {
+                                proxyDelay = delay.toLong()
                             }
                         }
                     }
                 }
+            }
 
             // Memory sampling is throttled: queryMemoryUsage() calls runtime.ReadMemStats,
             // which stop-the-worlds the Go proxy core. Sample at most every 30s.
             var memoryUsage = 0L
-            if (lastMemorySampleMs == Long.MIN_VALUE ||
-                nowMs - lastMemorySampleMs >= MEMORY_SAMPLE_INTERVAL_MS
+            if (lastMemorySampleElapsedMs == Long.MIN_VALUE ||
+                elapsedMs - lastMemorySampleElapsedMs >= MEMORY_SAMPLE_INTERVAL_MS
             ) {
                 memoryUsage = runCatching {
                     Clash.queryMemoryUsage()
                 }.getOrElse { 0L }
-                lastMemorySampleMs = nowMs
+                lastMemorySampleElapsedMs = elapsedMs
             } else {
                 memoryUsage = WidgetStateStore.current()?.memoryUsageBytes ?: 0L
             }
@@ -163,6 +173,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
                     downTotalBytes = previous?.downTotalBytes ?: 0L,
                     updatedAtEpochMs = System.currentTimeMillis(),
                 ),
+                force = true,
             )
         } catch (e: Exception) {
             Log.w("TrafficHistoryModule: stopped snapshot failed: ${e.message}", e)
@@ -172,12 +183,42 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
     /**
      * Store + notify same-app AppWidget observers when content actually changes.
      * Uses package-targeted self-broadcast (no third-party delivery).
+     *
+     * The broadcast wakes the main process out of its cached state, so rate-only churn is
+     * rate-limited to [BROADCAST_MIN_INTERVAL_MS] and skipped entirely with no widget placed.
      */
-    private fun publishWidgetState(state: WidgetState) {
+    private fun publishWidgetState(state: WidgetState, force: Boolean = false) {
         if (!WidgetStateStore.update(state)) {
             return
         }
+        if (!force && !shouldBroadcast(state)) {
+            return
+        }
+        if (!hasPlacedWidgets()) {
+            return
+        }
+        lastBroadcastElapsedMs = SystemClock.elapsedRealtime()
+        lastBroadcastState = state
         service.sendBroadcastSelf(Intent(WidgetStateStore.ACTION_WIDGET_STATE_CHANGED))
+    }
+
+    private fun shouldBroadcast(state: WidgetState): Boolean {
+        val previous = lastBroadcastState ?: return true
+        val contentChanged = state.running != previous.running ||
+            state.profileName != previous.profileName ||
+            state.mode != previous.mode ||
+            state.selectedNode != previous.selectedNode
+        if (contentChanged) {
+            return true
+        }
+        return SystemClock.elapsedRealtime() - lastBroadcastElapsedMs >= BROADCAST_MIN_INTERVAL_MS
+    }
+
+    private fun hasPlacedWidgets(): Boolean {
+        val manager = AppWidgetManager.getInstance(service) ?: return false
+        return manager.getInstalledProvidersForPackage(service.packageName, null).any {
+            manager.getAppWidgetIds(it.provider).isNotEmpty()
+        }
     }
 
     companion object {
@@ -186,5 +227,7 @@ class TrafficHistoryModule(service: Service) : Module<Unit>(service) {
         // queryMemoryUsage() triggers Go runtime.ReadMemStats (STW). Sample it
         // far less often than the 2s traffic cadence to avoid periodic proxy stalls.
         private val MEMORY_SAMPLE_INTERVAL_MS = TimeUnit.SECONDS.toMillis(30)
+
+        private val BROADCAST_MIN_INTERVAL_MS = TimeUnit.SECONDS.toMillis(5)
     }
 }
