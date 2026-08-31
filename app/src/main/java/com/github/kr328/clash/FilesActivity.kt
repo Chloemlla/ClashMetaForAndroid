@@ -21,11 +21,16 @@ import java.util.concurrent.TimeUnit
 
 class FilesActivity : BaseActivity<FilesDesign>() {
     override suspend fun main() {
+        // A-35: attach the skeleton before any cross-process call. If the profile query below
+        // fails or hangs, BaseActivity keeps this visible page and shows the error instead of a
+        // blank window (and the ActivityStart event just fetches nothing until we finish).
+        val design = FilesDesign(this)
+        setContentDesign(design)
+
         val uuid = intent.uuid ?: return finish()
         val profile = withProfile { queryByUUID(uuid) } ?: return finish()
         val root = uuid.toString()
 
-        val design = FilesDesign(this)
         val client = FilesClient(this)
         design.configurationEditable = profile.type == Profile.Type.File
         val fileActions = ProfileFileActions(
@@ -37,8 +42,6 @@ class FilesActivity : BaseActivity<FilesDesign>() {
             design = design,
         )
         val stack = Stack<String>()
-
-        setContentDesign(design)
 
         val ticker = ticker(TimeUnit.MINUTES.toMillis(1))
 

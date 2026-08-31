@@ -8,7 +8,6 @@ import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
 import com.github.kr328.clash.store.ServiceSettingsAdapter
 import com.github.kr328.clash.service.store.ServiceStore
-import com.github.kr328.clash.util.ApplicationObserver
 import com.github.kr328.clash.util.applyDynamicShortcuts
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
@@ -36,9 +35,12 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                     }
                 }
                 design.requests.onReceive {
-                    ApplicationObserver.createdActivities.forEach {
-                        it.recreate()
-                    }
+                    // B-83: a setting toggle used to recreate every activity in the back stack,
+                    // throwing away scroll positions and expanded states on the whole task. The
+                    // day/night theme change already fans out to all activities via
+                    // BaseActivity.onConfigurationChanged; here only this screen needs to re-read
+                    // its own settings.
+                    recreate()
                 }
             }
         }

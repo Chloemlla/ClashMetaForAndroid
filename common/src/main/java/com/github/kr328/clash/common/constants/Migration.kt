@@ -1,12 +1,26 @@
 package com.github.kr328.clash.common.constants
 
+import com.github.kr328.clash.common.util.packageName
+
 object Migration {
-    // Intentionally a fixed, non-${applicationId} permission name: the alpha and meta
-    // builds have different application IDs but must share ONE permission name so a
-    // same-signature sibling can be granted it. The signature protectionLevel plus the
-    // runtime checkSignatures() guard in MigrationProvider.enforceCaller are the actual
-    // trust controls; a hostile app pre-defining this name cannot pass the signature check.
-    const val PERMISSION = "com.github.metacubex.clash.permission.MIGRATE_DATA"
+    /**
+     * Signature-protected permission guarding the migration provider.
+     *
+     * Derived from the applicationId so a fork and upstream ClashMetaForAndroid never collide on
+     * the globally-unique custom permission name (the fixed upstream name causes
+     * `INSTALL_FAILED_DUPLICATE_PERMISSION` when both are installed side by side).
+     *
+     * The actual trust control is the runtime `checkSignatures()` guard in
+     * `MigrationProvider.enforceCaller`. The provider deliberately carries NO manifest-level
+     * `android:permission` attribute: with an applicationId-derived name, a meta build would
+     * hold "…meta.permission.MIGRATE_DATA" while the alpha provider would require
+     * "…alpha.permission.MIGRATE_DATA" — different names, so the system-level signature check
+     * would deny cross-flavor migration before the provider's own check ever ran. This constant
+     * exists for documentation / tooling only; it is not wired to any manifest attribute.
+     */
+    val PERMISSION: String
+        get() = "$packageName.permission.MIGRATE_DATA"
+
     const val AUTHORITY_SUFFIX = ".migration"
     const val BUNDLE_PATH = "bundle"
     const val FORMAT_VERSION = 1

@@ -46,6 +46,28 @@ fun gitCommitHash(rootDir: File): String {
     }
 }
 
+/**
+ * The mihomo core version baked into the Go native library. The JNI bridge returns this from
+ * `constant.Version`; exposing it as a BuildConfig field keeps the About dialog from loading the
+ * `bridge` native library into the UI process just to read a string (B-78).
+ */
+fun goCoreVersion(rootDir: File): String {
+    val versionFile = rootDir.resolve("core/src/foss/golang/clash/constant/version.go")
+    return try {
+        versionFile
+            .readLines()
+            .firstOrNull { it.trim().startsWith("Version") }
+            ?.substringAfter("=")
+            ?.substringAfter("\"")
+            ?.substringBefore("\"")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: "unknown"
+    } catch (_: Exception) {
+        "unknown"
+    }
+}
+
 buildscript {
     repositories {
         mavenCentral()
@@ -74,39 +96,8 @@ buildscript {
 }
 
 subprojects {
-    repositories {
-        mavenCentral()
-        google()
-        // STOP-G: MetaCubeX Maven mirror — see buildscript block above for details.
-        maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases") {
-            content {
-                includeGroup("com.github.kr328.golang")
-                includeGroup("com.github.kr328.kaidl")
-            }
-        }
-        // README option C: no-auth release assets synced under ./local-maven
-        maven {
-            name = "LocalMavenLumenCrash"
-            url = uri(rootProject.file("local-maven"))
-        }
-        maven {
-            name = "GitHubPackagesProjectLumen"
-            url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
-            credentials {
-                username = (
-                    findProperty("gpr.user") as String?
-                        ?: System.getenv("GITHUB_ACTOR")
-                        ?: ""
-                    )
-                password = (
-                    findProperty("gpr.key") as String?
-                        ?: System.getenv("GITHUB_TOKEN")
-                        ?: ""
-                    )
-            }
-        }
-    }
-
+    // Dependency repositories moved to settings.gradle.kts
+    // (dependencyResolutionManagement) — B-137 / C-04.
     val isApp = name == "app"
 
     apply(plugin = if (isApp) "com.android.application" else "com.android.library")
@@ -149,8 +140,12 @@ subprojects {
             if (isApp) {
                 val commitHash = gitCommitHash(rootProject.projectDir)
                 val buildTime = buildTimeIso()
+                val coreVersion = goCoreVersion(rootProject.projectDir)
                 buildConfigField("String", "COMMIT_HASH", "\"$commitHash\"")
                 buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
+                // The mihomo core version, sourced from the Go source so the About dialog never
+                // has to load the native library into the UI process (B-78).
+                buildConfigField("String", "CORE_VERSION", "\"$coreVersion\"")
             }
 
             resValue("string", "release_name", "v$versionName")
@@ -181,8 +176,13 @@ subprojects {
 
         // compileSdk must cover targetSdk; pin explicitly so library modules
         // cannot silently lag when target is bumped for platform work.
-        // AGP 8.13 tops out at platform 36.1, so gradle.properties carries
-        // android.suppressUnsupportedCompileSdk=37 for the 37 tooling gap.
+        // Why 37 (Android 17): targetSdk is 37 because the runtime behaviors this
+        // app depends on (edge-to-edge enforcement, predictive back, FGS specialUse,
+        // INTERACT_ACROSS_USERS) are gated by targetSdkVersion, not compileSdk.
+        // AGP 8.13's tested ceiling is platform 36.1, so gradle.properties carries
+        // android.suppressUnsupportedCompileSdk=37 to acknowledge the tooling gap.
+        // Revisit when AGP officially supports 37 (C-03) — do not blindly downgrade,
+        // that would silently change targetSdk-driven platform behavior.
         compileSdkVersion(37)
 
         if (isApp) {
@@ -380,26 +380,12 @@ subprojects {
 
         // Keep CI lint as a quality gate while suppressing known false positives / noise.
         // Configured via BaseExtension.lintOptions (still the supported API on BaseExtension).
-        // Issue suppressions also live in root lint.xml for merge/path-based ignores.
+        // All issue suppressions live in root lint.xml with a per-issue rationale line, so
+        // this block only carries the on/off switches (B-162).
         lintOptions {
             isAbortOnError = true
             isCheckReleaseBuilds = true
             lintConfig = rootProject.file("lint.xml")
-            disable("RestrictedApi")
-            disable("MissingTranslation")
-            disable("ExtraTranslation")
-            disable("GradleDependency")
-            disable("AndroidGradlePluginVersion")
-            disable("UseTomlInstead")
-            disable("IconLauncherShape")
-            disable("IconDipSize")
-            disable("IconDuplicatesConfig")
-            disable("IconLocation")
-            disable("IconDensities")
-            disable("IconMissingDensityFolder")
-            disable("UnusedResources")
-            disable("VectorPath")
-            disable("VectorRaster")
         }
     }
 }
@@ -415,7 +401,13 @@ tasks.wrapper {
         val sha256 = URL("$distributionUrl.sha256").openStream()
             .use { it.reader().readText().trim() }
 
-        file("gradle/wrapper/gradle-wrapper.properties")
-            .appendText("distributionSha256Sum=$sha256")
+        // Idempotent (B-163): re-running `wrapper` (e.g. when upgrading Gradle) must not
+        // append a duplicate distributionSha256Sum line — two differing sums would make
+        // Gradle use the later one while the earlier misleading one points debugging astray.
+        val propertiesFile = file("gradle/wrapper/gradle-wrapper.properties")
+        val existing = propertiesFile.readLines().filterNot { it.startsWith("distributionSha256Sum=") }
+        propertiesFile.writeText(
+            (existing + "distributionSha256Sum=$sha256").joinToString("\n") + "\n"
+        )
     }
 }

@@ -20,14 +20,15 @@ import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.log.LogcatFilter
 import com.github.kr328.clash.log.LogcatReader
 import com.github.kr328.clash.util.logsDir
+import com.github.kr328.clash.util.unbindServiceSilent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.OutputStreamWriter
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 import com.github.kr328.clash.design.R
 
 class LogcatActivity : BaseActivity<LogcatDesign>() {
@@ -104,6 +105,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         val ticker = ticker(500)
 
         var initial = true
+        var dropNotified = false
 
         while (isActive) {
             select<Unit> {
@@ -127,6 +129,13 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
                         design.patchMessages(snapshot.messages, snapshot.removed, snapshot.appended)
 
                         initial = false
+
+                        // B-26: a full ring buffer drops the oldest records. The user must not
+                        // mistake "missing earlier logs" for "nothing was logged".
+                        if (snapshot.removed > 0 && !dropNotified) {
+                            dropNotified = true
+                            design.showToast(R.string.logcat_dropped_messages, ToastDuration.Long)
+                        }
                     }
                 }
             }
@@ -134,37 +143,49 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
     }
 
     override fun onDestroy() {
-        conn?.apply(this::unbindService)
-
+        // Leaving the page is not a request to keep logging in the background: the foreground
+        // service would otherwise keep subscribing to kernel logs and writing files forever.
+        conn?.let { unbindServiceSilent(it) }
+        runCatching { stopService(LogcatService::class.intent) }
         super.onDestroy()
     }
 
     private suspend fun bindLogcatService(): LogcatService {
-        return suspendCoroutine { ctx ->
-            val bound = bindService(LogcatService::class.intent, object : ServiceConnection {
-                override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                    val srv = service?.queryLocalInterface("") as? LogcatService
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val srv = service?.queryLocalInterface("") as? LogcatService
 
-                    if (srv != null) {
-                        ctx.resume(srv)
-
-                        conn = this
-                    } else {
-                        // A null binder or wrong interface would otherwise hang the coroutine
-                        // or throw NPE on the binder thread; surface it to the caller instead.
-                        ctx.resumeWithException(IllegalStateException("LogcatService binder unavailable"))
-                    }
+                if (srv != null) {
+                    ctx.resume(srv)
+                } else {
+                    // A null binder or wrong interface would otherwise hang the coroutine
+                    // or throw NPE on the binder thread; surface it to the caller instead.
+                    ctx.resumeWithException(IllegalStateException("LogcatService binder unavailable"))
                 }
+            }
 
-                override fun onServiceDisconnected(name: ComponentName?) {
-                    conn = null
-                }
-            }, Context.BIND_AUTO_CREATE)
+            override fun onServiceDisconnected(name: ComponentName?) {
+                this@LogcatActivity.conn = null
+            }
+        }
+
+        // Keep the connection in a field from the moment it is created: onDestroy may run while
+        // bindService is still in flight, and a connection that only gets stored in the connect
+        // callback would never be unbound from a destroyed activity (leaked ServiceConnection).
+        conn = connection
+
+        return suspendCancellableCoroutine { ctx ->
+            ctx.invokeOnCancellation {
+                unbindServiceSilent(connection)
+            }
+
+            val bound = bindService(LogcatService::class.intent, connection, Context.BIND_AUTO_CREATE)
 
             if (!bound) {
                 // bindService() returning false means the system rejected the request and
                 // onServiceConnected will never be called; resume now to avoid hanging
                 // mainStreaming() forever.
+                unbindServiceSilent(connection)
                 ctx.resumeWithException(IllegalStateException("Failed to bind to LogcatService"))
             }
         }

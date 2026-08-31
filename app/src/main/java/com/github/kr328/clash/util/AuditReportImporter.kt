@@ -4,7 +4,6 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.BufferedReader
@@ -145,8 +144,10 @@ object AuditReportImporter {
     private fun importJsonl(context: Context, input: InputStream): AuditReportSummary {
         val target = createTarget(context)
         try {
-            val bytes = readBounded(input, AuditReportPolicy.MAX_JSONL_BYTES)
-            val reader = BufferedReader(InputStreamReader(bytes.inputStream(), Charsets.UTF_8))
+            // B-97: single-pass streaming. The old code read the whole file into a ByteArray and
+            // then decoded it again (raw bytes + decoded string + output buffer \u2248 3x peak). Here
+            // only one line at a time is in memory; the total-size cap is a cumulative counter.
+            val reader = BufferedReader(InputStreamReader(input, Charsets.UTF_8))
             val manifestLine = reader.readLine()?.removePrefix("\uFEFF") ?: error("Audit JSONL is empty")
             require(manifestLine.toByteArray(Charsets.UTF_8).size <= AuditReportPolicy.MAX_MANIFEST_BYTES) {
                 "Audit manifest is too large"
@@ -158,10 +159,14 @@ object AuditReportImporter {
             }
             val report = File(target, "report.jsonl")
             var recordCount = 0
+            var totalBytes = manifestLine.toByteArray(Charsets.UTF_8).size.toLong()
             report.outputStream().bufferedWriter().use { output ->
                 output.appendLine(manifest.toString())
-                reader.forEachLine { line ->
-                    if (line.isBlank()) return@forEachLine
+                while (true) {
+                    val line = reader.readLine() ?: break
+                    if (line.isBlank()) continue
+                    totalBytes += line.toByteArray(Charsets.UTF_8).size + 1L
+                    require(totalBytes <= AuditReportPolicy.MAX_JSONL_BYTES) { "Audit JSONL is too large" }
                     recordCount += 1
                     require(recordCount <= AuditReportPolicy.MAX_RECORD_COUNT) { "Audit JSONL has too many records" }
                     val record = JSONObject(line)
@@ -270,7 +275,7 @@ object AuditReportImporter {
         }
     }
 
-    private fun validateRecord(
+    internal fun validateRecord(
         record: JSONObject,
         sessionId: String,
         packageName: String,
@@ -376,20 +381,6 @@ object AuditReportImporter {
 
     private fun optionalString(value: JSONObject, name: String): String? =
         value.opt(name)?.takeUnless { it == JSONObject.NULL } as? String
-
-    private fun readBounded(input: InputStream, maximumBytes: Long): ByteArray {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        var total = 0L
-        while (true) {
-            val count = input.read(buffer)
-            if (count < 0) break
-            total += count
-            require(total <= maximumBytes) { "Audit JSONL is too large" }
-            output.write(buffer, 0, count)
-        }
-        return output.toByteArray()
-    }
 
     private data class ValidatedManifest(
         val sessionId: String,

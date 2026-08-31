@@ -34,7 +34,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
-                        Event.ActivityStart, Event.ProfileChanged -> {
+                        // ServiceRecreated covers batch restore (SettingsActivity) which broadcasts
+                        // one coarse event instead of a per-profile storm (B-85).
+                        Event.ActivityStart, Event.ProfileChanged, Event.ServiceRecreated -> {
                             design.fetch()
                         }
                         else -> Unit
@@ -119,13 +121,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
     }
 
     override fun onProfileUpdateCompleted(uuid: UUID?) {
-        if(uuid == null)
-            return;
+        if (uuid == null) return
         launch {
-            var name: String? = null;
-            withProfile {
-                name = queryByUUID(uuid)?.name
-            }
+            val name = queryProfileName(uuid)
             recordBreadcrumbSafe("Profile update completed name=$name")
             design?.showToast(
                 getString(R.string.toast_profile_updated_complete, name),
@@ -133,25 +131,25 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             )
         }
     }
+
     override fun onProfileUpdateFailed(uuid: UUID?, reason: String?) {
-        if(uuid == null)
-            return;
+        if (uuid == null) return
         launch {
-            var name: String? = null;
-            withProfile {
-                name = queryByUUID(uuid)?.name
-            }
+            val name = queryProfileName(uuid)
             recordBreadcrumbSafe("Profile update failed name=$name reason=${reason ?: "unknown"}")
             design?.showToast(
                 getString(R.string.toast_profile_updated_failed, name, reason),
                 ToastDuration.Long
-            ){
+            ) {
                 setAction(R.string.edit) {
                     startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                 }
             }
         }
     }
+
+    private suspend fun queryProfileName(uuid: UUID): String? =
+        withProfile { queryByUUID(uuid)?.name }
 
     private fun recordBreadcrumbSafe(event: String) {
         if (!LumenCrash.isInstalled()) return

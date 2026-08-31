@@ -1,5 +1,6 @@
 package com.github.kr328.clash
 
+import android.widget.Toast
 import com.github.kr328.clash.common.constants.Adblock
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.core.Clash
@@ -16,7 +17,17 @@ import kotlinx.coroutines.selects.select
 
 class OverrideSettingsActivity : BaseActivity<OverrideSettingsDesign>() {
     override suspend fun main() {
-        val configuration = withClash { queryOverride(Clash.OverrideSlot.Persist) }
+        // A-35: a config-editing page must not show editable defaults on failure — saving them
+        // would overwrite the real override with blanks. Instead surface the error and close.
+        val configuration = try {
+            withClash { queryOverride(Clash.OverrideSlot.Persist) }
+        } catch (e: Exception) {
+            runCatching {
+                Toast.makeText(this, R.string.failed_to_load_settings, Toast.LENGTH_LONG).show()
+            }
+            finish()
+            return
+        }
 
         defer {
             withClash {

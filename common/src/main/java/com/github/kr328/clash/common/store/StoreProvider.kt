@@ -1,6 +1,9 @@
 package com.github.kr328.clash.common.store
 
 interface StoreProvider {
+    fun contains(key: String): Boolean
+    fun remove(key: String)
+
     fun getInt(key: String, defaultValue: Int): Int
     fun setInt(key: String, value: Int)
 
@@ -15,4 +18,11 @@ interface StoreProvider {
 
     fun getBoolean(key: String, defaultValue: Boolean): Boolean
     fun setBoolean(key: String, value: Boolean)
+
+    /**
+     * Synchronously flushes pending writes to durable storage. Call before spawning another
+     * process that must observe the just-written values (e.g. before starting the service
+     * process after a settings change).
+     */
+    fun flush()
 }

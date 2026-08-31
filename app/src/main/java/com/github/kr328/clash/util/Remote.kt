@@ -16,6 +16,12 @@ private const val MAX_RETRIES = 5
 private const val RETRY_BASE_DELAY_MS = 100L
 
 /**
+ * Exponential backoff for a retry attempt (1-based). 100ms doubling: 100, 200, 400, 800, 1600.
+ * Exposed for unit tests; [withRemote] is the only production caller.
+ */
+internal fun retryBackoffMillis(attempt: Int): Long = RETRY_BASE_DELAY_MS shl (attempt - 1)
+
+/**
  * Retries a Binder call when the remote service dies. Bounded with exponential
  * backoff (100ms doubling, ~3s total) so a permanently dead service fails fast
  * instead of spinning forever.
@@ -52,7 +58,7 @@ private suspend fun <C, T> withRemote(
             if (attempt > MAX_RETRIES) throw e
             Log.w("Remote services panic (attempt $attempt/$MAX_RETRIES)")
             Remote.service.remote.reset(remote)
-            delay(RETRY_BASE_DELAY_MS shl (attempt - 1))
+            delay(retryBackoffMillis(attempt))
         }
     }
 }

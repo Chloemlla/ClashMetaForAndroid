@@ -5,9 +5,11 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.view.View
+import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
 import com.github.kr328.clash.common.compat.getDrawableCompat
+import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.store.UiStore
 
 class ProxyView(
@@ -15,6 +17,7 @@ class ProxyView(
     config: ProxyViewConfig,
 ) : View(context) {
     var selectable: Boolean = false
+    private var lastAccessibilityText: CharSequence? = null
 
     init {
         background = context.getDrawableCompat(config.clickableBackground)
@@ -38,11 +41,12 @@ class ProxyView(
             reset()
 
             textSize = state.config.textSize
-
-            getTextBounds("Stub!", 0, 1, state.rect)
         }
 
-        val textHeight = state.rect.height()
+        // Line height derived from font metrics, independent of the actual text content
+        // (title, delay) so CJK / emoji / large system fonts are not clipped.
+        val fontMetrics = state.paint.fontMetrics
+        val textHeight = fontMetrics.descent - fontMetrics.ascent
         val exceptHeight = (state.config.layoutPadding * 2 +
                 state.config.contentPadding * 2 +
                 textHeight * 2 +
@@ -65,6 +69,13 @@ class ProxyView(
 
         if (state.update(false))
             postInvalidateOnAnimation()
+
+        // Notify accessibility when the spoken summary changes (selection / delay / title).
+        val accessibilityText = buildAccessibilityText(state)
+        if (accessibilityText != lastAccessibilityText) {
+            lastAccessibilityText = accessibilityText
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+        }
 
         val width = width.toFloat()
         val height = height.toFloat()
@@ -95,13 +106,8 @@ class ProxyView(
                     Path.Direction.CW,
                 )
 
-                paint.setShadowLayer(
-                    state.config.cardRadius,
-                    state.config.cardOffset,
-                    state.config.cardOffset,
-                    state.config.shadow
-                )
-
+                // setShadowLayer is not honored for drawPath under hardware acceleration;
+                // a real shadow would need elevation/outlineProvider. Leave the card flat.
                 drawPath(path, paint)
 
                 clipPath(path)
@@ -204,5 +210,37 @@ class ProxyView(
         info.className = if (selectable) Button::class.java.name else View::class.java.name
         info.isClickable = selectable
         info.isSelected = selectable && state?.isSelected == true
+
+        // Everything on this view is canvas-drawn, so expose the node's semantics as text
+        // ("name, type, delay, selected state") for TalkBack instead of a bare "button".
+        info.text = lastAccessibilityText ?: state?.let { buildAccessibilityText(it) }
+    }
+
+    private fun buildAccessibilityText(state: ProxyViewState): CharSequence {
+        return buildString {
+            append(state.title)
+            if (state.subtitle.isNotEmpty()) {
+                append(", ")
+                append(state.subtitle)
+            }
+            append(", ")
+            append(
+                if (state.delayText.isEmpty()) {
+                    context.getString(R.string.unavailable)
+                } else {
+                    context.getString(R.string.format_delay_milliseconds, state.delayText)
+                }
+            )
+            if (selectable) {
+                append(", ")
+                append(
+                    if (state.isSelected) {
+                        context.getString(R.string.selected)
+                    } else {
+                        context.getString(R.string.not_selected)
+                    }
+                )
+            }
+        }
     }
 }

@@ -27,10 +27,10 @@ jobs:
       alpha_tag: ${{ steps.meta.outputs.alpha_tag }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v5
+        uses: gradle/actions/wrapper-validation@0723195856401067f7a2779048b490ace7a47d7c # v5
 
       - name: Set release metadata
         id: meta
@@ -49,16 +49,16 @@ jobs:
         run: git submodule update --init --recursive --force
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
 
       - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           cache: false
           go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
@@ -78,7 +78,7 @@ jobs:
             patch --verbose -p 1 < "$p"
           done
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: |
             ~/.cache/go-build
@@ -107,6 +107,14 @@ jobs:
         shell: pwsh
         run: ./tools/adb-audit/Test-AdbAuditBridge.ps1
 
+      - name: Assemble SDK facade
+        # B-69: :sdk is an embeddable facade shipped to third parties; compiling it in
+        # CI ensures its errors surface here instead of at integration time.
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_READ_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: ./gradlew :sdk:assemble
+
       - name: JVM unit tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -115,7 +123,7 @@ jobs:
 
       - name: Upload JVM test reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: push-release-jvm-test-reports
           path: '**/build/reports/tests/**'
@@ -133,7 +141,7 @@ jobs:
 
       - name: Upload Android Lint reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: push-release-android-lint-reports
           path: |
@@ -148,22 +156,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
 
       - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           cache: false
           go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
@@ -183,7 +191,7 @@ jobs:
             patch --verbose -p 1 < "$p"
           done
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: |
             ~/.cache/go-build
@@ -224,10 +232,22 @@ jobs:
       - name: Stage secret-signed Meta APKs
         run: bash .github/scripts/stage-signed-apks.sh app/build/ci-apks/meta-release
 
+      - name: Upload R8 mapping and native symbols
+        # B-138: keep mapping.txt (and native symbol files) per release for crash
+        # deobfuscation (lumen-crash reports) — without it a release stack cannot be restored.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: meta-release-mapping
+          path: |
+            app/build/outputs/mapping/**/mapping.txt
+            app/build/outputs/native-symbols/**/*
+          if-no-files-found: warn
+
       - name: Publish Meta full release (latest)
         # Feature-branch push builds APKs for validation; only main publishes releases.
         if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 (previously pinned SHA 7c4723f7 no longer resolves in the upstream repo)
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
@@ -250,22 +270,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Checkout submodules
         run: git submodule update --init --recursive --force
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
 
       - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           cache: false
           go-download-base-url: https://github.com/MetaCubeX/go/releases/download/build
@@ -285,7 +305,7 @@ jobs:
             patch --verbose -p 1 < "$p"
           done
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: |
             ~/.cache/go-build
@@ -326,6 +346,18 @@ jobs:
       - name: Stage secret-signed Alpha APKs
         run: bash .github/scripts/stage-signed-apks.sh app/build/ci-apks/alpha-release
 
+      - name: Upload R8 mapping and native symbols
+        # B-138: keep mapping.txt (and native symbol files) per release for crash
+        # deobfuscation (lumen-crash reports) — without it a release stack cannot be restored.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: alpha-release-mapping
+          path: |
+            app/build/outputs/mapping/**/mapping.txt
+            app/build/outputs/native-symbols/**/*
+          if-no-files-found: warn
+
       - name: Prepare Alpha migration APK aliases
         run: |
           set -euo pipefail
@@ -348,7 +380,7 @@ jobs:
       - name: Publish Alpha pre-release
         # Feature-branch push builds APKs for validation; only main publishes releases.
         if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 (previously pinned SHA 7c4723f7 no longer resolves in the upstream repo)
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false

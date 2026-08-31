@@ -4,11 +4,38 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 
 class SharedPreferenceProvider(private val preferences: SharedPreferences) : StoreProvider {
+    override fun contains(key: String): Boolean {
+        return preferences.contains(key)
+    }
+
+    override fun remove(key: String) {
+        dirty = true
+        preferences.edit {
+            remove(key)
+        }
+    }
+
+    /**
+     * apply() (the default of [edit]) only schedules an async disk write, while an empty
+     * commit() is a no-op, so a freshly spawned process can read stale values. Track whether
+     * anything was written and, when it was, force a real synchronous write with a stable
+     * marker key before returning — this makes the just-applied values durable for the next
+     * process to read.
+     */
+    override fun flush() {
+        if (!dirty) return
+        preferences.edit()
+            .putLong(FLUSH_MARKER_KEY, System.currentTimeMillis())
+            .commit()
+        dirty = false
+    }
+
     override fun getInt(key: String, defaultValue: Int): Int {
         return preferences.getInt(key, defaultValue)
     }
 
     override fun setInt(key: String, value: Int) {
+        dirty = true
         preferences.edit {
             putInt(key, value)
         }
@@ -19,6 +46,7 @@ class SharedPreferenceProvider(private val preferences: SharedPreferences) : Sto
     }
 
     override fun setLong(key: String, value: Long) {
+        dirty = true
         preferences.edit {
             putLong(key, value)
         }
@@ -36,6 +64,7 @@ class SharedPreferenceProvider(private val preferences: SharedPreferences) : Sto
     }
 
     override fun setString(key: String, value: String) {
+        dirty = true
         preferences.edit {
             putString(key, value)
         }
@@ -52,6 +81,7 @@ class SharedPreferenceProvider(private val preferences: SharedPreferences) : Sto
     }
 
     override fun setStringSet(key: String, value: Set<String>) {
+        dirty = true
         preferences.edit {
             putStringSet(key, value)
         }
@@ -62,9 +92,20 @@ class SharedPreferenceProvider(private val preferences: SharedPreferences) : Sto
     }
 
     override fun setBoolean(key: String, value: Boolean) {
+        dirty = true
         preferences.edit {
             putBoolean(key, value)
         }
+    }
+
+    private var dirty: Boolean = false
+
+    private companion object {
+        /**
+         * Internal marker written only to force a synchronous commit in [flush]. Not part of the
+         * public preference surface; ignored by all readers.
+         */
+        const val FLUSH_MARKER_KEY = "__clash_flush_marker__"
     }
 }
 

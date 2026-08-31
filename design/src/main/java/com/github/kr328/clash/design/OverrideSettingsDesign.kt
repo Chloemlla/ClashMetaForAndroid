@@ -162,16 +162,31 @@ class OverrideSettingsDesign(
                 valuesText = booleanValuesText,
                 title = R.string.allow_lan,
             ) {
-                listener = OnChangedListener {
+                // Warn before enabling LAN sharing without authentication, and let the user
+                // back out: the value is only written after the confirmation is accepted.
+                confirmBeforeSet = { newValue ->
+                    if (newValue != true) return@confirmBeforeSet true
+
                     val authentication = configuration.authentication
-                    if (configuration.allowLan == true &&
-                        (authentication.isNullOrEmpty() ||
-                         authentication.all { it.isBlank() })) {
-                        MaterialAlertDialogBuilder(context)
+                    val requiresWarning = authentication.isNullOrEmpty() ||
+                        authentication.all { it.isBlank() }
+                    if (!requiresWarning) return@confirmBeforeSet true
+
+                    suspendCancellableCoroutine { ctx ->
+                        val dialog = MaterialAlertDialogBuilder(context)
                             .setTitle(R.string.security_warning)
                             .setMessage(R.string.allow_lan_no_auth_warning)
-                            .setPositiveButton(R.string.ok, null)
+                            .setPositiveButton(R.string.ok) { _, _ -> ctx.resume(true) }
+                            .setNegativeButton(R.string.cancel) { _, _ -> ctx.resume(false) }
                             .show()
+
+                        dialog.setOnDismissListener {
+                            if (!ctx.isCompleted) ctx.resume(false)
+                        }
+
+                        ctx.invokeOnCancellation {
+                            dialog.dismiss()
+                        }
                     }
                 }
             }
@@ -235,13 +250,15 @@ class OverrideSettingsDesign(
                     null,
                     TunnelState.Mode.Direct,
                     TunnelState.Mode.Global,
-                    TunnelState.Mode.Rule
+                    TunnelState.Mode.Rule,
+                    TunnelState.Mode.Script,
                 ),
                 valuesText = arrayOf(
                     R.string.dont_modify,
                     R.string.direct_mode,
                     R.string.global_mode,
-                    R.string.rule_mode
+                    R.string.rule_mode,
+                    R.string.script_mode,
                 ),
                 title = R.string.mode
             )

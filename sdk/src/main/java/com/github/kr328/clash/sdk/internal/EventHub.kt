@@ -5,72 +5,103 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import com.github.kr328.clash.common.compat.registerReceiverCompat
+import com.github.kr328.clash.common.constants.Authorities
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.sdk.ClashRuntimeEvent
+import com.github.kr328.clash.service.StatusProvider
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.merge
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
-internal class EventHub(private val context: Application) {
+/**
+ * Bridges self-broadcasts from `:service` into a host-observable [events] stream.
+ *
+ * Instances are created at [com.github.kr328.clash.sdk.ClashRuntime] load time and
+ * attached to an [Application] during `install`; subscribing to [events] before install
+ * is legal and simply yields no events until receivers are registered by [register].
+ */
+@OptIn(FlowPreview::class)
+internal class EventHub {
+    // High-frequency / progress events: a bounded buffer is acceptable, and any drop is logged.
     private val _events = MutableSharedFlow<ClashRuntimeEvent>(
-        extraBufferCapacity = 32,
+        extraBufferCapacity = 64,
     )
-    val events: SharedFlow<ClashRuntimeEvent> = _events.asSharedFlow()
+
+    // Lifecycle state events: StateFlow guarantees the latest state is delivered to every
+    // (re-)subscriber even when transient emissions were conflated, so a host that rebinds
+    // cannot permanently miss e.g. "started".
+    private val _state = MutableStateFlow<ClashRuntimeEvent?>(null)
+
+    val events: Flow<ClashRuntimeEvent> =
+        merge(_state.filterNotNull(), _events.asSharedFlow())
 
     @Volatile
     var clashRunning: Boolean = false
         private set
 
-    private var registered = false
+    private val registered = AtomicBoolean(false)
+
+    @Volatile
+    private var context: Application? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.`package` != context?.packageName) return
 
-            val event = when (intent?.action) {
+            when (intent?.action) {
                 Intents.ACTION_SERVICE_RECREATED -> {
                     clashRunning = false
-                    ClashRuntimeEvent.ServiceRecreated
+                    emitState(ClashRuntimeEvent.ServiceRecreated)
                 }
                 Intents.ACTION_CLASH_STARTED -> {
                     clashRunning = true
-                    ClashRuntimeEvent.Started
+                    emitState(ClashRuntimeEvent.Started)
                 }
                 Intents.ACTION_CLASH_STOPPED -> {
                     clashRunning = false
-                    ClashRuntimeEvent.Stopped(intent.getStringExtra(Intents.EXTRA_STOP_REASON))
+                    emitState(ClashRuntimeEvent.Stopped(intent.getStringExtra(Intents.EXTRA_STOP_REASON)))
                 }
-                Intents.ACTION_PROFILE_CHANGED -> ClashRuntimeEvent.ProfileChanged
-                Intents.ACTION_PROFILE_LOADED -> ClashRuntimeEvent.ProfileLoaded
+                Intents.ACTION_PROFILE_CHANGED -> emit(ClashRuntimeEvent.ProfileChanged)
+                Intents.ACTION_PROFILE_LOADED -> emit(ClashRuntimeEvent.ProfileLoaded)
                 Intents.ACTION_PROFILE_UPDATE_COMPLETED -> {
                     val raw = intent.getStringExtra(Intents.EXTRA_UUID)
-                    ClashRuntimeEvent.ProfileUpdateCompleted(
-                        raw?.let { runCatching { UUID.fromString(it) }.getOrNull() },
+                    emit(
+                        ClashRuntimeEvent.ProfileUpdateCompleted(
+                            raw?.let { runCatching { UUID.fromString(it) }.getOrNull() },
+                        ),
                     )
                 }
                 Intents.ACTION_PROFILE_UPDATE_FAILED -> {
                     val raw = intent.getStringExtra(Intents.EXTRA_UUID)
-                    ClashRuntimeEvent.ProfileUpdateFailed(
-                        raw?.let { runCatching { UUID.fromString(it) }.getOrNull() },
-                        intent.getStringExtra(Intents.EXTRA_FAIL_REASON),
+                    emit(
+                        ClashRuntimeEvent.ProfileUpdateFailed(
+                            raw?.let { runCatching { UUID.fromString(it) }.getOrNull() },
+                            intent.getStringExtra(Intents.EXTRA_FAIL_REASON),
+                        ),
                     )
                 }
-                else -> null
-            }
-
-            if (event != null) {
-                _events.tryEmit(event)
             }
         }
     }
 
+    /** Bind this hub to an [Application]; required before [register]/[unregister]. */
+    fun attach(application: Application) {
+        context = application
+    }
+
     fun register() {
-        if (registered) return
+        val ctx = context ?: return
+        if (!registered.compareAndSet(false, true)) return
         try {
-            context.registerReceiverCompat(
+            ctx.registerReceiverCompat(
                 receiver,
                 IntentFilter().apply {
                     addAction(Intents.ACTION_SERVICE_RECREATED)
@@ -82,21 +113,51 @@ internal class EventHub(private val context: Application) {
                     addAction(Intents.ACTION_PROFILE_LOADED)
                 },
             )
-            registered = true
+            // Probe the real service state instead of assuming stopped: a quick unbind->rebind
+            // cycle must not render a stale "not running".
+            clashRunning = probeClashRunning(ctx)
         } catch (e: Exception) {
+            registered.set(false)
             Log.w("Register runtime event receiver: $e", e)
         }
     }
 
     fun unregister() {
-        if (!registered) return
+        val ctx = context ?: return
+        if (!registered.compareAndSet(true, false)) return
         try {
-            context.unregisterReceiver(receiver)
+            ctx.unregisterReceiver(receiver)
         } catch (e: Exception) {
             Log.w("Unregister runtime event receiver: $e", e)
-        } finally {
-            registered = false
-            clashRunning = false
+        }
+        // Intentionally leave clashRunning untouched: it is driven by broadcasts and the
+        // register() probe, so unbind() alone must not flip the running flag.
+    }
+
+    private fun emit(event: ClashRuntimeEvent) {
+        if (!_events.tryEmit(event)) {
+            Log.w("ClashRuntime: event buffer full, dropped ${event::class.simpleName}")
+        }
+    }
+
+    private fun emitState(event: ClashRuntimeEvent) {
+        _state.value = event
+    }
+
+    private fun probeClashRunning(ctx: Context): Boolean {
+        return try {
+            ctx.contentResolver.call(
+                Uri.Builder()
+                    .scheme("content")
+                    .authority(Authorities.STATUS_PROVIDER)
+                    .build(),
+                StatusProvider.METHOD_WIDGET_STATE,
+                null,
+                null,
+            )?.getBoolean(StatusProvider.KEY_RUNNING, false) ?: false
+        } catch (e: Exception) {
+            Log.w("Query clash running state: $e", e)
+            false
         }
     }
 }

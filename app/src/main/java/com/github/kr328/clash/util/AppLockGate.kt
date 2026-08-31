@@ -23,4 +23,24 @@ object AppLockGate {
         if (now < lastUnlockedAt) return true
         return now - lastUnlockedAt >= backgroundTimeoutMs
     }
+
+    /**
+     * Return-from-background gate. Unlike [requiresUnlock] (which measures from the last unlock),
+     * this measures the *duration of the last background trip*, captured once when the app returns
+     * to the foreground. Navigating between activities while the app stays foreground never
+     * re-prompts, and a long foreground session does not re-arm the gate.
+     *
+     * [backgroundDurationMs] is 0 when the app has never backgrounded this process (the cold-start
+     * gate handles that separately), so 0 means "no recheck needed".
+     */
+    fun requiresUnlockOnResume(
+        enabled: Boolean,
+        backgroundDurationMs: Long,
+        backgroundTimeoutMs: Long = DEFAULT_BACKGROUND_TIMEOUT_MS,
+    ): Boolean {
+        if (!enabled) return false
+        if (backgroundDurationMs < 0L) return true
+        if (backgroundDurationMs == 0L) return false
+        return backgroundDurationMs >= backgroundTimeoutMs
+    }
 }

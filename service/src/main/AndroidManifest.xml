@@ -68,14 +68,17 @@
             android:process=":background"
             tools:ignore="ExportedContentProvider" />
 
+        <!-- No manifest-level android:permission on MigrationProvider: with an ${applicationId}-derived
+             permission name (B-131) the meta build holds "…meta.permission.MIGRATE_DATA" while the
+             alpha provider would require "…alpha.permission.MIGRATE_DATA" — a system-level signature
+             check against DIFFERENT names, denying cross-flavor migration before provider code runs.
+             The real gate is MigrationProvider.enforceCaller()'s runtime checkSignatures(), which
+             leaving the element ungated lets run. -->
         <provider
             android:name=".migration.MigrationProvider"
             android:authorities="${applicationId}.migration"
             android:exported="true"
             android:grantUriPermissions="false"
-            android:permission="com.github.metacubex.clash.permission.MIGRATE_DATA"
-            android:readPermission="com.github.metacubex.clash.permission.MIGRATE_DATA"
-            android:writePermission="com.github.metacubex.clash.permission.MIGRATE_DATA"
             tools:ignore="ExportedContentProvider" />
         <provider
             android:name=".PreferenceProvider"

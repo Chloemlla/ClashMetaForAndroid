@@ -36,17 +36,17 @@ enum class PartnerTrust {
  * Partner apps that are auto-included in VPN access control and allowed to query lightweight
  * Clash running status.
  *
- * ### Registry rule (v5)
+ * ### Registry rule
  *
  * ```
- * isPartner = signedWith(trustedSignerSha1)
+ * isPartner = signedWith(trustedSignerSha256, fallback trustedSignerSha1) && packageName in hardcodePackages
  * ```
  *
- * The whole suite is signed with one shared release key, so that key is the entire registry: every
- * installed app presenting the pinned certificate is a partner, including apps this build has never
- * heard of, and no app without it is a partner whatever applicationId it claims and whatever
- * meta-data it declares. [hardcodePackages] and [META_DATA_PARTNER_KEY] survive only to label
- * *claimants* in the partner list — neither grants access.
+ * The whole suite is signed with one shared release key. A partner is an installed package from a
+ * known partner family ([hardcodePackages]) whose signing certificate is the pinned one; no app
+ * without it is a partner whatever applicationId it claims and whatever meta-data it declares.
+ * [hardcodePackages] and [META_DATA_PARTNER_KEY] survive only to label *claimants* in the partner
+ * list — neither grants access.
  *
  * Recognition never widens what a partner can do (still read-only status + VPN access-control
  * auto-include, never start/stop/toggle of the VPN — see F-12 in `SECURITY.md`), it only decides
@@ -64,11 +64,25 @@ object PartnerApps {
      * `apksigner verify --print-certs <apk>` (`Signer #1 certificate SHA-1 digest`). Replace the
      * value — do not append to it — when the shared release key is rotated: a second entry would
      * reintroduce exactly the multi-key trust this gate exists to remove.
+     *
+     * Kept as the *transitional fallback* until [trustedSignerSha256] is populated (B-132):
+     * SHA-1 is collision-weak, so the trust comparison should move to SHA-256.
      */
     val trustedSignerSha1: Set<String> = setOf(
         // Shared Chloemlla release key (CN=Chloemlla), used by CMFA and every partner app
         "295443559574b12e12a0e49f6c92692ca0dc307a",
     )
+
+    /**
+     * The pinned release certificate as a SHA-256 digest (lowercase hex, no separators).
+     *
+     * TODO(B-132): populate with the real SHA-256 digest of the shared release certificate
+     * (CN=Chloemlla), e.g. from `apksigner verify --print-certs` (`Signer #1 certificate SHA-256
+     * digest`). The value is not available in this repository offline and MUST NOT be invented;
+     * until it is filled, [hasPinnedSigner] falls back to [trustedSignerSha1]. When populated,
+     * the SHA-1 set can be dropped.
+     */
+    val trustedSignerSha256: Set<String> = emptySet()
 
     val piliPlusPackages: Set<String> = setOf(
         "com.chloemlla.piliplus",
@@ -153,23 +167,38 @@ object PartnerApps {
     }
 
     /** True when any signing certificate of [packageName] is the pinned release certificate. */
-    private fun hasPinnedSigner(pm: PackageManager, packageName: String): Boolean =
-        matchesPinnedSignerSha1(
-            signingCertificatesOf(pm, packageName).map { sha1Hex(it.toByteArray()) },
-        )
+    private fun hasPinnedSigner(pm: PackageManager, packageName: String): Boolean {
+        val certificates = signingCertificatesOf(pm, packageName)
+        // B-132: prefer the collision-resistant SHA-256 pin. SHA-1 remains only as a
+        // transitional fallback until the real SHA-256 digest is recorded in trustedSignerSha256.
+        return matchesPinnedSignerSha256(certificates.map { sha256Hex(it.toByteArray()) }) ||
+            matchesPinnedSignerSha1(certificates.map { sha1Hex(it.toByteArray()) })
+    }
 
     /**
-     * Every installed application presenting the pinned release certificate, whether or not this
-     * build has ever heard of its applicationId. Safe to call from access-control / status paths —
-     * a PackageManager failure is swallowed and only shrinks the result.
+     * Installed partner packages: the known partner families ([hardcodePackages]) that are
+     * installed AND signed with the pinned release certificate.
+     *
+     * Looked up per candidate package rather than with a full `getInstalledPackages` scan
+     * (B-133): the candidate set is a small constant, a full enumeration is slow on the main
+     * thread, and one binder failure used to empty the whole result. Partner apps must therefore
+     * be registered in [hardcodePackages] to be discovered.
      */
-    fun installedPartnerPackages(context: Context): Set<String> =
-        partnerPackagesFrom(installedSignerSha1s(context.packageManager))
+    fun installedPartnerPackages(context: Context): Set<String> {
+        val pm = context.packageManager
+        val signerSha1ByPackage = hardcodePackages
+            .filter { isInstalled(pm, it) }
+            .associateWith { packageName ->
+                signingCertificatesOf(pm, packageName).map { sha1Hex(it.toByteArray()) }
+            }
+        return partnerPackagesFrom(signerSha1ByPackage)
+    }
 
     /**
-     * Installed apps the partner list has to show: everything signed with the pinned certificate,
-     * plus the claimants ([hardcodePackages] and [META_DATA_PARTNER_KEY] declarers) that fail the
-     * certificate check — an app presenting the wrong key is exactly what needs to be surfaced.
+     * Installed apps the partner list has to show: the installed partner families signed with the
+     * pinned certificate, plus the claimants ([hardcodePackages] and [META_DATA_PARTNER_KEY]
+     * declarers) that fail the certificate check — an app presenting the wrong key is exactly what
+     * needs to be surfaced.
      */
     fun installedCandidatePackages(context: Context): Set<String> {
         val pm = context.packageManager
@@ -186,6 +215,11 @@ object PartnerApps {
             pm.getApplicationInfo(packageName, 0)
             true
         } catch (_: PackageManager.NameNotFoundException) {
+            false
+        } catch (t: RuntimeException) {
+            // B-133: a transient binder failure must not crash the caller; treat the package as
+            // not-installed for this query and let the caller surface a retry.
+            Log.w("PartnerApps: failed to query package $packageName", t)
             false
         }
     }
@@ -230,22 +264,15 @@ object PartnerApps {
         return try {
             signaturesOf(pm.getPackageInfo(packageName, signingCertificatesFlag()))
         } catch (_: PackageManager.NameNotFoundException) {
+            // Package not installed: an ordinary absence, not a failure.
             emptySet()
-        }
-    }
-
-    /** SHA-1 fingerprints of every installed package's signing certificates, keyed by package. */
-    private fun installedSignerSha1s(pm: PackageManager): Map<String, List<String>> {
-        return try {
-            @Suppress("DEPRECATION")
-            pm.getInstalledPackages(signingCertificatesFlag()).associate { info ->
-                info.packageName to signaturesOf(info).map { sha1Hex(it.toByteArray()) }
-            }
-        } catch (t: Throwable) {
-            // The registry is additive only; a PackageManager failure (e.g. transient binder
-            // death, OEM restriction) must never block VPN startup or status queries.
-            Log.w("PartnerApps: failed to enumerate installed signing certificates", t)
-            emptyMap()
+        } catch (t: RuntimeException) {
+            // B-133: a transient binder failure (e.g. TransactionTooLargeException) or a security
+            // exception must not crash the caller nor be conflated with "package absent". Log it
+            // and treat this one package as having no known certificate; the rest of the query
+            // is unaffected.
+            Log.w("PartnerApps: failed to read signing certificates for $packageName", t)
+            emptySet()
         }
     }
 
@@ -292,6 +319,13 @@ object PartnerApps {
     internal fun matchesPinnedSignerSha1(certificateDigests: Collection<String>): Boolean =
         certificateDigests.any { it.lowercase() in trustedSignerSha1 }
 
+    /**
+     * Pure certificate-fingerprint membership test against [trustedSignerSha256]. Empty until the
+     * real SHA-256 digest is recorded (B-132), so it currently never matches.
+     */
+    internal fun matchesPinnedSignerSha256(certificateDigests: Collection<String>): Boolean =
+        certificateDigests.any { it.lowercase() in trustedSignerSha256 }
+
     /** Lowercase hex SHA-256, matching the digest `apksigner verify --print-certs` reports. */
     internal fun sha256Hex(bytes: ByteArray): String = hex("SHA-256", bytes)
 
@@ -304,9 +338,10 @@ object PartnerApps {
 
     /**
      * Pure registry rule, extracted for unit testing with fakes (no PackageManager or
-     * android.content.pm.Signature needed): of every installed package, keyed to the SHA-1
-     * fingerprints of its signing certificates, the partners are exactly those presenting the
-     * pinned one — applicationId and meta-data play no part.
+     * android.content.pm.Signature needed): of the candidate packages, keyed to the SHA-1
+     * fingerprints of their signing certificates, the partners are exactly those presenting the
+     * pinned (SHA-1 fallback) one — applicationId and meta-data play no part. Callers are
+     * responsible for feeding only the known candidate families (see [installedPartnerPackages]).
      */
     internal fun partnerPackagesFrom(
         signerSha1ByPackage: Map<String, Collection<String>>,

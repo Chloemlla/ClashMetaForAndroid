@@ -6,17 +6,17 @@ import com.github.kr328.clash.design.SettingsDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.design.R as DesignR
-import com.github.kr328.clash.service.data.ImportedDao
-import com.github.kr328.clash.service.data.PendingDao
 import com.github.kr328.clash.service.migration.MigrationBundle
-import com.github.kr328.clash.service.util.sendProfileChanged
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.DataBackup
+import com.github.kr328.clash.util.startClashService
+import com.github.kr328.clash.util.stopClashService
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.withContext
 
 class SettingsActivity : BaseActivity<SettingsDesign>() {
     override suspend fun main() {
@@ -44,11 +44,22 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                         SettingsDesign.Request.StartAuditReport ->
                             startActivity(AuditReportActivity::class.intent)
                         SettingsDesign.Request.BackupBeforeUninstall -> {
-                            val target = startActivityForResult(
-                                ActivityResultContracts.CreateDocument("application/zip"),
-                                "clash-backup-${System.currentTimeMillis()}.zip",
-                            )
-                            if (target != null) exportBackup(design, target)
+                            // B-18: the export is plaintext and contains subscription credentials.
+                            // Warn before the SAF picker so the user knows not to share it.
+                            MaterialAlertDialogBuilder(this)
+                                .setTitle(DesignR.string.backup_sensitive_title)
+                                .setMessage(DesignR.string.backup_sensitive_message)
+                                .setPositiveButton(DesignR.string.continue_) { _, _ ->
+                                    launch {
+                                        val target = startActivityForResult(
+                                            ActivityResultContracts.CreateDocument("application/zip"),
+                                            "clash-backup-${System.currentTimeMillis()}.zip",
+                                        )
+                                        if (target != null) exportBackup(design, target)
+                                    }
+                                }
+                                .setNegativeButton(DesignR.string.cancel, null)
+                                .show()
                         }
                         SettingsDesign.Request.RestoreAfterReinstall -> {
                             val source = startActivityForResult(
@@ -90,6 +101,15 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
 
     private suspend fun restoreBackup(design: SettingsDesign, source: android.net.Uri) {
         try {
+            // B-17: restoring while :background holds the old pref cache and reads config files
+            // can leave the restore partially overwritten. Stop the core first, then bring it back
+            // up so the imported data is the only writer.
+            val wasRunning = clashRunning
+            if (wasRunning) {
+                stopClashService()
+                delay(RESTORE_STOP_SETTLE_MILLIS)
+            }
+
             var restored: MigrationBundle.ImportResult? = null
             withModelProgressBar {
                 configure {
@@ -105,16 +125,23 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                 return
             }
 
-            withContext(Dispatchers.IO) {
-                (ImportedDao().queryAllUUIDs() + PendingDao().queryAllUUIDs())
-                    .distinct()
-                    .forEach(this@SettingsActivity::sendProfileChanged)
-            }
+            // B-85: broadcasting one ProfileChanged per restored uuid is a self-inflicted event
+            // storm (each one re-queries the dashboard and re-runs adblock prompts on the home
+            // screen). A single coarse-grained ServiceRecreated refreshes every screen that cares.
             sendServiceRecreated()
             design.showToast(
                 getString(DesignR.string.backup_restored, result.totalProfiles),
                 ToastDuration.Long,
             )
+
+            if (wasRunning) {
+                val vpnRequest = startClashService()
+                if (vpnRequest != null) {
+                    // VPN authorization needs a user-visible screen; surface it so the restored
+                    // config actually takes effect.
+                    runCatching { startActivity(vpnRequest) }
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -123,5 +150,10 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                 ToastDuration.Long,
             )
         }
+    }
+
+    private companion object {
+        // B-17: how long to let the core tear down before overwriting its prefs/files.
+        const val RESTORE_STOP_SETTLE_MILLIS = 500L
     }
 }

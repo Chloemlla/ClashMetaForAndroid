@@ -16,6 +16,12 @@ interface SelectableListPreference<T> : ClickablePreference {
     var selected: Int
 
     var listener: OnChangedListener?
+
+    /**
+     * Optional suspend predicate invoked with the value the user picked, before it is written.
+     * Returning false cancels the write and keeps the current selection / control state.
+     */
+    var confirmBeforeSet: (suspend (T) -> Boolean)?
 }
 
 fun <T> PreferenceScreen.selectableList(
@@ -50,6 +56,7 @@ fun <T> PreferenceScreen.selectableList(
                 this.summary = valuesText.getOrNull(value)
             }
         override var listener: OnChangedListener? = null
+        override var confirmBeforeSet: (suspend (T) -> Boolean)? = null
     }
 
     impl.configure()
@@ -97,9 +104,16 @@ private fun <T> PreferenceScreen.popupSelectMenu(
         setOnItemClickListener { _, _, position, _ ->
             dismiss()
 
-            launch(Dispatchers.Main) {
+            launch {
+                val newValue = values[position]
+                if (impl.confirmBeforeSet?.invoke(newValue) == false) {
+                    // Confirmation rejected (e.g. user cancelled a security dialog):
+                    // do not write, leave the current selection untouched.
+                    return@launch
+                }
+
                 withContext(Dispatchers.IO) {
-                    value.set(values[position])
+                    value.set(newValue)
                 }
 
                 impl.selected = position

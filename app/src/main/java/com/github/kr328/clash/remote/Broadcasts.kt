@@ -5,11 +5,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.registerReceiverCompat
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.constants.Permissions
 import com.github.kr328.clash.common.log.Log
 import java.util.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class Broadcasts(private val context: Application) {
     interface Observer {
@@ -22,6 +25,7 @@ class Broadcasts(private val context: Application) {
         fun onProfileLoaded()
     }
 
+    @Volatile
     var clashRunning: Boolean = false
 
     private var registered = false
@@ -102,7 +106,17 @@ class Broadcasts(private val context: Application) {
             // failure (e.g. StatusClient) cannot leave a permanently leaked registration.
             registered = true
 
-            clashRunning = StatusClient(context).currentProfile() != null
+            // B-08: querying StatusClient can cold-start :background; that must not block the
+            // main thread (we are inside ApplicationObserver's foreground callback). Seed an
+            // "unknown" (false) initial state and reconcile asynchronously.
+            Global.launch(Dispatchers.IO) {
+                val running = runCatching {
+                    StatusClient(context).currentProfile() != null
+                }.getOrDefault(false)
+                if (running != clashRunning) {
+                    clashRunning = running
+                }
+            }
         } catch (e: Exception) {
             Log.w("Register global receiver: $e", e)
         }

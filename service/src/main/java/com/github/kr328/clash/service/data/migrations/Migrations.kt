@@ -24,9 +24,12 @@ private val MIGRATION_2_3 = object : Migration(2, 3) {
                 "FOREIGN KEY(`uuid`) REFERENCES `imported`(`uuid`) " +
                 "ON UPDATE NO ACTION ON DELETE CASCADE)"
         )
+        // Rows orphaned before the foreign key existed would abort the copy; ON DELETE CASCADE
+        // means they were already meant to be gone.
         database.execSQL(
             "INSERT INTO `selections_new` (`uuid`, `proxy`, `selected`) " +
-                "SELECT `uuid`, `proxy`, `selected` FROM `selections`"
+                "SELECT `uuid`, `proxy`, `selected` FROM `selections` " +
+                "WHERE `uuid` IN (SELECT `uuid` FROM `imported`)"
         )
         database.execSQL("DROP TABLE `selections`")
         database.execSQL("ALTER TABLE `selections_new` RENAME TO `selections`")

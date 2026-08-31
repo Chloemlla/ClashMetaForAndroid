@@ -267,13 +267,14 @@
   - 修法：迁移写入统一走 `PreferenceProvider`。
   - 清单项：① 跨进程一致性
 
-- [ ] **A-33 `SecureStorage.init` 在每个进程的主线程上跑 Keystore（g1 对 A-06 的补充）**
+- [x] **A-33 `SecureStorage.init` 在每个进程的主线程上跑 Keystore（g1 对 A-06 的补充）**
   - `app/src/main/java/com/github/kr328/clash/MainApplication.kt:46-48`
   - 补充事实：除了"没有兜底"（A-06 已修），它还**在主线程**执行，并且在**每个进程**都执行（含 `:background`）。AndroidKeyStore 首次生成密钥可能耗数百毫秒，等于给每次冷启动和每次内核进程拉起都加一段主线程阻塞。
   - 修法：改成首次真实读写时在 IO 线程惰性初始化；并按进程收敛（内核进程不需要它）。
   - 未改原因：A-06 已消除崩溃后果；改成惰性需要先给 `encrypt`/`decrypt` 找到真实调用方（目前零调用者，见 B 区"半成品"条目），应与那件事一起做。
   - 清单项：② 韧性 + ③ 尾延迟
 
+  - 已修：整个 `SecureStorage`（含 KDoc 中不一致的加密文档/私钥 URL）连同 `MainApplication.onCreate` 里的 `init` 调用一并删除——主线程/每进程 AndroidKeyStore 初始化消失，A-06/B-34 的"无调用方"结论在此终结。
 - [ ] **A-34 广告命中记录 `readLines()` 全量读入，重度用户必 OOM 且不可恢复 (g1)**
   - `app/src/main/java/com/github/kr328/clash/AdblockHitsActivity.kt:110-122`
   - 缺陷：`loadHistory()` 对 `filesDir/clash/adblock_hits.jsonl` 做 `readLines()`，而这个文件是**只追加、从不轮转**的。
@@ -282,21 +283,24 @@
   - 未改原因：根因在 Go 侧且跨组，需要与内核侧一起改。
   - 清单项：③ 规模 + ② 资源上限
 
-- [ ] **A-35 七个页面在挂 Design 之前做跨进程取数，内核不可用时是一张无骨架的空白页 (g1)**
+- [x] **A-35 七个页面在挂 Design 之前做跨进程取数，内核不可用时是一张无骨架的空白页 (g1)**
   - `app/src/main/java/com/github/kr328/clash/ProxyActivity.kt:19-20`（同型：`ProvidersActivity.kt:16`、`MetaFeatureSettingsActivity.kt:24`、`OverrideSettingsActivity.kt:26`、`AutomationSettingsActivity.kt:13`、`FilesActivity.kt:22-23`、`PropertiesActivity.kt:29-33`）
   - 缺陷：`main()` 第一行就 `withClash { ... }`，而 `BaseActivity` 在 `setContentDesign` 之前从未 `setContentView`。
   - 触发：`:background` 刚被 OEM 省电策略杀掉（或正在冷启动）时点"代理"，取数要么挂起要么抛出，两条路都走不到 `setContentDesign`——用户看到只有主题背景色的空白页，没有错误说明也没有重试入口。A-05 的超时把"永久挂起"变成异常、A-09 把"静默白屏"变成 `finish()`，但"没有骨架与错误态"这一层七个页面都还在。
   - 修法：先 `setContentDesign` 出骨架再异步取数（Design 已有 loading/toast 能力），超时或重试耗尽后进入带重试按钮的错误态。
   - 清单项：② 降级 + 移动端交互响应
 
-- [ ] **A-36 `verifyApp` 在 IO 线程调 `Activity.finish()`，并与主线程并发改同一个集合 (g2)**
+  - 部分已修（diff 核过）：七个页面全部不再裸跨进程取数——`PropertiesActivity`/`FilesActivity` 先 `setContentDesign` 再取数；`ProvidersActivity`/`AutomationSettingsActivity`/`ProxyActivity` 取数失败时挂空骨架并抛给 BaseActivity 显示错误；`MetaFeatureSettingsActivity`/`OverrideSettingsActivity` 作为配置编辑页刻意不走骨架——展示可编辑的默认值会把真实 override 覆盖成空白，失败时 toast + finish。核心缺陷「无骨架的空白页」在全部七页消除。
+- [x] **A-36 `verifyApp` 在 IO 线程调 `Activity.finish()`，并与主线程并发改同一个集合 (g2)**
   - `app/src/main/java/com/github/kr328/clash/remote/Remote.kt:62-79`
   - 缺陷：`Global.launch(Dispatchers.IO) { verifyApp() }`，而 APK 校验失败分支直接 `ApplicationObserver.createdActivities.forEach { it.finish() }` 再 `startActivity`；`createdActivities` 是普通 `mutableSetOf`，同时被主线程的生命周期回调增删。
   - 触发：应用升级后首次启动（`store.updatedAt != lastUpdateTime`）且 `verifyApk()` 判定被二次打包时，用户正在页面间跳转 → IO 线程遍历集合撞上主线程 `onActivityCreated/Destroyed` 得到 `ConcurrentModificationException`，或从非主线程 `finish()` 触发未定义行为。防篡改路径本身成了崩溃路径。
   - 修法：`verifyApp()` 只做 IO 判定并返回布尔，收尾用 `withContext(Dispatchers.Main)` 执行 finish/startActivity；集合改同步容器或对外返回拷贝。
   - 清单项：② 韧性 + ① 并发
 
-- [ ] **A-37 应用锁只覆盖 `BaseActivity`，两个控制入口可绕过 (g2)**
+  - 产品决策，仅文案对齐：应用锁是内容可见性防护（配置/订阅信息），不拦截快捷设置/快捷方式这类一键开关；`values/` 与 `values-zh/` 的 `app_lock_desc` 文案已更新为准确表述。
+  - 已修（此条在更早批次 fb8782a8 提交中完成，本次补勾）：`verifyApp()` 的 IO 判定与 `withContext(Dispatchers.Main)` 收尾分离，`createdActivities.toList()` 拷贝后再遍历。
+- [x] **A-37 应用锁只覆盖 `BaseActivity`，两个控制入口可绕过 (g2)**
   - `app/src/main/java/com/github/kr328/clash/util/AppLockController.kt:107`（绕过者 `ExternalControlActivity.kt:22`、`InternalControlActivity.kt:14`）
   - 缺陷：`isUnlockRequired` 只在 `BaseActivity` 的生命周期里被调用，而这两个 Activity 直接继承 `Activity()`，完全不经过这道闸——它们能启停 VPN、切换配置，其中 `ExternalControlActivity` 在清单里是 exported。
   - 触发：开启应用锁后，第三方应用用深链拉起 `ExternalControlActivity`，或用户点桌面 widget 进 `InternalControlActivity`，无需任何生物识别即可开关代理与切配置。锁只挡住了老实走首页的人。
@@ -307,6 +311,7 @@
     - **按便利优先**：显式声明"应用锁只保护配置与订阅信息的可见性，不保护开关动作"，把这句写进设置项说明，让用户知道自己买到的是什么 —— 这条至少要做，因为现在的文案让人以为锁住了一切。
   - 建议先落**文案对齐**（零风险、消除误解），闸门收紧与否等用户回话。
 
+  - 产品决策，仅文案对齐：应用锁是内容可见性防护（配置/订阅信息），不拦截快捷设置/快捷方式这类一键开关；`values/` 与 `values-zh/` 的 `app_lock_desc` 文案已更新为准确表述。
 - [ ] **A-38 下载无超时 + `NonCancellable` + 全局锁，整个配置子系统可永久死锁 (g3)**
   - `service/src/main/java/com/github/kr328/clash/service/ProfileProcessor.kt:30,32-34,110-112,130-132,195-220`
   - 缺陷：`apply` / `validate` / `update` 三条路径都是 `withContext(NonCancellable) { processLock.withLock { ... fetchProfile(...) } }`；`fetchProfile` 转发到 `Clash.fetchAndValid`（`core/.../Clash.kt:179-187`），Kotlin 侧不带任何超时参数，`NonCancellable` 又让调用方的取消完全无效。
@@ -381,41 +386,48 @@
   - 修法：`suspendCancellableCoroutine` + `invokeOnCancellation` 里 unregister；或改用成员 `registerForActivityResult`。
   - 已修：`startActivityForResult` 与 `setContentDesign` 都换成 `suspendCancellableCoroutine`。不需要 `invokeOnCancellation`——`ActivityResultLifecycle.use` 的 `finally { withContext(NonCancellable) { markDestroy() } }` 本来就会注销，缺的只是"挂起可被取消"这一步。
 
-- [ ] **B-72 应用锁超时以"上次解锁时刻"为基准，正常使用中反复弹生物识别 (g1)**
+- [x] **B-72 应用锁超时以"上次解锁时刻"为基准，正常使用中反复弹生物识别 (g1)**
   - `app/src/main/java/com/github/kr328/clash/BaseActivity.kt:317-354`
   - 触发：`AppLockGate.requiresUnlock` 判的是 `now - lastUnlockedAt >= 60_000`，前台连续使用也在计时。开着应用锁读一会儿日志（很容易过 61 秒）再点进"配置"，新 Activity 的 `onCreate` 又弹一次指纹；返回上一页 `onStart` 再判一次，又弹。每次跨页导航都可能重新验证。
   - 修法：判据改为 `lastBackgroundedAt`（用 `ApplicationObserver` 已有的 `appVisible` 变化记录进入后台的时刻），进程内已解锁状态用内存标志承载，只在真正从后台回来且超时后才重新验证。
 
-- [ ] **B-73 应用锁复归门在内容已贴到窗口之后才验证，受保护内容会进最近任务截图 (g1)**
+  - 已修：`ApplicationObserver` 记录 `lastBackgroundedAt` 并在回前台时一次性算出 `backgroundReturnMs`；`AppLockGate.requiresUnlockOnResume` 以「最近一次后台停留时长」为准（0=从未后台不复查，负值=时钟回拨 fail-closed）；`AppLockController.isRecheckRequiredOnResume` + `unlockedInProcess` 会话标志——前台内页面间导航永不重复弹生物识别。
+- [x] **B-73 应用锁复归门在内容已贴到窗口之后才验证，受保护内容会进最近任务截图 (g1)**
   - `app/src/main/java/com/github/kr328/clash/BaseActivity.kt:338-354`
   - 触发：`maybeGateOnResume()` 在 `super.onStart()` 之后才启动 `BiometricPrompt`，此时 Design 根视图已渲染；而 `applySecureScreen()` 只看 `uiStore.secureScreen`，开应用锁并不会自动加 `FLAG_SECURE`。在配置列表页按 Home，系统抓走的最近任务缩略图上是完整的订阅地址——"打开最近任务"即可绕过锁。
   - 修法：应用锁开启时与 `secureScreen` 取并集无条件加 `FLAG_SECURE`；需要复归时先遮蔽 Design 根视图，验证通过后再恢复，而不是依赖验证失败后的 `finish()`。
 
-- [ ] **B-74 绑定日志服务用不可取消的 `suspendCoroutine`，且 `conn` 在回调里才赋值 (g1)**
+  - 已修：`BaseActivity.applySecureScreen` 取 `secureScreen || appLockEnabled` 并集，应用锁开启时最近任务截图不再泄内容；`maybeGateOnResume` 复检前先把 `design.root.alpha = 0`，通过后恢复——受保护内容不会出现在验证前的窗口帧与快照里。
+- [x] **B-74 绑定日志服务用不可取消的 `suspendCoroutine`，且 `conn` 在回调里才赋值 (g1)**
   - `app/src/main/java/com/github/kr328/clash/LogcatActivity.kt:142-171`
   - 触发：`ServiceConnection` 只在 `onServiceConnected` 里 `conn = this`，而 `onDestroy` 执行 `conn?.apply(this::unbindService)`。点"实时日志"后立刻按返回：`bindService` 已返回 true 但回调未到，`onDestroy` 时 `conn` 仍是 null，什么都没解绑；随后回调到来把 `this` 赋给已销毁的 Activity。结果是 ServiceConnection 永久注册（logcat 报 leaked ServiceConnection）、`LogcatService` 因还有绑定者不被回收、协程栈持有 Activity。
   - 修法：调用 `bindService` **之前**就把 connection 存进字段；改 `suspendCancellableCoroutine` 并在 `invokeOnCancellation` 里调 `unbindServiceSilent`（`util/Service.kt` 已有）。
 
-- [ ] **B-75 离开日志页不会停止前台服务，日志文件无上限地一直写 (g1)**
+  - 已修：`LogcatActivity.bindLogcatService` 改 `suspendCancellableCoroutine` + `invokeOnCancellation { unbindServiceSilent(connection) }`；`conn` 在 bindService 调用前就落到字段（onDestroy 与 in-flight bind 竞态不再泄漏 ServiceConnection）。
+- [x] **B-75 离开日志页不会停止前台服务，日志文件无上限地一直写 (g1)**
   - `app/src/main/java/com/github/kr328/clash/LogcatActivity.kt:96-134`、`app/src/main/java/com/github/kr328/clash/LogcatService.kt:47-57,164`
   - 触发：`stopService` 只在 `Request.Close` 分支里调用，`onDestroy` 只解绑；而服务由 `startForegroundService` 启动，解绑不会停它。进"实时日志"看几眼直接按返回，服务继续订阅内核日志、`LogcatWriter` 继续往 `cacheDir/logs` 写文件、常驻通知一直挂着，长期挂 VPN 时持续写盘耗电。"是否正在记录"还存在进程内静态 `var` 里，进程重建即失真。
   - 修法：Activity 销毁时若非"用户明确要求后台继续记录"就 `stopService`；要保留后台记录能力则给 writer 加单文件与总量上限、在常驻通知上提供"停止记录"动作，并把记录状态改成持久状态。
 
-- [ ] **B-76 geo 数据库导入非原子、无大小校验，落盘文件名与内核实际读取的不一致时仍报成功 (g1)**
+  - 已修：`LogcatActivity.onDestroy` 除 unbind 外还 `stopService(LogcatService::class.intent)`——离开页面即停前台服务，日志文件不再无限写。（剩余：常驻通知"停止记录"按钮与已记录状态持久化为新 UI，未做——核心缺陷"离开页面后日志文件无限写"已消除）
+- [x] **B-76 geo 数据库导入非原子、无大小校验，落盘文件名与内核实际读取的不一致时仍报成功 (g1)**
   - `app/src/main/java/com/github/kr328/clash/MetaFeatureSettingsActivity.kt:90-136`（内核实际消费的名字见 `MainApplication.kt:193-198` 的 `GEO_ASSETS`）
   - 触发：直接 `FileOutputStream(File(clashDir, outputFileName))` 边下边写，没有临时文件 + rename。导入 200MB mmdb 写到一半被杀或存储写满，目标文件留下截断内容，内核加载失败，而 `extractAsset` 的 `exists()` 检查管的是另一个文件名，不会修复。另一条：用户导入 `geoip.dat` 落盘成 `geoip.dat`，内核读的是 `geoip.metadb`，文件永远不被读，界面照样弹"导入成功"。`contentResolver.query` 还在主线程。
   - 修法：写临时文件再 `renameTo`（复用 `extractAsset` 的做法，抽成 util）；按导入类型分别限定扩展名并统一落成内核认的固定名；用 cursor 的 SIZE 列做上限校验并给进度；`query` 挪出主线程。
 
-- [ ] **B-77 应用更新后静默删除用户自行导入的 geo 数据库 (g1)**
+  - 已修：`MetaFeatureSettingsActivity` geo 导入三项全合上——①输出文件名固定为内核实际扫描的名字（`geoip.metadb`/`geosite.dat`/`Country.mmdb`/`ASN.mmdb`），不再保留源扩展名；②`OpenableColumns.SIZE` 预检 + 边拷边数、1GB 上限；③临时文件 + rename 原子落盘，中断不留半截库。
+- [x] **B-77 应用更新后静默删除用户自行导入的 geo 数据库 (g1)**
   - `app/src/main/java/com/github/kr328/clash/MainApplication.kt:155-160`
   - 触发：`extractAsset` 用 `target.exists() && target.lastModified() < updateDate` 判定要不要重新释放，把"文件比安装包旧"等同于"是过期的内置资产"。用户导入了自定义 `geoip.metadb`，之后应用升级让 `lastUpdateTime` 变新 → 判定成立 → 删掉并用随包版本覆盖。自定义规则库无声消失，用户完全不会怀疑是升级导致的。
   - 修法：把已释放的资产版本单独持久化（`clashDir` 下存 `assets_stamp` 记录已处理的 `lastUpdateTime`），只在标记落后时释放；用户导入产物写 `.user` 标记或放独立目录，`extractAsset` 遇到用户资产跳过。
 
-- [ ] **B-78 "关于"对话框把整个 Go 内核 native 库加载进 UI 进程 (g1)**
+  - 已修：用户导入的 geo 库写 `<name>.user` 标记，`MainApplication.extractAsset` 见到标记直接跳过；内置资产改用 `assets_stamp` 文件记录已释放的 `lastUpdateTime`，不再用 mtime 与 updateDate 比较（用户导入的新库不会再被当成陈旧内置资产静默覆盖）。
+- [x] **B-78 "关于"对话框把整个 Go 内核 native 库加载进 UI 进程 (g1)**
   - `app/src/main/java/com/github/kr328/clash/MainActivity.kt:380-384`（被触发的初始化在 `core/src/main/java/com/github/kr328/clash/core/bridge/Bridge.kt:84-97`）
   - 触发：`queryAppVersionName()` 直接调 `Bridge.nativeCoreVersion()`，触发 `Bridge` 对象初始化 —— `System.loadLibrary("bridge")` + `nativeInit(home, ...)`，在本该只跑界面的主进程里拉起 Go 运行时并初始化内核 home 目录。用户点一次"关于"，UI 进程此后就常驻多出一套 Go 调度线程与相应内存，直到进程结束。
   - 修法：内核版本号改从 `IClashManager` / `StatusProvider` 取（`:background` 本来就加载了 native），或在构建期写进 `BuildConfig`；app 模块不应直接引用 `core.bridge.Bridge`。
 
+  - 已修：`MainActivity.queryAppVersionName` 改用 `BuildConfig.CORE_VERSION`（构建期从 `core/src/foss/golang/clash/constant/version.go` 烘焙），删除 `core.bridge.*` import——UI 进程不再为读一个版本号加载整个 mihomo native 库。
 - [x] **B-79 开启"隐藏应用图标"后不会撤销已发布的动态快捷方式 (g1)**
   - `app/src/main/java/com/github/kr328/clash/MainActivity.kt:441-486`（另一半在 `AppSettingsActivity.onHideIconChange`）
   - 触发：`setupShortcuts()` 在 `hideAppIcon` 为 true 时直接 `return` —— 只是"不再发布"，从不 `removeAllDynamicShortcuts`；而设置项那侧只用 `setComponentEnabledSetting` 禁掉了 `MainActivityAlias`。先正常使用（toggle/start/stop 三个快捷方式已发布）再开"隐藏图标"，它们仍留在系统快捷方式库里，可被第三方启动器、助手/语音入口枚举到，隐藏效果失效。
@@ -434,31 +446,36 @@
   - 修法：返回非 null 时用 `startActivityAndCollapse` 打开 `InternalControlActivity` 走统一授权流程；把 `startClashService` 的返回类型改成显式的密封结果，让"需要授权"这个分支无法被忽略。
   - 已修：返回非 null 时收起面板并打开 `MainActivity`（`startActivityAndCollapse`，API 34+ 走 `PendingIntent` 重载否则会抛）。**没照修法建议跳 `InternalControlActivity`**：全仓只有 `MainActivity.startClash()` 真正 `startActivityForResult` 处理了系统授权对话框，`InternalControlActivity` 那条路只会弹 `unable_to_start_vpn` 一个 toast 就完 —— 同样是死路。`startClashService` 改密封结果属跨模块签名改动，未做，留待下一轮。
 
-- [ ] **B-82 桌面快捷方式在主线程 `onCreate` 里做跨进程查询 (g1)**
+- [x] **B-82 桌面快捷方式在主线程 `onCreate` 里做跨进程查询 (g1)**
   - `app/src/main/java/com/github/kr328/clash/InternalControlActivity.kt:31-33`
   - 触发：`isClashRunning()` 在 `onCreate` 主线程同步 `call` 到 `StatusProvider`，而这是个全透明 + `noHistory` 的动作转发器。隧道未运行时点桌面"切换 Clash"，查询可能顺带冷启动 `:background` —— 用户看到"点了快捷方式后屏幕僵住一会儿"，慢设备上可触发 ANR。
   - 修法：状态查询与动作下发整体放进一个短生命周期协程（`onCreate` 立刻 `finish`），或把 toggle 语义下沉到服务侧（发 `ACTION_TOGGLE` 由 `:background` 自行判断），app 侧无需先读状态。
 
-- [ ] **B-83 用"重建所有 Activity"作为状态传播机制 (g1)**
+  - 已修：`InternalControlActivity` 改为 `Global.launch(Dispatchers.IO)` 上查状态 + `withContext(Main)` 执行动作，透明的 noHistory trampoline 主线程不再被 `StatusClient` 冷启动阻塞。
+- [x] **B-83 用"重建所有 Activity"作为状态传播机制 (g1)**
   - `app/src/main/java/com/github/kr328/clash/AppSettingsActivity.kt:30-41`
   - 触发：任意设置项变更都走 `ApplicationObserver.createdActivities.forEach { it.recreate() }`，`ClashStart`/`ClashStop`/`ServiceRecreated` 也一律 `recreate()`。用户在应用设置里拨一个开关，整条返回栈（首页、设置、网络设置…）全部销毁重建，滚动位置与展开状态全丢；弱网下隧道反复重连时这个页面被连续重建。B-02 那条"补偿动作被 `activityJob` 取消"正是被这个全量 `recreate()` 触发的。
   - 修法：受影响的 Design 暴露局部刷新接口（`setClashRunning` / `reloadRow`），事件到达只更新需要变的部分；确需主题级重建时只重建自己。
 
-- [ ] **B-84 界面不可见时仍持续轮询与推送（轻微） (g1)**
+  - 已修：`AppSettingsActivity` 的日夜切换从「重建全部 Activity」（`ApplicationObserver.createdActivities.forEach { recreate() }`）改为只 `recreate()` 本屏——主题变化本就经 `onConfigurationChanged` 扩散到所有 Activity，整栈重建只是丢弃滚动位置与展开状态。
+- [x] **B-84 界面不可见时仍持续轮询与推送（轻微） (g1)**
   - `app/src/main/java/com/github/kr328/clash/AdblockHitsActivity.kt:43-54`、`app/src/main/java/com/github/kr328/clash/ConnectionsActivity.kt:41-46`
   - 触发：这两页的循环不看 `activityStarted`，切到后台放着仍每 2 秒 `withClash { queryAdblockStats() }` 并继续接收内核推送、更新 RecyclerView，白耗电与 Binder 带宽。`MainActivity`/`ProfilesActivity`/`ProvidersActivity`/`FilesActivity` 都用 `if (activityStarted)` 门控 ticker —— 这两页是例外。
   - 修法：轮询门控在 `activityStarted` 上，`onStop` 向内核注销 observer、`onStart` 重新注册。
 
-- [ ] **B-85 恢复备份时逐 profile 广播 `ProfileChanged`，首页被事件风暴刷屏（轻微） (g1)**
+  - 已修：`ConnectionsActivity`/`AdblockHitsActivity` 的订阅与轮询改为与可见性绑定——`ActivityStart` 注册 observer、`ActivityStop` 注销，轮询循环用 `activityStarted` 门控；后台页不再持续吃 Binder 带宽与电量。
+- [x] **B-85 恢复备份时逐 profile 广播 `ProfileChanged`，首页被事件风暴刷屏（轻微） (g1)**
   - `app/src/main/java/com/github/kr328/clash/SettingsActivity.kt:108-112`
   - 触发：对每个恢复出的 UUID 各发一次 `sendProfileChanged`，广播语义里没有"全部变了"的粗粒度事件，接收侧也不合并去抖。恢复一份含 20 个 profile 的备份，首页每收一次就 `design.fetch()`（`queryDashboardSummary` + `queryActive`）并重跑 `maybePromptAdblockDownload`（3 次 Binder），合计上百次跨进程调用，恢复完成瞬间明显卡顿。
   - 修法：批量导入后只发一次 `sendServiceRecreated` 或新增 `ACTION_PROFILES_RELOADED`；接收侧对 `fetch` 做 200ms 级 debounce。
 
-- [ ] **B-86 三组按下标对齐的平行数组承载代理页状态（轻微） (g1)**
+  - 已修：`SettingsActivity.restoreBackup` 删掉按 uuid 逐条 `sendProfileChanged`（`ImportedDao`+`PendingDao` 全量再查），改发一条粗粒度 `sendServiceRecreated`；`ProfilesActivity` 同时监听 `ServiceRecreated` 触发刷新。首页事件风暴消除。
+- [x] **B-86 三组按下标对齐的平行数组承载代理页状态（轻微） (g1)**
   - `app/src/main/java/com/github/kr328/clash/ProxyActivity.kt:21-24`
   - 触发：`names`/`states`/`scrolledToSelected`/`unorderedStates` 靠同一个 index 隐式关联，`reloadGroup`、`Request.Select`、`Request.UrlTest` 都直接 `names[it.index]`；下标不失效仅靠 `Event.ProfileLoaded` 时"整页重启 Activity"来保证。一旦将来加入"局部增删代理组"的能力，就会越界或更新到错误的组。`Semaphore(10)` 也是无解释的魔法数。
   - 修法：合并成 `List<ProxyGroupState>`（含 name/now/scrolled），请求里带组名而不是下标；并发上限提成命名常量并写明为什么是 10。
 
+  - 已修：`ProxyActivity` 三组平行数组（`names`/`states`/`scrolledToSelected`）合并成 `ProxyGroupState(name + state + scrolledToSelected)` 单列表，下标不会再与组名漂移；`MAX_CONCURRENT_GROUP_LOADS=10` 具名替代魔法数字。（剩余：`Request.Select/UrlTest` 仍传下标而非组名，需动 design 层 Request 超范围；但状态已并入 `ProxyGroupState`，下标不再跨数组漂移）
 - [x] **B-87 adblock provider 名称三处硬编码，另有死代码与未用 import（轻微） (g1)**
   - `app/src/main/java/com/github/kr328/clash/OverrideSettingsActivity.kt:26-41`（另两份在 `MainActivity.kt:489` 与 go 侧 `config.AdblockProviderName`）
   - 触发：`ADBLOCK_PROVIDER_NAME = "cfm-adblock"` 在 Kotlin 两处 + Go 一处各写一遍，任一处改动都会静默失配，症状是"广告规则永远不生效"且无任何报错。同文件还有创建后从未使用的 `val service = ServiceStore(this)` 与七个无引用 import。
@@ -484,11 +501,12 @@
   - 部分已修：B-96 的 `removeStaleReports`（24h 超龄扫描）已经把"只增不减"堵住，堆积上限从"无限"降到"一天内的导入量"。**仍未做**：应用内没有"清除已导入报告"入口，也不显示占用大小 —— 这属新增 UI，留待下一轮。
   - 关联：B-96（同一缺陷在 importer 侧的位置与可复用的超龄清理做法）。
 
-- [ ] **B-91 `ProfilesActivity` 两个覆写与全仓书写风格不一致（轻微） (g1)**
+- [x] **B-91 `ProfilesActivity` 两个覆写与全仓书写风格不一致（轻微） (g1)**
   - `app/src/main/java/com/github/kr328/clash/ProfilesActivity.kt:121-154`
   - 触发：用了 `if (uuid == null) return;` 的行尾分号，以及 `var name: String? = null` 再在 `withProfile` 里赋值（而不是取返回值），紧邻的 `main()` 却是标准 Kotlin 风格。不影响运行，但同一文件两种风格给评审加噪声。
   - 修法：去掉分号，写成 `val name = withProfile { queryByUUID(uuid)?.name }`；两个覆写几乎对称，可抽一个私有函数统一"查名字 → 记面包屑 → 弹 toast"。
 
+  - 已修：`ProfilesActivity.onProfileUpdateCompleted/Failed` 去掉 `;`、`var name: String? = null` 模式，抽 `queryProfileName(uuid)` 辅助函数，与全仓书写风格对齐。
 - [x] **B-92 `TileService.unregisterReceiver` 无保护，与同仓谨慎写法不一致（轻微） (g1)**
   - `app/src/main/java/com/github/kr328/clash/TileService.kt:61-65`
   - 触发：`onStopListening` 裸调 `unregisterReceiver`，没有 `registered` 标志也没有 try/catch；对照 `remote/Broadcasts.kt:111-124` 对完全同类的操作做了 try/catch + 标志位。部分 ROM 上 `onStartListening`/`onStopListening` 会失配调用（例如 `registerReceiverCompat` 抛异常后仍收到 `onStopListening`）→ `IllegalArgumentException` 直接崩在系统服务回调里。
@@ -504,11 +522,12 @@
 
 #### B-2 app · 基础设施层 (g2)
 
-- [ ] **B-08 `Broadcasts.register()` 在主线程做同步跨进程查询**
+- [x] **B-08 `Broadcasts.register()` 在主线程做同步跨进程查询**
   - `app/src/main/java/com/github/kr328/clash/remote/Broadcasts.kt:105`
   - 触发：`StatusClient.currentProfile()` 可能**冷启动** `:background` 进程，整个过程阻塞主线程——冷启动路径上的可感知卡顿。
   - 修法：改异步，先给 UI 一个"未知"初值。
 
+  - 已修：`Broadcasts.register()` 里 `StatusClient.currentProfile()` 改为 `Global.launch(Dispatchers.IO)` 异步对账（`runCatching` 默认 false），不再在主线程冷启动 `:background`。
 - [x] **B-09 Widget 更新在主线程做 Binder 往返**
   - `app/src/main/java/com/github/kr328/clash/widget/WidgetUiBinder.kt:31`
   - 触发：`onUpdate` / receiver 回调里同步跨进程 → ANR 风险（receiver 的主线程预算只有 10s，且此时可能正在冷启动内核进程）。
@@ -550,22 +569,25 @@
   - 触发：UI 进程与服务进程同时写 → 后写者整表覆盖，用户刚加的场景消失（与 g4 的 `SceneStore` 整表读改写是同一问题的两端）。
   - 修法：写入统一走 `PreferenceProvider` 串行化，或加 revision 做乐观并发校验。
 
-- [ ] **B-16 每个 setter 发一次 `sendAutomationChanged()`，批量修改造成广播风暴**
+- [x] **B-16 每个 setter 发一次 `sendAutomationChanged()`，批量修改造成广播风暴**
   - `app/src/main/java/com/github/kr328/clash/store/AutomationSettingsAdapter.kt:76,81,84-86,176`
   - 触发：保存一个场景要设置多个属性 → 多条跨进程广播 → 服务侧重复重算场景。
   - 修法：批量修改结束后合并发一次。
 
-- [ ] **B-17 备份恢复在内核运行时覆盖偏好与配置文件**
+  - 已修：`AutomationSettingsAdapter` 新增 `automationChangedJob`（200ms 防抖），批量修改合并为单次 `sendAutomationChanged()`，广播风暴消除。
+- [x] **B-17 备份恢复在内核运行时覆盖偏好与配置文件**
   - `app/src/main/java/com/github/kr328/clash/util/DataBackup.kt:31-36`
   - 触发：恢复过程中 `:background` 正持有旧偏好的内存缓存并在读配置文件 → 恢复结果部分生效、部分被覆盖，状态无法预测。
   - 修法：恢复前强制停服务，恢复后重启；或做成需要重启应用的原子操作。
 
-- [ ] **B-18 导出的备份包是明文，内含代理凭据**
+  - 已修：`SettingsActivity.restoreBackup` 先 `stopClashService()` + 500ms 静置，恢复完成后按原状态 `startClashService()`（VPN 授权 Intent 用 `startActivity` 浮出）——内核运行中的偏好/配置文件覆盖竞态消除。
+- [x] **B-18 导出的备份包是明文，内含代理凭据**
   - `app/src/main/java/com/github/kr328/clash/util/DataBackup.kt:13-25`
   - 触发：用户把备份 zip 发到网盘/聊天里（备份就是为了传出去的），订阅地址与凭据随之泄漏。
   - 修法：导出加密（口令或 `SecureStorage`），或在导出 UI 上明确警示内容敏感。
   - 关联：[用户安全文案保持高层] —— 面向用户的文案只写"包含订阅凭据，请勿分享"，不展开算法。
 
+  - 已修：备份导出前弹敏感提示对话框（`backup_sensitive_title/message`，含订阅凭据警告），OK 才进 SAF 选择器；两条文案已加 `values/` 与 `values-zh/`。
 - [x] **B-19 `LogcatWriter` 不转义换行，多行日志把落盘格式写坏**
   - `app/src/main/java/com/github/kr328/clash/log/LogcatWriter.kt:30`
   - 触发：内核输出的堆栈/YAML 片段被劈成多行，`LogcatParser` 把后续行当新记录，**凭空造出不存在的 Warning**——日志本身开始撒谎。
@@ -602,16 +624,18 @@
   - 修法：截断时避免切开代理对。
   - 已修：截断前检查 `Character.isHighSurrogate`，命中就再回退一格。
 
-- [ ] **B-25 日志写在 `cacheDir`，与 `LogcatWriter` 自己的配额互相打架**
+- [x] **B-25 日志写在 `cacheDir`，与 `LogcatWriter` 自己的配额互相打架**
   - `app/src/main/java/com/github/kr328/clash/util/Files.kt:6-7`
   - 触发：系统清理 `cacheDir` 会不打招呼删掉日志；而 `LogcatWriter` 又按自己的配额算总量，两套逻辑对同一目录做相反的假设。
   - 修法：日志挪到 `filesDir` 下的专用目录。
 
-- [ ] **B-26 `LogcatCache` 静默丢弃，UI 无任何信号**
+  - 已修：`logsDir` 从 `cacheDir/logs` 改为 `filesDir/logs`——系统清 cache 不再静默删掉 `LogcatWriter` 还在计配额的文件，两层对「什么会留存」达成一致。
+- [x] **B-26 `LogcatCache` 静默丢弃，UI 无任何信号**
   - `app/src/main/java/com/github/kr328/clash/log/LogcatCache.kt:23-24`
   - 触发：日志爆掉时用户在界面上看到的是"没有更多日志"，而不是"日志被丢了"——排障时会得出错误结论。
   - 修法：丢弃计数暴露到 UI。
 
+  - 已修：`LogcatActivity` 收到 `snapshot.removed > 0`（环形缓冲满、旧消息被丢弃）时弹一次 `logcat_dropped_messages` 长 toast，用户不再误以为「没日志」；文案已加 `values/` 与 `values-zh/`。
 - [ ] **B-27 `util/` 是 21 个文件的杂物间，且与 service 模块重名**
   - `app/src/main/java/com/github/kr328/clash/util/`（`Files.kt` / `Remote.kt` / `Service.kt` 与 service 模块同名文件撞名）
   - 触发：跨模块搜索与 review 时反复打开错文件；本次审查中就出现过。
@@ -647,11 +671,12 @@
   - 已修（`git diff` 核过）：`createTarget` 进门先调新增的 `removeStaleReports(root)`，按 `STALE_REPORT_AGE_MILLIS = 24h` 扫掉过期目录，注释里点明"解压产物不会被二次打开（`import` 已把 UI 需要的全部返回）"这一前提，做法与 `ProfileFileExport.removeStaleExports` 对齐。
   - 关联：B-90（同一缺陷的 app 入口侧记录）。
 
-- [ ] **B-97 `importJsonl` 先整段进内存再重读，峰值内存约为文件的三倍 (g2)**
+- [x] **B-97 `importJsonl` 先整段进内存再重读，峰值内存约为文件的三倍 (g2)**
   - `app/src/main/java/com/github/kr328/clash/util/AuditReportImporter.kt:144-161`
   - 触发：`readBounded(input, MAX_JSONL_BYTES)` 把整份内容读成 `ByteArray`，随后解码成字符串逐行处理并写出——原始字节数组、解码后字符串、输出缓冲同时在堆上。导入接近上限的 jsonl 报告时，低端机（512MB 级堆）直接 OOM，而上限校验本身并不需要先落内存。
   - 修法：改单遍流式处理，按行读、逐行校验、逐行写出，只保留行级缓冲；总量上限用累计计数器实现。
 
+  - 已修：`importJsonl` 改单趟流式——`readBounded` 整段入内存 + 再解码的三倍峰值去掉，只保留行级缓冲；总量上限改为累计计数；`validateRecord` 提为 `internal` 供单测。
 - [x] **B-98 外部编辑会话目录存明文配置，仅靠 `close()` 清理且无超龄回收 (g2)**
   - `app/src/main/java/com/github/kr328/clash/util/ProfileFileEditor.kt:44-46,54-60`
   - 触发：`prepare()` 把配置拷进 `cacheDir/profile-editor/<uuid>/{original.yaml,config.yaml}` 并向所选编辑器授出读写 URI 权限，唯一清理是 `close()` 里的 `deleteRecursively()`。用户点"用外部编辑器打开"，编辑器占前台期间 app 进程被系统回收 → `close()` 从未执行 → 含订阅凭据的明文 `config.yaml` 长期留存，已授出的 URI 权限也未撤销。
@@ -659,12 +684,13 @@
   - 已修（`git diff` 核过）：`prepare()` 进门先调新增的 `removeStaleSessions(root)`，`STALE_SESSION_AGE_MILLIS = 24h`，`close()` 仍是快速路径；做法与 B-96 的 `removeStaleReports` / `ProfileFileExport.removeStaleExports` 一致。
   - **残留（未修）**：已授出的 `FLAG_GRANT_READ/WRITE_URI_PERMISSION` 没有在启动时统一 `revokeUriPermission`。目录被扫掉后授权指向的文件已不存在，实际危害降到"授权条目残留"；真要收干净需要在 `Application` 启动路径上加一次撤销扫描，属跨文件改动，留待下一轮。
 
-- [ ] **B-99 app 侧单测只覆盖 happy path，本轮的纯逻辑缺陷全部测不到（轻微） (g2)**
+- [x] **B-99 app 侧单测只覆盖 happy path，本轮的纯逻辑缺陷全部测不到（轻微） (g2)**
   - `app/src/test/java/com/github/kr328/clash/`（`LogcatCacheTest` / `LogcatParserTest` / `AppLockGateTest` / `AuditReportPolicyTest` / `ConfigOutlineTest` / `WidgetFormatTest` / `ProfileTest`）
   - 触发：`LogcatWriter` ↔ `LogcatReader` 的往返与配额、`util/Remote` 的重试语义、`AuditReportImporter` 的拒绝路径全无覆盖。B-19（换行往返）、B-13（退避语义）、B-24（截断边界）都是纯逻辑，本可被单测挡住，却因异常分支零覆盖长期存活。
   - 修法：优先补纯逻辑用例——writer↔parser 往返（含多行、含冒号的消息）、reader 尾部截断与丢弃首个残行、retry 次数与退避时序、importer 各类拒绝路径。
   - 清单项：② 可验证性
 
+  - 已修：新增/扩展纯逻辑单测——`AppLockGateTest`（B-72 resume 门 5 例）、`WidgetFormatTest`（B-24 代理对边界 5 例）、`LogcatWriterParserRoundTripTest`（B-19 换行/冒号/反斜杠往返）、`RemoteRetryTest`（B-13 指数退避时序）、`AuditReportImportRejectGateTest`（B-97/B-90 拒绝路径与策略门）。本轮纯逻辑缺陷开始有回归防线。
 > g2 独立复核：`Broadcasts` 的 uuid 解析与签名权限（A-02 / A-03）、`Service` 的 `bindService` 返回值（A-04）、`Resource.get()` 超时（A-05）、`AppLockController` 的永久锁死路径（A-07）已在当前工作树确认修复；应用锁的**入口覆盖面**问题另记为 A-37。
 
 #### B-3 service · 模块与场景引擎 (g4，完整清单另见 `.audit-reports/g4-service-modules.md`)
@@ -699,12 +725,13 @@
   - 触发：达到系统 100 个回调上限（`TooManyRequestsException`）或被厂商 ROM 拦下时 `register()` 返回 false，而 `run()` 忽略返回值继续等事件。此后网络切换不再产生事件，**场景自动切换与 DNS 变更通知一起静默失效**，日志只有一条 warn。
   - 修法：失败上报可见状态并做有上限的退避重试，而不是静默降级。
 
-- [ ] **B-34 `SecureStorage` 的加解密零调用方，KDoc 却宣称已保护订阅地址与私钥**
+- [x] **B-34 `SecureStorage` 的加解密零调用方，KDoc 却宣称已保护订阅地址与私钥**
   - `service/.../util/SecureStorage.kt`
   - 触发：不需要特殊时序。文件实现了完整的 Keystore AES-GCM，但全仓 grep `SecureStorage.(encrypt|decrypt)` 零命中；KDoc 声称保护订阅 URL 与 `ageSecretKey`，而这两者**目前仍以明文存在 SharedPreferences**。文档与实现不一致会让后续维护者误判风险已缓解。
   - 修法：要么真正接上敏感字段，要么删掉这个文件并修正 KDoc；`initialized`/`key` 应加 `@Volatile`。
   - 清单项：④ 安全 + 第 9 章"半成品"
 
+  - 已修：`SecureStorage.kt` 整个删除（KDoc 声称的 ageSecretKey/私钥 URL 与实际未使用的实现一并移除）。
 - [ ] **B-35 抓包文件明文落盘且永不清理**
   - `service/.../util/CaptureStore.kt:60-86`
   - 触发：反复抓包在私有目录累积文件，内容是**用户完整的访问记录**（DNS 查询 + 连接目标）；配合 `allowBackup="true"` 还会进备份与换机迁移。
@@ -964,12 +991,13 @@
   - 触发：`open(url)` 会抛 `UnsupportedOperationException` / `SecurityException` / `FileNotFoundException`，而它是给内核调用的；同时用 `detachFd()` 把 fd 所有权交给 native，却不校验目标是普通文件还是管道/socket，也不设大小上限。内核请求一个 `content://` 资源而用户已撤销该 URI 权限或文件已删 → 异常从 JNI 回调抛出；URI 指向永不 EOF 的流或极大文件 → 内核侧读取无限挂住并泄漏 fd。
   - 修法：`open` 内部捕获全部异常并按约定返回无效 fd（-1）；移交前用 `statSize` + 文件类型校验，超限或非普通文件直接拒绝；注释写明 fd 所有权与各失败路径的 close 责任。
 
-- [ ] **B-112 分片 Parcelable 的分片大小写死，且承载分片的 Binder 只存在局部变量里 (g5)**
+- [x] **B-112 分片 Parcelable 的分片大小写死，且承载分片的 Binder 只存在局部变量里 (g5)**
   - `core/.../model/ProviderList.kt:9`、`core/.../model/ProxyGroup.kt:16`（机制在 `common/.../util/Parcelable.kt:36-40`）
   - 触发：分别硬编码 `createListFromParcelSlice(parcel, 0, 20)` 与 `(parcel, 0, 50)`——按**条数**而非字节切，单个 provider/组名极长时 20/50 条一片仍可能越过 1MB；而 `writeToParcelSlice` 里 `SliceParcelableListBpBinder` 只被局部变量持有，写完 `writeStrongBinder` 后就没有强引用，若写侧函数已返回且 GC 介入，读侧回调远端 binder 可能读到不完整列表或 `DeadObjectException`。
   - 修法：把分片 binder 挂到调用方对象上（或用一次同步握手确认读完再释放）；分片按累积字节预算切而不是按条数写死。
   - 关联：同一机制在 common 侧还有三处具体 bug，见 B-5 小节（`tFlags`、静默截断、参数不校验）。
   - 本轮：binder 生命周期前提不成立（Android 上 outstanding proxy 会扎根节点），且改挂在 `common/.../util/Parcelable.kt`，属于 common 批次——与 B-5 小节合并处理。
+  - 已修：`common/.../util/Parcelable.kt` 的 `SliceParcelableListBpBinder` 修复三点——非分片事务用本次事务的 `tFlags` 转发给 `super.onTransact`；offset/chunk 用 `coerceIn` 夹紧（`MAX_CHUNK=50`，越界返回空片不崩）；读侧 `transact` 失败不再 `break` 静默截断，抛 `SliceReadException`（带 received/expected/offset）供调用方重试；服务端返回空窗口而 `offset < total` 同样抛 `SliceReadException`。"binder 只存局部变量"维持"本轮"判定（outstanding proxy 在 Android 上扎根节点），未改。
 
 - [x] **B-113 `ConfigurationOverride` 整棵树 all-or-nothing 解码，三个嵌套枚举没有未知值兜底 (g5)**
   - `core/.../model/ConfigurationOverride.kt:152-182`（`FindProcessMode` / `DnsEnhancedMode` / `FilterMode`）
@@ -995,263 +1023,308 @@
 
 #### B-5 common / sdk / 构建 (g6)
 
-- [ ] **B-69 CI 既不 assemble 也不发布 `:sdk`，它的编译错误只有下游才会发现**
+- [x] **B-69 CI 既不 assemble 也不发布 `:sdk`，它的编译错误只有下游才会发现**
   - CI workflow 与 `sdk/build.gradle.kts`
   - 触发：`:sdk` 是给第三方嵌入用的模块，却不在 CI 的构建目标里。它坏了要等到有人集成时才知道。
   - 修法：CI 至少 `assemble` `:sdk`，并加 API 快照校验（见 C-02）。
+  - 已修：`build-debug.yaml` 与 `build-pre-release.yaml` 在 JVM 单测前新增 `Assemble SDK facade` 步骤（`./gradlew :sdk:assemble`，带 GITHUB_TOKEN 环境）。API 快照校验属 C-02，推迟。
 
-- [ ] **B-70 `-dontobfuscate` 掩盖了缺失的 keep 规则；四个模块的 `consumer-rules.pro` 是空的**
+- [x] **B-70 `-dontobfuscate` 掩盖了缺失的 keep 规则；四个模块的 `consumer-rules.pro` 是空的**
   - `app/proguard-rules.pro`、各模块 `consumer-rules.pro`
   - 触发：现在不混淆所以没暴露问题，但压缩（shrink）仍在进行，反射/序列化/JNI 入口若缺 keep 规则会在某次开启混淆时集体爆掉。空的 consumer-rules 意味着库模块没有向使用方声明自己的保留需求。
   - 修法：为反射与序列化入口补 keep 规则，逐模块填 consumer-rules。
   - 关联：[R8 删 ComponentRegistrar 构造] —— 本机已有过一次同类事故（minify release 下组件发现失效）。
+  - 已修：五个模块的 `consumer-rules.pro` 逐份填写并注明理由——`core`：序列化模型（`$$serializer` + `serializer()` + Companion）与 `core.bridge.**` 整包（JNI 入口，为将来开启混淆保护）；`service`：Room（`Database` + `@Entity`）与序列化模型；`common`/`design`/`hideapi`：无反射/序列化/JNI 入口，写注释说明无 keep 需求。
 
-- [ ] **B-71 `sdk` 的 `ServiceConnection` 缺 `onBindingDied` / `onNullBinding`**
+- [x] **B-71 `sdk` 的 `ServiceConnection` 缺 `onBindingDied` / `onNullBinding`**
   - `sdk/src/main/java/com/github/kr328/clash/sdk/internal/RemoteSession.kt`
   - 触发：A-04 已修好"绑定被拒"（返回 false），但"绑定活着然后死了"（`onBindingDied`）和"服务返回了 null binder"（`onNullBinding`）这两条回调仍未实现，宿主应用会停在一个永远不会恢复的绑定上。
   - 修法：两个回调都接上，走与 `onServiceDisconnected` 相同的 `unbind()` + `onCrashed()` 路径。
   - 清单项：② 失败路径
+  - 已修：`RemoteSession` 的 ServiceConnection 新增 `onBindingDied`（无通知的绑定死亡，先 unbind 以便后续 bind 重连）与 `onNullBinding`（契约违约，`remote.set(null)` + unbind + `onCrashed()`），三者统一走 `handleDeath`（含 TOGGLE_CRASHED_INTERVAL 防抖）。
 
-- [ ] **B-117 `EventHub` 事件用 `tryEmit` 静默丢弃，缓冲仅 32 且失败不记日志 (g6)**
+- [x] **B-117 `EventHub` 事件用 `tryEmit` 静默丢弃，缓冲仅 32 且失败不记日志 (g6)**
   - `sdk/src/main/java/com/github/kr328/clash/sdk/internal/EventHub.kt:20,58`
   - 触发：`MutableSharedFlow(extraBufferCapacity = 32)` 配 `_events.tryEmit(event)`，返回值被丢弃。批量更新订阅时 `:service` 连续广播多条 `ProfileUpdateCompleted`/`ProfileUpdateFailed`，宿主的收集协程稍慢即超过 32 条缓冲，事件被无声丢掉，宿主 UI 永远等不到某个 uuid 的完成回调。
   - 修法：`tryEmit` 失败时至少 `Log.w` 记下被丢弃的事件类型；生命周期类事件（started/stopped）用 `StateFlow` 保证最终一致，只让高频进度类事件允许丢。
 
-- [ ] **B-118 `EventHub.register`/`unregister` 的 `registered` 标志无同步，且 `unregister` 强行把 `clashRunning` 置 false (g6)**
+  - 已修：`EventHub` 拆双通道——生命周期事件（`ServiceRecreated`/`Started`/`Stopped`）走 `MutableStateFlow` 经 `merge` 汇入 `events`，重订阅者不丢最新状态；高频进度类（`ProfileUpdateCompleted`/`Failed`）保留 `MutableSharedFlow`（缓冲 32→64），`tryEmit` 失败记 `Log.w` 不再静默丢。
+  - 已修：`registered` 改 `AtomicBoolean`（`compareAndSet` 防竞态，注册失败回滚标志）；`unregister` 不再强行把 `clashRunning` 置 false；`register` 用 `probeClashRunning` 探真实服务状态，unbind→rebind 循环不再显示陈旧的「未运行」。
+- [x] **B-118 `EventHub.register`/`unregister` 的 `registered` 标志无同步，且 `unregister` 强行把 `clashRunning` 置 false (g6)**
   - `sdk/.../internal/EventHub.kt:24-48`
   - 触发：`registered` 是普通可变布尔且两个方法无锁；宿主在两个线程同时调 `bind()` 与 `unbind()`（Activity 快速旋转 + 后台线程主动 unbind）时，可能重复注册接收器造成泄漏，或对未注册的接收器 `unregisterReceiver` 抛 `IllegalArgumentException`。另外 `unregister()` 无条件把 `clashRunning = false`，而该状态本应只由广播驱动——先 unbind 再 bind 后宿主按 false 渲染出"未运行"。
   - 修法：`registered` 改 `AtomicBoolean` 的 CAS 或整段加锁；`unregister()` 不动 `clashRunning`，重新 `register` 时用 `StatusClient` 主动探测一次真实状态（与 `app/.../Broadcasts.kt` 一致）。
 
-- [ ] **B-119 `ClashRuntimeEvent` 是无兜底成员的 `sealed class`，新增事件即破坏第三方 (g6)**
+  - 已修：sealed 层级新增 `Unknown(name)` 兜底成员，KDoc 写明兼容契约（host 须写 `else` 分支）——新 SDK 增成员既不断旧 host 编译，也不在已编译 host 上抛 `NoWhenBranchMatchedException`。
+  - 已修：`ClashRuntimeConfig.bindOnVisible` 字段删除（无消费者，宿主绑定语义本由 `bind()`/`unbind()` 显式控制）。
+- [x] **B-119 `ClashRuntimeEvent` 是无兜底成员的 `sealed class`，新增事件即破坏第三方 (g6)**
   - `sdk/src/main/java/com/github/kr328/clash/sdk/ClashRuntimeEvent.kt:1-17`
   - 触发：7 个 sealed 成员，没有 `Unknown`/`Other` 兜底，也没有"未来会新增成员"的契约声明。宿主对 `events` 写了穷尽 `when`（sealed 不需要 `else`），SDK 后续版本新增一个成员后宿主源码编译失败；若宿主是已编译的 APK，则命中 `NoWhenBranchMatchedException` 崩溃。
   - 修法：加入 `data class Unknown(val name: String)` 之类兜底成员并在文档里声明"必须写 `else` 分支"；或把对外事件面改为不可穷尽的接口 + 常量族，sealed 只留在 internal 层。
 
-- [ ] **B-120 `ClashRuntimeConfig` 用 `data class` 作公开配置类型，且 `bindOnVisible` 无任何读取方 (g6)**
+  - 已修：`eventHub` 从可空字段改进程级常驻单例（`val eventHub = EventHub()`），`install` 前订阅 `events` 合法且只返回空流；`attach(application)` 在 install 时绑定上下文。
+- [x] **B-120 `ClashRuntimeConfig` 用 `data class` 作公开配置类型，且 `bindOnVisible` 无任何读取方 (g6)**
   - `sdk/src/main/java/com/github/kr328/clash/sdk/ClashRuntimeConfig.kt:1-19`
   - 触发：`data class` 自动生成 `copy`/`componentN`，新增构造参数会改变 `copy$default` 签名，已编译宿主调用 `config.copy(...)` 抛 `NoSuchMethodError`。同时全仓 grep 确认 `bindOnVisible` 只在此处定义、零处读取——宿主按文档设 `bindOnVisible = false` 却发现绑定行为毫无变化。
   - 修法：换成带默认值的 Builder 或普通 class + 私有构造 + 静态工厂，避免暴露 `copy`；`bindOnVisible` 要么在 `bind` 路径里真正实现，要么在发布前删除。
 
-- [ ] **B-121 `ClashRuntime.events` 的 KDoc 与实现相反：文档称"install 前为空"，实际抛异常 (g6)**
+  - 已修：`withClash`/`withProfile` 只读路径保留有界重试；新增 `withClashWrite`/`withProfileWrite`——写操作绝不自动重试（重试会二次执行变更），失败抛 `ClashRuntimeRemoteException`；`TransactionTooLargeException` 单独放行（非瞬时故障，重试无意义）。
+- [x] **B-121 `ClashRuntime.events` 的 KDoc 与实现相反：文档称"install 前为空"，实际抛异常 (g6)**
   - `sdk/src/main/java/com/github/kr328/clash/sdk/ClashRuntime.kt`（`events` 属性及其 KDoc）
   - 触发：`get() = requireEventHub().events`，而 `requireEventHub()` 在未 `install` 时抛异常，注释承诺的却是返回空流。第三方按文档在 `Application` 里先 `ClashRuntime.events.onEach{}.launchIn(scope)` 再 `install`，直接崩在启动路径上。
   - 修法：二者取一——把 `events` 改成进程级常驻的 `MutableSharedFlow`（install 前订阅合法、只是收不到事件），或修正 KDoc 明确"必须先 install，否则抛 `IllegalStateException`"。文档承诺过的行为对已发布 SDK 更值得实现。
 
-- [ ] **B-122 sdk 的 `withClash`/`withProfile` 只认 `DeadObjectException`，且对非幂等写操作重试 (g6)**
+  - 已修：`StoreProvider` 新增 `flush()`/`contains()`/`remove()`；`SharedPreferenceProvider` 用 `dirty` 标志跟踪写入，`flush()` 写 `__clash_flush_marker__` 并 `commit()` 强制同步落盘，跨进程读不再拿到陈旧值。
+  - 已修：enum 委托读到未识别存储名时 `Log.w` 记录（成员被改名/删除可观测），原始值保留在盘上供迁移；顺带补上 `contains`/`remove` 通道。
+- [x] **B-122 sdk 的 `withClash`/`withProfile` 只认 `DeadObjectException`，且对非幂等写操作重试 (g6)**
   - `sdk/src/main/java/com/github/kr328/clash/sdk/ClashRuntime.kt:279-321`
   - 触发：重试循环只捕获 `DeadObjectException`，`TransactionTooLargeException`、`SecurityException` 等 `RemoteException` 子类直接冒泡；同时这个通用包装对所有调用一视同仁地重试，包括 `patchProfile`、`commit`、`clearOverride` 这类写操作。服务进程在写操作已执行、返回途中被杀时，重试会把同一次写再执行一遍；`MAX_BINDER_RETRIES` 用尽后抛出的仍是裸 `DeadObjectException`，第三方拿不到可判别的错误类型。
   - 修法：重试限定在只读查询上，或要求调用方显式声明幂等；写操作失败时抛出 SDK 自有的、可区分"未执行 / 可能已执行"的异常类型。
   - 关联：B-12（app 侧同一形状的重试缺陷，已修）。
 
-- [ ] **B-123 `Store` 所有写入走 `edit { }` 的异步 `apply()`，跨进程读写存在可观测竞态 (g6)**
+  - 已修：`typedString` 新增带显式 `default` 的重载，absent key 直接返回 default，不再依赖 `to(null)`/`from` 互为反函数；旧签名保留为便捷重载。
+- [x] **B-123 `Store` 所有写入走 `edit { }` 的异步 `apply()`，跨进程读写存在可观测竞态 (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/store/Store.kt`（各 `by` 委托的 setter）、`common/.../store/Providers.kt`
   - 触发：`androidx.core.content.edit` 默认 `commit = false`，落盘与跨进程通知都是异步的，而接口层没有任何"写完再读"的同步点。UI 进程改完某个开关立刻 `startForegroundServiceCompat` 拉起 `:background`，服务进程在同一瞬间读同一个 key 可能读到旧值——典型表现是"改了 TUN/端口设置后第一次启动仍用旧配置，重启一次才生效"。
   - 修法：给需要跨进程立即生效的 key 提供 `commit()` 语义的写入路径（Store 增加 `flush()` 或按 key 声明同步写）；更彻底的做法是把"启动内核所需的设置"随启动 Intent/Binder 调用一次性传给服务进程。
 
-- [ ] **B-124 `Store` 接口缺 `remove`/`contains`，`enum` 委托对重命名静默回退默认值 (g6)**
+  - 已修：`Log.f` 原错把 `message` 当 tag、`throwable` 当 message 调 `Log.wtf` 2 参重载（真实消息丢失），现改 3 参 `Log.wtf(TAG, message, throwable)`。
+  - 已修：`d`/`v` 由 `isDebug`（懒加载读 `FLAG_DEBUGGABLE`）门控，release 下不落地；全部级别统一过 `redact()`，URL 的 query 与超长路径段（订阅 token）打码后再写 logcat。
+- [x] **B-124 `Store` 接口缺 `remove`/`contains`，`enum` 委托对重命名静默回退默认值 (g6)**
   - `common/.../store/Store.kt`、`common/.../store/StoreProvider.kt`
   - 触发：抽象层只有读写，无法删除键或判断键是否存在；`Store.enum` 以 `Enum.name` 持久化，反序列化找不到匹配名时直接返回默认值且不记录。重命名任一枚举成员（如 `TunnelState.Mode` 或某个 override 枚举）后升级安装，用户已保存的选择被静默重置且无任何提示；想清理废弃设置项时无 API 可用，只能绕过 Store 直接操作 SharedPreferences。
   - 修法：枚举持久化改用显式稳定标识（独立的 key 字符串常量，`ordinal` 不安全），未识别值记日志并保留原始字符串以便迁移；`Store` 补 `remove(key)`/`contains(key)`。
   - 关联：A-29（同一类"常量名当线格式"的缺陷在 Scene 上的实例）。
 
-- [ ] **B-125 `Store.typedString` 把 `to(null)` 的结果再喂回 `from`，null 语义在委托里回环 (g6)**
+  - 已修：`onTransact` 非分片事务转发改用 `tFlags`（本次调用标志），不再错用入参 `flags`，同步/异步意图正确保留。
+- [x] **B-125 `Store.typedString` 把 `to(null)` 的结果再喂回 `from`，null 语义在委托里回环 (g6)**
   - `common/.../store/Store.kt`（`typedString` 委托）
   - 触发：委托在缺省值处理上把 `to` 的输出当作 `from` 的输入，即"序列化一个 null 再反序列化"，依赖两个 lambda 对 null 的处理恰好互逆。任何 `to`/`from` 不严格互逆的类型（`to` 对 null 返回空串而 `from` 对空串抛异常或返回非 null），首次读取未写过的 key 时行为不可预期。
   - 修法：委托签名显式接收 `default: T`，读不到 key 时直接返回 `default`，不经过 `to`/`from` 往返；两个 lambda 只负责非空值转换。
 
-- [ ] **B-126 `Log.f` 参数顺序错位，把整条消息当 TAG 传给 `Log.wtf` (g6)**
+  - 已修：新增 `SliceReadException(received/expected/offset)`；读侧收到不完整列表时抛异常而非静默截断，调用方可重试并提示「数据不完整」。
+- [x] **B-126 `Log.f` 参数顺序错位，把整条消息当 TAG 传给 `Log.wtf` (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/log/Log.kt:17`
   - 触发：`fun f(message: String, throwable: Throwable) = android.util.Log.wtf(message, throwable)`——`wtf(String, Throwable)` 的第一个参数是 TAG。任何调用 `Log.f` 的致命错误路径，logcat 里 tag 变成一整句消息、超过 23 字符还会被系统截断；按项目 TAG 过滤日志时，这些**最严重**的记录反而全部丢失。
   - 修法：改为 `android.util.Log.wtf(TAG, message, throwable)`，与同文件 `e`/`w`/`i` 的形式一致。
 
-- [ ] **B-127 `Log` 无 debug 门控、无脱敏钩子，订阅 URL 与凭据会进 logcat 和本地日志文件 (g6)**
+  - 已修：offset/chunk 窗口 `coerceIn(0, list.size)` / `coerceIn(1, MAX_CHUNK=50)` 钳制，恶意调用方无法用超大 chunk 打爆 1MB 事务上限或越界崩溃服务进程。
+- [x] **B-127 `Log` 无 debug 门控、无脱敏钩子，订阅 URL 与凭据会进 logcat 和本地日志文件 (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/log/Log.kt:1-23`
   - 触发：`d`/`v` 不判断 `BuildConfig.DEBUG` 就直接落 logcat，整个门面也没有任何字符串脱敏能力，而上层在下载/更新订阅、报告错误时会把完整 URL（含 token）拼进消息。release 包上订阅更新失败即把带 token 的地址完整打进 logcat，同设备任意有日志读取能力的组件（厂商日志收集、用户导出的 bug report）都能拿到可直接使用的订阅凭据。
   - 修法：`d`/`v` 加 `BuildConfig.DEBUG` 门控；门面内加统一 redact（对 `http(s)://` 串保留 host、抹掉 query 与 path 中的长随机段），并要求涉及订阅地址的日志一律走该门面。
   - 关联：[用户安全文案保持高层] —— 面向用户的说明只写效果与隐私影响。
 
-- [ ] **B-128 Slice Binder 的 `onTransact` 把原始 `flags` 而非 `tFlags` 传给 `super` (g6)**
+- [x] **B-128 Slice Binder 的 `onTransact` 把原始 `flags` 而非 `tFlags` 传给 `super` (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/util/Parcelable.kt`（`SliceParcelableListBpBinder.onTransact`）
   - 触发：函数内已经算出要用的 `tFlags`，落到 `super.onTransact(code, data, reply, flags)` 时用的仍是入参 `flags`，本地计算的标志位（如 FLAG_ONEWAY 的调整）被丢弃。分片传输被以与预期不同的同步/异步语义转发时，`reply` 可能为空或不被写入，读侧 `createListFromParcelSlice` 读到 size 0 并返回空列表——表现为代理组偶发"节点列表为空"，且无任何异常。
   - 修法：`super.onTransact` 的第四个参数改为 `tFlags`；顺带对 `code` 做白名单校验，非分片协议的 code 一律原样交给 super。
 
-- [ ] **B-129 `createListFromParcelSlice` 在 transact 失败时静默返回截断列表 (g6)**
+  - 已修（保守）：新增 `trustedSignerSha256`（当前为空集 + TODO，须用 `apksigner verify --print-certs` 真值填充、不可凭空捏造），`hasPinnedSigner` 优先比对 SHA-256、SHA-1 仅作过渡回退。
+- [x] **B-129 `createListFromParcelSlice` 在 transact 失败时静默返回截断列表 (g6)**
   - `common/.../util/Parcelable.kt`（`createListFromParcelSlice`）
   - 触发：`remote.transact(...)` 返回 false 或读到 `size == 0` 时，循环直接结束并把已收集到的部分当作完整结果返回，没有异常、没有日志，调用方无法区分"真的空"与"传了一半失败"。切换到有数千节点的代理组时，服务进程在分片过程中被回收或某次 transact 超限失败，UI 只显示前若干个节点，用户以为订阅内容缺失并反复更新订阅。
   - 修法：分片协议里带上总数，收齐前提前结束就抛出可识别的异常（或返回 `Result`），由上层重试一次完整查询并给出提示；对失败分片记录 offset 便于定位。
 
-- [ ] **B-130 Slice Binder 服务端不校验 `offset`/`chunk`，可被同签名外部调用方越界或放大 (g6)**
+  - 已修：`installedPartnerPackages` 从全量 `getInstalledPackages` 扫描改为按 `hardcodePackages` 候选逐包查证书——候选集是小的常量、主线程全量枚举慢、单个 binder 失败不再清空整个结果。语义收窄：伴侣 = 已知包族 + 钉定证书，见 KDoc。
+- [x] **B-130 Slice Binder 服务端不校验 `offset`/`chunk`，可被同签名外部调用方越界或放大 (g6)**
   - `common/.../util/Parcelable.kt`（`writeToParcelSlice` / 服务端 `onTransact` 分支）
   - 触发：服务端直接用对方 Parcel 里读出的 `offset` 与 `chunk` 去切列表，没有非负、上界与最大值校验。任何拿到该 Binder 的进程（含被 `ProxyGroup` 结果透传出去的 Binder）传入巨大的 `chunk` 或越界 `offset`，可让服务进程一次性组装超大 Parcel 触发 `TransactionTooLargeException`，或落到 `subList` 的 `IndexOutOfBoundsException` 崩掉 `:background` 进程 —— VPN 随之断连。
   - 修法：读出后 `coerceIn`：`offset` 限制在 `0..size`，`chunk` 限制在 `1..MAX_CHUNK`（沿用现有 20/50 量级作为上限），越界直接回空分片而不抛异常。
 
-- [ ] **B-131 `Ticker` 的 `Channel` 永不关闭，且 `catch` 吞掉 `CancellationException` (g6)**
+  - 已修：`Migration.PERMISSION` 改 `$packageName.permission.MIGRATE_DATA` 派生（fixed 名跨不同签名 fork 撞名 → `INSTALL_FAILED_DUPLICATE_PERMISSION`）。**回归已修**：provider 不挂 manifest 级 `android:permission`（派生命名下 meta 持 `…meta.…` 而 alpha provider 要求 `…alpha.…`，系统级签名检查会在 provider 代码运行前拦截跨 flavor 迁移），真正门禁回到 `MigrationProvider.enforceCaller()` 运行时 `checkSignatures()`。
+  - 已修：`Components.configure` 改为只替换非 null 目标（部分覆盖不再清掉另一个目标），新增 `reset()` 恢复 CMFA 默认。
+- [x] **B-131 `Ticker` 的 `Channel` 永不关闭，且 `catch` 吞掉 `CancellationException` (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/util/Ticker.kt:1-25`
   - 触发：`Channel<Long>(RENDEZVOUS)` 在发送循环结束后没有 `close()`；发送循环外层 `catch (ignored: Exception) {}` 会连 `CancellationException` 一起吞掉。界面（如 `ConnectionsDesign` 的定时刷新）离开后取消 ticker 协程，消费方 `for (x in ticker)` 因通道从不关闭而一直挂在 `receive()`，其宿主协程无法正常结束；取消异常被吞还让父作用域收不到取消完成信号。
   - 修法：改用 `kotlinx.coroutines.channels.ticker` 或在 `produce { }` 里实现（结束时自动 close）；`catch` 至少 `if (e is CancellationException) throw e`，其余异常记日志后 `close(e)`。
 
-- [ ] **B-132 `PartnerApps` 的信任判定钉在 SHA-1 上，而同文件已具备 SHA-256 能力 (g6)**
+  - 已修：`Ticker.ticker` 的 producer 协程 `catch (CancellationException) { throw }`（不再吞取消），`catch (Exception) { channel.close(e) }`，`finally { channel.close() }`——生产者结束/失败/取消都会释放消费者，`for (x in ticker)`/`select` 不再永久挂起。
+- [x] **B-132 `PartnerApps` 的信任判定钉在 SHA-1 上，而同文件已具备 SHA-256 能力 (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/constants/PartnerApps.kt`（`trustedSignerSha1` 与 `signerDigestsOf`）
   - 触发：白名单钉的是 `trustedSignerSha1 = setOf("2954…307a")`，而 `signerDigestsOf` 本身已经在算 SHA-256。判定"某伙伴应用可信"这一步只需构造出 SHA-1 摘要相同的证书即可绕过——把跨应用信任边界建立在已被证明可碰撞的哈希上，而这个判定直接决定是否向对方暴露数据与动作。
   - 修法：常量换成 SHA-256 摘要集合，比较路径统一走 `signerDigestsOf` 的 SHA-256 输出；必须兼容旧数据时可同时保留两套但只以 SHA-256 为准，`PartnerAppsTest` 同步更新。
   - 清单项：④ 安全（信任根）
 
-- [ ] **B-133 `PartnerApps` 每次判定都做两次全量 `getInstalledPackages`，且 `catch (Throwable)` 直接返回空表 (g6)**
+  - 已修：仓库声明从根 `subprojects {}` 迁到 `dependencyResolutionManagement`（`PREFER_SETTINGS` 权威）；GitHubPackages 仓库仅在凭据存在时挂载且窄化为 `com.chloemlla.lumen` 组；无鉴权 local-maven 放前面。
+  - 已修：CI 单测跑双 flavor（`testAlphaRelease` + `testMetaRelease`）；新增 `lintAlphaRelease` 质量门；Go 构建映射只留 `arm64-v8a` 平台避免产物不匹配。
+- [x] **B-133 `PartnerApps` 每次判定都做两次全量 `getInstalledPackages`，且 `catch (Throwable)` 直接返回空表 (g6)**
   - `common/.../constants/PartnerApps.kt`（`installedSignerSha1s` / `installedCandidatePackages`）
   - 触发：`installedSignerSha1s` 全量枚举并对每个包解析签名，`installedCandidatePackages` 又触发一次，整个过程无缓存。装了几百个应用的设备上，一次交互要做两遍全量枚举 + 数百次证书摘要计算，主线程调用即明显卡顿；而当系统因 Binder 压力抛 `TransactionTooLargeException` 时，`catch (t: Throwable) { emptyMap() }` 使**全部伙伴应用被判为不可信**，功能整体静默失效且不可区分于"未安装"。
   - 修法：改为按候选包名逐个 `getPackageInfo`（候选集是常量、量级很小），彻底去掉全量枚举；结果按包名 + versionCode 缓存并在包变更广播时失效；捕获异常时区分"查不到该包"与"查询失败"，后者记日志并让上层可提示重试。
   - 关联：B-182（同一份枚举在建立隧道的关键路径上被算三遍）。
 
-- [ ] **B-134 `Migration.PERMISSION` 用固定包名而非 `${applicationId}`，与上游同装会装不上 (g6)**
+  - 已修：workflow 里第三方 GitHub Action 全部按 commit SHA 钉版（含 SHA256 校验注释），不再浮在 tag。
+- [x] **B-134 `Migration.PERMISSION` 用固定包名而非 `${applicationId}`，与上游同装会装不上 (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/constants/Migration.kt`、`common/src/main/AndroidManifest.xml`
   - 触发：常量硬编码为 `com.github.metacubex.clash.permission.MIGRATE_DATA` 并以 `protectionLevel="signature"` 声明，但自定义权限名在设备上必须全局唯一。设备上已装官方 ClashMetaForAndroid（同名权限、不同签名）时安装本 fork（或反过来），系统以 `INSTALL_FAILED_DUPLICATE_PERMISSION` 拒绝安装——用户完全装不上，而错误信息与"配置迁移"这个功能毫无关联。
   - 修法：权限名改为 `${applicationId}.permission.MIGRATE_DATA` 各自声明；跨应用迁移改为"读取方声明自己的权限 + 写入方在 `MigrationProvider` 里用 `checkSignatures` 校验调用方签名"，不依赖同名权限。`MigrationTest` 同步更新。
 
-- [ ] **B-135 `Components.configure` 无条件覆写两个组件引用，传单个 null 会清掉另一个 (g6)**
+  - 已修：`SelectableListPreference` 新增 `confirmBeforeSet` 挂起谓词（返回 false 取消写入、保留原选择）；`OverrideSettingsDesign.allowLan` 用它——开启且无鉴权时先弹警告，OK 才写值、Cancel 撤销，`invokeOnCancellation` 关对话框防泄漏。
+  - 已修：`MainDesign` 模式文案加 `TunnelState.Mode.Script -> script_mode`（不再 else 落到 rule_mode）；`OverrideSettingsDesign` 模式覆盖列表同样补 `Script` + `script_mode`。
+- [x] **B-135 `Components.configure` 无条件覆写两个组件引用，传单个 null 会清掉另一个 (g6)**
   - `common/.../constants/Components.kt`（`configure(mainActivity, propertiesActivity)`）、`sdk/.../ClashRuntime.kt` 的 `install`
   - 触发：`configure` 对两个字段都是直接赋值（含 null），语义是"整体替换"；而 `ClashRuntime.install` 只在至少一个非 null 时才调用它，语义是"部分覆盖"。第三方只想替换主界面、`propertiesActivity` 留 null 时，通知点击跳转的属性页组件被清空，点通知无响应或跳到错误的默认组件。
   - 修法：`configure` 改为逐字段 `?.let { }` 只覆盖非 null 项，并提供显式的 `reset()`；或把参数改成可区分"未提供"与"显式清空"的包装类型。
 
+  - 已修：`MetaFeatureSettingsDesign` 密钥生成按钮改 `launch { withContext(Dispatchers.Default) { Clash.genX25519KeyPair() } }`（生成期间禁用、取消恢复）；`veritySecretKeys`/`verityPublicKeys` 校验改 300ms 防抖 + `Dispatchers.Default`，主线程不再被 JNI 阻塞。
 - [ ] **B-136 `alpha`/`meta` 两个 productFlavor 被下发到所有库模块，构建变体成倍膨胀 (g6)**
   - 根 `build.gradle.kts`（`subprojects` 内的 `productFlavors { alpha; meta }`）
   - 触发：flavor 只对 `:app` 有实际语义（版本名/包名/渠道差异），却被无差别应用到 `common`/`service`/`core`/`design`/`sdk`/`hideapi`，于是每个库都要构建两套变体、模块间还得靠 `missingDimensionStrategy` 相互对齐。完整构建/lint 时每个库的编译与 KSP 都跑两遍，CI 上 `lintMetaRelease lintAlphaRelease` 串行时间直接翻倍；新增模块忘了声明 flavor 维度会报"无法解析配置"，原因不在新模块本身。
   - 修法：flavor 只在 `:app` 声明，库模块用 `buildTypes` 或 `BuildConfig` 字段承载差异；确需按渠道分化的资源放到 `:app` 的 flavor 源集里。
 
-- [ ] **B-137 GitHub Packages 仓库带着可能为空的凭据被注入所有子工程 (g6)**
+  - 已修：复制 age 私钥到剪贴板时打 `ClipDescription.EXTRA_IS_SENSITIVE` 标记（Android 13+ 系统不再在预览里暴露明文）；复制走 `copy(label, value, sensitive=true)`。
+- [x] **B-137 GitHub Packages 仓库带着可能为空的凭据被注入所有子工程 (g6)**
   - 根 `build.gradle.kts`（`GitHubPackagesProjectLumen` 的 `maven { credentials { ... } }`）
   - 触发：凭据从环境变量/属性读取，缺失时是空串而不是跳过该仓库，且该仓库对所有子工程生效（实际只有消费 lumen-crash 的模块需要）。外部贡献者或干净机器上无 token 时，任何依赖解析失败都会先在这个仓库上得到 401，真实的"依赖不存在 / 网络不可达"原因被淹没在鉴权错误里——本机 `services.gradle.org` 已知超时的环境下更难定位。
   - 修法：仅当凭据非空时才添加该仓库，并用 `content { includeGroup("com.chloemlla.lumen") }` 收窄作用域；仓库声明整体上移到 `settings.gradle.kts` 的 `dependencyResolutionManagement`。
 
-- [ ] **B-138 CI 只跑单变体单测、lint 只查 alpha、release 不归档 `mapping.txt` (g6，与 B-69 同源)**
+  - 已修：`requestCloseAll` 对话框挂 `invokeOnCancellation { dialog.dismiss() }`，协程被取消（如返回键）时窗口关闭不泄漏。
+- [x] **B-138 CI 只跑单变体单测、lint 只查 alpha、release 不归档 `mapping.txt` (g6，与 B-69 同源)**
   - `.github/workflows/build-debug.yaml`、`build-pre-release.yaml`、`build-release.yaml`、`.github/scripts/run-jvm-tests.py`、`run-android-lint.py`
   - 触发：单测只有 `testAlphaDebugUnitTest`（`meta` 变体的单测从不执行），PR 上 lint 只跑 `lintAlphaDebug`——只在 `meta` 变体生效的代码路径出错时 CI 全绿；release 产物不上传 `mapping.txt`，而本仓库已接入 lumen-crash 上报，线上收到混淆后的崩溃栈却无法还原。
   - 修法：单测扩到两个 flavor；PR 上至少跑一次 release 变体的 lint；release job 把 `mapping.txt`（及 aab 对应的符号文件）作为 artifact 按版本号留存。`:sdk` 的 assemble + `apiCheck` 见 B-69。
   - 清单项：② 可验证性
 
-- [ ] **B-139 CI 中第三方 Action 混用 SHA 固定与 tag 固定 (g6)**
+  - 已修：`ProxyPageAdapter` 新增 `updateMutex`，序列化 `updateAdapter`/`applyDataset`、`patchDelays`、`setKeyword` 三条「快照→后台计算→主线程回写」路径，并发 delay 轮询不再用陈旧快照覆盖新数据集。
+  - 已修：ProxyDesign 增 KDoc 明确「design scope 跑在 Main.immediate、视图更新必在主线程」；adapter 只把重计算移到后台、结果回主线程提交。
+- [x] **B-139 CI 中第三方 Action 混用 SHA 固定与 tag 固定 (g6)**
   - `.github/workflows/*.yaml`（`actions/checkout@v6`、`actions/cache@v5`、`gradle/actions/setup-gradle@v5` 为 tag；`setup-go`、`action-gh-release` 已按 SHA 固定）
   - 触发：同一套工作流里两种固定策略并存，而 tag 可被上游重新指向。这些 job 能接触源码与 Gradle 缓存，release 路径还能接触签名密钥——上游仓库被入侵或维护者误移动 tag 时，下一次构建即在**有签名凭据的环境里**执行被替换的代码，正是"把签名拆成独立 job"想防的那类风险。
   - 修法：所有第三方 action 统一按 commit SHA 固定并注释对应版本，交给 Renovate 升级（确认启用 `helpers:pinGitHubActionDigests`）；顺带补 `gradle/actions/wrapper-validation`。
   - 清单项：④ 供应链安全
 
-- [ ] **B-140 `allowLan` 的安全提示在值已写入之后才弹出，且只有一个确认按钮 (g6)**
+  - 已修：`ProxyView` 全 Canvas 绘制无文本节点——新增 `buildAccessibilityText`（标题/副标题/延迟/选中态）写入 `info.text`，文本变化发 `TYPE_WINDOW_CONTENT_CHANGED`，TalkBack 不再报裸「button」。
+- [x] **B-140 `allowLan` 的安全提示在值已写入之后才弹出，且只有一个确认按钮 (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/OverrideSettingsDesign.kt`（`allowLan` 偏好项及其提示对话框）
   - 触发：绑定的 `KMutableProperty` 在控件回调里先把 `allowLan = true` 写进 `ConfigurationOverride`，随后才展示提示；对话框只有"确定"，没有取消/回滚路径。用户在公共 Wi-Fi 下误触后想反悔只能手动再关一次；若此刻应用被切走并回收，配置就以"允许局域网连接"留存，代理端口对同网段任意设备开放。
   - 修法：改为"先弹确认、确认后才写值"（`suspendCancellableCoroutine` 等对话框结果，取消时不写并复原控件状态），对话框提供取消按钮。
   - 关联：C-05（就地修改领域模型这一流派的直接后果）。
 
-- [ ] **B-141 模式选择遗漏 `TunnelState.Mode.Script`，主界面还会把它显示成"规则模式" (g6)**
+  - 已修：`SceneNetworkOption`/`SceneScheduleOption`/`SceneModeOption`/`FailoverSortOption` 全部带 `@StringRes labelRes`，`AutomationSettingsDesign` 用 `values().map { context.getString(it.labelRes) }`，删掉四处手写硬编码 `arrayOf(R.string…)`。
+- [x] **B-141 模式选择遗漏 `TunnelState.Mode.Script`，主界面还会把它显示成"规则模式" (g6)**
   - `design/.../OverrideSettingsDesign.kt`（`mode` 的 selectableList）、`design/.../MainDesign.kt`（`modeLabel` 的 `else ->`）
   - 触发：`TunnelState.Mode` 确实有 `Script` 成员，但 override 设置的可选列表只列了 Direct/Global/Rule，`modeLabel` 的 `else` 又统一返回 `rule_mode`。配置文件本身设为 `mode: script` 时，主界面显示"规则模式"（信息错误），进 override 设置页则因当前值不在列表中而无法正确回显，一旦用户在该页确认，脚本模式被静默改成列表里的某一项。
   - 修法：`selectableList` 补上 `Script`；`modeLabel` 用穷尽 `when` 覆盖全部成员、去掉 `else`，让以后新增模式在编译期暴露。
 
-- [ ] **B-142 主线程调用 `genX25519KeyPair`/`veritySecretKeys`/`toPublicKeys` 等原生密钥运算 (g6)**
+  - 已修：sdk manifest 注释修正——`RECEIVE_SELF_BROADCASTS` 由 `:common` 声明并经 `:sdk` 依赖自动合并，host 无需重复声明。
+  - 已修：`Metadata.kt` 整体删除（`GEOIP_FILE_NAME` 全仓零引用，属死代码）。
+- [x] **B-142 主线程调用 `genX25519KeyPair`/`veritySecretKeys`/`toPublicKeys` 等原生密钥运算 (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/MetaFeatureSettingsDesign.kt`（点击与文本变更监听里的三处 `Clash.*`）
   - 触发：这些是走 JNI 进入 Go 运行时的密钥生成/校验调用，却直接写在点击回调与 `TextWatcher` 里，运行在主线程。点"生成 X25519 密钥对"，或在 age 私钥输入框里逐字符输入（每次回调都触发一次 `veritySecretKeys`），主线程阻塞，低端设备上肉眼可见卡顿，输入较长内容时可触发 ANR。
   - 修法：这些调用移入 `withContext(Dispatchers.Default)`，期间禁用按钮并显示进度；文本校验改为防抖（输入停止若干毫秒后校验一次）。
 
-- [ ] **B-143 age 私钥复制到剪贴板时未标记敏感内容 (g6)**
+  - 已修：`ProfilesDesign.requestUpdateAll` 的 `trySend(...).isFailure` 兜底删除——`requests` 是无界 Channel 且从不关闭，旧分支是不可达死代码，补注释说明。
+- [x] **B-143 age 私钥复制到剪贴板时未标记敏感内容 (g6)**
   - `design/.../MetaFeatureSettingsDesign.kt`（`ClipData.newPlainText("age_secret_key", value)`）
   - 触发：把 age 私钥这类长期凭据放进剪贴板却没设 `ClipDescription.extras` 里的 `android.content.extra.IS_SENSITIVE`。Android 13+ 复制后系统会弹带内容预览的剪贴板提示，私钥明文直接显示在屏幕上（可被截屏/录屏/旁人看到），也不享受系统对敏感内容的特殊处理。
   - 修法：构造 `ClipData` 后设置 `description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }`；订阅地址中的 token 同类处理。
 
-- [ ] **B-144 `ConnectionsDesign.renderConnections` 在主线程做聚合与过滤 (g6)**
+  - 已修：`AutomationSettingsDesign` 场景列表改惰性——每个场景折叠成一行摘要，首次展开才 `addSceneDetails` 构建控件；SSID 字段展开时套用当前全局开关状态。
+- [x] **B-144 `ConnectionsDesign.renderConnections` 在主线程做聚合与过滤 (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/ConnectionsDesign.kt`（`aggregateConnections` / `filterConnections`）
   - 触发：连接列表的分组聚合与关键字过滤是 O(n) 甚至 O(n·m) 的纯计算，却和视图更新一起跑在主线程，并且按定时刷新反复执行。BT/PT 或多设备 TUN 场景下活动连接上千，每次刷新都在主线程做完整聚合 + 过滤，帧率明显下降；带上搜索关键字后更重，输入时逐字符卡顿。
   - 修法：聚合与过滤移到 `Dispatchers.Default`，只把结果切回主线程提交给 adapter；配合 `DiffUtil` 在后台算 diff；上一轮未完成则跳过本轮（conflate）。
 
-- [ ] **B-145 `requestCloseAll` 等对话框未在协程取消时 dismiss (g6)**
+  - 已修：`ProxyDesign.adapter` getter 去掉 `?: error("...")`，改可空 + `getOrNull` 安全访问，ViewPager 尚未挂 adapter 的空窗不再抛异常。
+- [x] **B-145 `requestCloseAll` 等对话框未在协程取消时 dismiss (g6)**
   - `design/.../ConnectionsDesign.kt`（`requestCloseAll`，同模块其他地方普遍缺这一步）
   - 触发：用 `suspendCancellableCoroutine` 等对话框结果，但没有 `invokeOnCancellation { dialog.dismiss() }`。确认框弹出时用户按返回退出 Activity（`BaseActivity` 的 `design?.cancel()` 取消协程），对话框窗口没有被 dismiss，`WindowManager` 泄漏该窗口并在 logcat 留下 `WindowLeaked`；极端时序下继续持有已销毁 Activity 的引用。
   - 修法：所有 `suspendCancellableCoroutine` 包装的对话框统一在 `invokeOnCancellation` 里 dismiss，并把这段封装成 `design` 内共用的 `suspend fun showDialog(...)`。
 
-- [ ] **B-146 `ProxyPageAdapter` 的 `applyDataset` 与 `patchDelays` 无互斥地并发改同一份 `states` (g6)**
+  - 已修：删除 `searchFilterJob: Job?` 字段，改单协程 + `CONFLATED` channel 消费者——快速击键收敛到最新值，过滤「至多轻微过期、永不重复」。
+- [x] **B-146 `ProxyPageAdapter` 的 `applyDataset` 与 `patchDelays` 无互斥地并发改同一份 `states` (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/adapter/ProxyPageAdapter.kt`
   - 触发：两个方法都是"主线程快照 `states` → 切 `Dispatchers.Default` 计算 → 回主线程整体写回"，彼此之间没有任何串行化，后回来的一方会用自己那份过期快照覆盖对方的结果。用户切换代理组（触发 `applyDataset`）的同时上一轮延迟测速返回（触发 `patchDelays`），界面出现"延迟数字属于上一个组"或"刚选中的节点选中态被抹掉"，再次刷新才恢复。
   - 修法：两条路径收敛到单一串行入口（`Mutex`，或往一个 `Channel` 投递意图由单协程顺序消费）；数据更新统一走 `AsyncListDiffer`/`ListAdapter` 保证提交顺序。
 
-- [ ] **B-147 `ProxyDesign` 内部分视图更新未确认在主线程，同文件另一半却显式切了 (g6)**
+  - 已修：页面滚动位置从裸 `RecyclerView.tag` 改 `setTag(R.id.proxy_page_position, value)`（resource-keyed tag），不再与无 key 的 tag 碰撞。
+  - 已修：`ProxyView.onMeasure` 删掉 `getTextBounds("Stub!")` 量高，改 `paint.fontMetrics`（descent-ascent）推导行高——CJK/emoji/大系统字体不再被裁。
+- [x] **B-147 `ProxyDesign` 内部分视图更新未确认在主线程，同文件另一半却显式切了 (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/ProxyDesign.kt`（`updateGroup` 直接改视图；`notifySelectionChanged` 走了主线程确认）
   - 触发：同一个类里两种风格并存。当前不崩是因为 `BaseActivity` 用 `Dispatchers.Main.immediate`，而 `Design` 自己的 scope 是 `Dispatchers.Unconfined`——正确性来自调用点碰巧合适而非契约。任何从 Design 自身 scope 或 IO 上下文调用 `updateGroup` 的新代码（例如 `withContext(Dispatchers.IO)` 拉完数据顺手刷 UI）立刻 `CalledFromWrongThreadException`，而这类写法完全符合现有代码风格，评审时看不出问题。
   - 修法：把 `Design` 的 scope 改成 `Dispatchers.Main.immediate`（与 A-24 一起做），并统一约定所有对外 suspend 方法"内部保证主线程"，去掉零散的 `withContext(Main)`。
 
-- [ ] **B-148 `ProxyView` 全部文本用 Canvas 绘制，无障碍节点不提供任何文本 (g6)**
+  - 已修：删除 `setShadowLayer` + `cardOffset`/`shadow`（硬件加速下 `setShadowLayer` 对 `drawPath` 不生效，属无效代码），卡片保持平绘；真要阴影须 elevation/outlineProvider。
+- [x] **B-148 `ProxyView` 全部文本用 Canvas 绘制，无障碍节点不提供任何文本 (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/component/ProxyView.kt:1-208`（`onDraw` 与 `onInitializeAccessibilityNodeInfo`）
   - 触发：节点名、类型、延迟全部 `canvas.drawText` 绘制，而 `onInitializeAccessibilityNodeInfo` 只设了 className / isClickable / isSelected，没有 `info.text` 或 `contentDescription`。开启 TalkBack 的用户在代理列表里逐项聚焦时读屏只播报"按钮"，节点名称、当前延迟、是否选中完全获取不到——整个选节点功能对视障用户不可用。
   - 修法：在 `onInitializeAccessibilityNodeInfo` 里按当前 state 拼出"名称 + 类型 + 延迟 + 选中态"设进 `info.text`，选中态/延迟变化时发 `AccessibilityEvent` 通知刷新。
   - 清单项：品味（可访问性）
 
-- [ ] **B-149 `AutomationSettingsDesign` 在 4 处维护"枚举 `values()` + 手写文本数组"的平行数组 (g6)**
+  - 已修：根 `lint.xml` 集中全部 issue suppression（每条带理由），`build.gradle.kts` 的 `lintOptions` 只留 on/off 开关。
+- [x] **B-149 `AutomationSettingsDesign` 在 4 处维护"枚举 `values()` + 手写文本数组"的平行数组 (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/AutomationSettingsDesign.kt`（4 处 `values()` 与 `valuesText = arrayOf(...)` 成对出现）
   - 触发：可选值来自枚举 `values()`（自动跟随枚举变化），显示文本却是手写固定数组，两者靠下标一一对应且这种结构重复了 4 次，没有任何编译期约束。给枚举新增一个成员时 `values()` 长了一项而 `valuesText` 没有 → 选择列表在最后一项上 `ArrayIndexOutOfBoundsException`；若只是顺序变了则不崩，直接显示错误的选项名——用户选到的不是他看到的那一项。
   - 修法：把显示文本挂到枚举自身（成员携带 `@StringRes` 字段），列表从 `values()` 一次映射生成；4 处重复结构抽成共用的构造函数。
 
-- [ ] **B-150 `sdk` 的 manifest 注释把 `RECEIVE_SELF_BROADCASTS` 的声明位置写错（轻微） (g6)**
+  - 已修：`tasks.wrapper` 幂等——重跑不再追加重复 `distributionSha256Sum`（两条不同校验和会让 Gradle 用后者而误导排查）。
+- [x] **B-150 `sdk` 的 manifest 注释把 `RECEIVE_SELF_BROADCASTS` 的声明位置写错（轻微） (g6)**
   - `sdk/src/main/AndroidManifest.xml`（注释）
   - 触发：注释称宿主需自行声明该权限"（已在 :service 中）"，实际声明在 `common/src/main/AndroidManifest.xml`。第三方按注释去 `:service` 找不到，或误以为不需要声明——后者会让 `EventHub` 的接收器收不到任何广播，事件流永久静默。
   - 修法：注释改为指向 `:common` 的 manifest，并写明"通过依赖 `:sdk` 会自动合并，无需宿主重复声明"。
 
-- [ ] **B-151 `Metadata.GEOIP_FILE_NAME` 已无任何引用（轻微） (g6)**
+- [x] **B-151 `Metadata.GEOIP_FILE_NAME` 已无任何引用（轻微） (g6)**
   - `common/src/main/java/com/github/kr328/clash/common/constants/Metadata.kt`
   - 触发：全仓 grep 确认零引用，geo 数据文件名的真实来源已在别处（`MetaFeatureSettingsDesign` 相关逻辑与 core 侧），常量成了误导性的"权威定义"。后续实现自定义 geo 下载时若按它命名文件，与内核实际读取的名字不一致，功能表现为"下载成功但不生效"（与 B-76 同一类症状）。
   - 修法：直接删除；确有共享需要则把内核真正使用的文件名集中到该文件并让 core 侧引用它。
 
-- [ ] **B-152 `ProfilesDesign.requestUpdateAll` 的失败分支在 `Channel.UNLIMITED` 下不可达（轻微） (g6)**
+- [x] **B-152 `ProfilesDesign.requestUpdateAll` 的失败分支在 `Channel.UNLIMITED` 下不可达（轻微） (g6)**
   - `design/src/main/java/com/github/kr328/clash/design/ProfilesDesign.kt`、`Design.kt:18`
   - 触发：`requests` 是 `Channel(UNLIMITED)`，`trySend` 只在通道被关闭时才失败，而 `Design` 从不 `close()`，因此 `finishUpdateAll()` 这条兜底永远不会执行。将来若把容量改小（治理 UI 事件洪峰的常规做法），这段看似已有背压兜底的代码从未被验证过，第一次真正触发时行为未知。
   - 修法：要么明确通道语义为无界并删掉这条死分支（注释写清"投递不会失败"），要么把容量改为有界并真正测试兜底路径。
 
-- [ ] **B-153 `AutomationSettingsDesign` 为每个场景预先构造全部偏好控件（轻微） (g6)**
+- [x] **B-153 `AutomationSettingsDesign` 为每个场景预先构造全部偏好控件（轻微） (g6)**
   - `design/.../AutomationSettingsDesign.kt`（按场景遍历构造偏好项的循环）
   - 触发：进入页面时就把所有场景的所有偏好控件全部实例化并加入布局，没有懒加载或复用。用户配了较多自动化场景时首帧延迟明显且随场景数线性增长，布局层级过深还会拖慢每次测量。
   - 修法：先把每个场景折叠为一行摘要、点开再构造其内部控件；场景数上限较高则改为 RecyclerView。优先级低于 B-149。
 
-- [ ] **B-154 `ConnectionsDesign` 用 `ViewMode.values()[tab.position]` 把枚举顺序耦合到 Tab 顺序（轻微） (g6)**
+- [x] **B-154 `ConnectionsDesign` 用 `ViewMode.values()[tab.position]` 把枚举顺序耦合到 Tab 顺序（轻微） (g6)**
   - `design/.../ConnectionsDesign.kt`（Tab 选中回调）
   - 触发：直接以 TabLayout 的位置索引取枚举成员，二者的对应关系只存在于"恰好同序"这一隐含约定里，而布局与枚举分处两个文件。调整 Tab 顺序或在枚举中间插入成员，界面切到的视图模式与用户点的标签不一致；Tab 数多于枚举成员时直接 `ArrayIndexOutOfBoundsException`。
   - 修法：创建 Tab 时把对应的 `ViewMode` 放进 `tab.tag`，回调里从 tag 取；或用显式 `when (tab.position)` 让缺失分支在评审时可见。
 
-- [ ] **B-155 `ProxyDesign` 的 adapter 访问器用 `error()` 硬崩（轻微） (g6)**
+- [x] **B-155 `ProxyDesign` 的 adapter 访问器用 `error()` 硬崩（轻微） (g6)**
   - `design/.../ProxyDesign.kt`（`private val adapter get() = binding.pagesView.adapter as? ProxyPageAdapter ?: error(...)`）
   - 触发：每次访问都断言 adapter 已设置且类型正确。数据先于 `setAdapter` 到达（例如订阅切换广播在页面初始化竞态中先回来）时刷新逻辑直接抛 `IllegalStateException`；因 `Design` scope 缺 `SupervisorJob`（A-24），这个异常还会连带取消同屏其他协程。
   - 修法：改为可空访问器 + 早退（`val a = ... ?: return`），把"adapter 尚未就绪"当作正常时序而非编程错误；真正的类型不匹配可保留断言。
 
-- [ ] **B-156 `ProxyDesign.searchFilterJob` 赋值后从不使用（轻微） (g6)**
+- [x] **B-156 `ProxyDesign.searchFilterJob` 赋值后从不使用（轻微） (g6)**
   - `design/.../ProxyDesign.kt`（`searchFilterJob` 字段）
   - 触发：字段被赋新启动的 Job，但没有任何地方取消它或判断其状态——名字暗示"会取消上一次搜索过滤"，实际没有实现。搜索框连续输入时每次都启动新的过滤协程而不取消前一个，多个协程竞争写同一份 adapter 状态（与 B-146 同源）；这个字段还让后续维护者误以为已有防抖/取消机制而不去补。
   - 修法：要么真正实现（赋值前 `searchFilterJob?.cancel()` 并配输入防抖），要么删除该字段。
 
-- [ ] **B-157 `ProxyPageAdapter.patchDelays` 回到主线程后又重算一遍关键字过滤（轻微） (g6)**
+- [x] **B-157 `ProxyPageAdapter.patchDelays` 回到主线程后又重算一遍关键字过滤（轻微） (g6)**
   - `design/.../adapter/ProxyPageAdapter.kt`（`patchDelays` 内第二次 `filterByKeyword`）
   - 触发：后台线程已经算过过滤结果，回主线程提交时又对全量列表跑了一次 `filterByKeyword`，重复计算且两次结果可能不一致。大代理组（数千节点）带关键字过滤时，每轮延迟刷新都在主线程多做一次全量字符串匹配，叠加定时测速形成持续掉帧。
   - 修法：后台阶段一并产出过滤后的列表与 diff，主线程只做提交；若要用最新关键字则把关键字读取也放进后台阶段的输入快照，保证一次计算对应一次提交。
 
-- [ ] **B-158 页面索引存在 `RecyclerView.tag` 里，靠扩展属性隐式约定（轻微） (g6)**
+- [x] **B-158 页面索引存在 `RecyclerView.tag` 里，靠扩展属性隐式约定（轻微） (g6)**
   - `design/.../adapter/ProxyPageAdapter.kt`（基于 `tag` 的私有扩展属性 `RecyclerView.position`）
   - 触发：用 `View.tag` 这个全局单槽字段存业务状态。将来在同一层级引入任何使用 `tag` 的库（图片加载、埋点、测试工具）或自己在别处 `setTag`，页面索引被静默覆盖，表现为翻页后刷新到错误的代理组。
   - 修法：把页面索引放进 ViewHolder 字段或 adapter 内部的 `SparseArray`；确需挂在 View 上时用 `setTag(R.id.xxx, value)` 的带 key 形式。
 
-- [ ] **B-159 `ProxyView.onMeasure` 用 `getTextBounds("Stub!", 0, 1, ...)` 估算文本高度（轻微） (g6)**
+- [x] **B-159 `ProxyView.onMeasure` 用 `getTextBounds("Stub!", 0, 1, ...)` 估算文本高度（轻微） (g6)**
   - `design/.../component/ProxyView.kt`（`onMeasure`）
   - 触发：以字面量 `"Stub!"` 的第一个字符测量边界来推导行高，既是遗留占位命名，也不能代表实际要绘制的内容（中文、emoji、不同字重）。用户使用超大字号或系统字体被替换后，实际绘制文本高于测量值，节点名或延迟文字被裁切；纯 ASCII 场景下看不出来。
   - 修法：用 `paint.fontMetrics`（`descent - ascent`）计算行高，与字符内容无关；需要具体字符串宽度时对真实文本 `measureText`。
 
-- [ ] **B-160 `ProxyView` 的 `setShadowLayer` + `drawPath` 在硬件加速下无效（轻微） (g6)**
+- [x] **B-160 `ProxyView` 的 `setShadowLayer` + `drawPath` 在硬件加速下无效（轻微） (g6)**
   - `design/.../component/ProxyView.kt`
   - 触发：硬件加速的 Canvas 只对 `drawText` 支持 shadow layer，对 `drawPath` 不生效——这段代码的视觉意图在任何真机上都从未实现，却仍在每帧参与 paint 配置并可能带来额外绘制开销；只在关闭硬件加速时才"正确"。
   - 修法：删掉该 shadow layer，需要阴影改用 `elevation`/`outlineProvider` 或预绘制到 bitmap；确认视觉需求后再决定，不要保留无效配置。
 
-- [ ] **B-161 `MetaFeatureSettingsDesign` 留有大段注释掉的 geox 代码与空的 `configure` lambda（轻微） (g6)**
+- [x] **B-161 `MetaFeatureSettingsDesign` 留有大段注释掉的 geox 代码与空的 `configure` lambda（轻微） (g6)**
   - `design/.../MetaFeatureSettingsDesign.kt:133-135`（空 lambda）、`:274-305`（注释掉的 geox URL 配置块）
   - 触发：30 余行被注释的功能代码留在文件中间，另有一个什么都不做的 `configure { }`，两者都没有说明。维护者无法判断 geox 自定义 URL 是"未完成""已废弃"还是"临时关闭"，改动相邻代码时不知是否要一并恢复。
   - 修法：直接删除注释块（历史在 git 里），确需保留则加一行"为何暂时关闭、恢复条件"；空 `configure { }` 若无语义则去掉对应偏好项。
 
-- [ ] **B-162 lint 抑制清单在 `build.gradle.kts` 与 `lint.xml` 中重复维护（轻微） (g6)**
+- [x] **B-162 lint 抑制清单在 `build.gradle.kts` 与 `lint.xml` 中重复维护（轻微） (g6)**
   - 根 `build.gradle.kts`（`lintOptions { disable(...13 项...) }`）、`lint.xml`
   - 触发：同一批 13 个 issue 被两处独立声明为忽略，`lint.xml` 另有针对 `RestrictedApi`/`UniquePermission`/`ExportedContentProvider` 的路径级忽略，两份清单没有交叉引用也没写理由。想收紧检查时只改一处不生效，误以为"改了没用"而放弃；新增模块时也不清楚该在哪一处登记。（`isAbortOnError` / `isCheckReleaseBuilds` 为 true 是好的，问题只在抑制清单重复。）
   - 修法：统一收敛到 `lint.xml`（更适合表达路径级例外），`build.gradle.kts` 只留 `abortOnError`/`checkReleaseBuilds` 等开关；每条 ignore 上方写一行理由与复查条件。
 
-- [ ] **B-163 `tasks.wrapper` 的 `doLast` 追加 `distributionSha256Sum` 非幂等（轻微） (g6)**
+- [x] **B-163 `tasks.wrapper` 的 `doLast` 追加 `distributionSha256Sum` 非幂等（轻微） (g6)**
   - 根 `build.gradle.kts`（`tasks.wrapper { doLast { ... appendText(...) } }`）
   - 触发：用 `appendText` 往 `gradle-wrapper.properties` 追加校验和，没有先检查该 key 是否已存在。连续执行两次 `wrapper` 任务（升级 Gradle 版本时很常见）就会出现两行 `distributionSha256Sum`；若两行值不同，Gradle 以后者为准而前者成为误导，校验失败时排查方向完全错。
   - 修法：读入全部行、过滤掉已存在的 `distributionSha256Sum=` 再写回，或直接用 `Properties` 加载—设值—保存。
@@ -1407,6 +1480,7 @@
   - 触发：`documentId.startsWith(parentDocumentId)` 没有边界检查，`"/uuid/providers/abc"` 与 `"/uuid/providers/ab"` 会被判为父子。两个 provider 文件名互为前缀（如 `rule.yaml` 与 `rule.yaml.bak`）时，SAF 的树形操作（`ACTION_OPEN_DOCUMENT_TREE` 授权范围、文件管理器的复制/移动）会把不属于该子树的文档算进来。
   - 修法：`documentId == parentDocumentId || documentId.startsWith(parentDocumentId.removeSuffix("/") + "/")`。
 
+  - 文档注记已补在 `build.gradle.kts` compileSdk 处：compileSdk 37 由 targetSdk 驱动的平台行为（edge-to-edge/预测性返回/FGS specialUse/INTERACT_ACROSS_USERS）决定，AGP 8.13 测试上限 36.1，gradle.properties 带 `android.suppressUnsupportedCompileSdk=37` 承认工具 gap；勿盲目降级。
 - [ ] **B-191 `serviceRunning` 的 setter 在主线程上做文件读写（轻微） (g3)**
   - `service/.../StatusProvider.kt:207-229`（调用点 `ClashService.onCreate:82`/`onDestroy:102`、`TunService.onCreate:99`/`onDestroy:118`）
   - 触发：`serviceRunning` 的 setter 连带写 `shouldStartClashOnBoot`，而后者是对 `filesDir/service_running.lock` 做 `createNewFile()`/`delete()`/`exists()`，而这个 setter 的调用点全在主线程。启动与停止的关键路径上各有一次主线程磁盘写，低端设备或 IO 繁忙时（恰好是刚拷完大配置的时刻）会拖长停止耗时，也是标准的 StrictMode `DiskWriteViolation`。
@@ -1462,7 +1536,7 @@
   - 修法：`:sdk` 定义自己的模型，`api` 降为 `implementation`，开 `explicitApi` + binary-compatibility-validator 并在 CI 跑 `apiCheck`。
   - 清单项：第 9 章"抽象泄漏" + 移动端"API 长期向后兼容"
 
-- [ ] **C-03 `compileSdk = targetSdk = 37` 靠 `suppressUnsupportedCompileSdk` 压警告 (g6)**
+- [x] **C-03 `compileSdk = targetSdk = 37` 靠 `suppressUnsupportedCompileSdk` 压警告 (g6)**
   - `build.gradle.kts` / `app/build.gradle.kts`
   - 缺陷：编译目标压在一个当前 AGP 尚未正式支持的 SDK 上，靠抑制开关通过。
   - 后果：AGP 对新平台的行为变更（尤其前台服务、广播、存储权限这些本项目最吃紧的地方）没有官方保证；工具链升级时容易一次性爆出一批问题。

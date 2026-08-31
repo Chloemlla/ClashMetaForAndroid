@@ -15,7 +15,6 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.migration.AlphaDataMigrator
 import com.github.kr328.clash.service.util.sendServiceRecreated
-import com.github.kr328.clash.service.util.SecureStorage
 import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.clashDir
 import com.github.kr328.clash.util.onLumenCrashSaved
@@ -41,12 +40,6 @@ class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-        // Keystore provisioning can fail on OEM builds with a broken/locked-out AndroidKeyStore.
-        // Every other startup step here is fail-soft; a crash loop before onCreate finishes would
-        // brick the app, and SecureStorage has no read/write callers to break.
-        runCatching { SecureStorage.init(this) }
-            .onFailure { Log.w("Init secure storage: $it", it) }
 
         val processName = currentProcessName
 
@@ -140,7 +133,24 @@ class MainApplication : Application() {
                     packageManager.getPackageInfo(packageName, 0).lastUpdateTime
                 }
 
-                GEO_ASSETS.forEach { asset -> extractAsset(asset, updateDate) }
+                // B-77: persist which lastUpdateTime we have already released. Comparing file mtime
+                // to updateDate is wrong: a user-imported database newer than the APK would be
+                // treated as "stale built-in asset" and silently replaced on the next update.
+                val stampFile = File(clashDir, ASSETS_STAMP_FILE)
+                val releasedAt = runCatching { stampFile.readText().trim().toLong() }.getOrDefault(0L)
+                val needsRefresh = releasedAt < updateDate
+
+                GEO_ASSETS.forEach { asset -> extractAsset(asset, updateDate, needsRefresh) }
+
+                // Advance the stamp only when every bundled asset is present, so a failed
+                // extraction (e.g. low storage) is retried on the next launch instead of being
+                // skipped forever. User-imported databases (`.user` marker) count as present.
+                val allReleased = GEO_ASSETS.all { asset ->
+                    File(clashDir, asset).exists() || File(clashDir, "$asset.user").exists()
+                }
+                if (needsRefresh && allReleased) {
+                    runCatching { stampFile.writeText(updateDate.toString()) }
+                }
             }
         }
     }
@@ -148,14 +158,20 @@ class MainApplication : Application() {
     /**
      * Extract a bundled asset into [clashDir] atomically.
      *
-     * A stale copy (older than the last package update) is refreshed. The copy goes to a
+     * A stale copy (older than the last package update) is refreshed only when [forceRefresh]
+     * (i.e. the [ASSETS_STAMP_FILE] says this build has not been released yet). The copy goes to a
      * temporary file first and is renamed into place only after it fully completes, so an
      * interrupted write (process death, low storage) never leaves a truncated file that the
      * `exists()` guard would otherwise treat as valid and never repair.
      */
-    private fun extractAsset(name: String, updateDate: Long) {
+    private fun extractAsset(name: String, updateDate: Long, forceRefresh: Boolean) {
         val target = File(clashDir, name)
-        if (target.exists() && target.lastModified() < updateDate) {
+
+        // A user-imported database carries a `.user` marker; never delete or overwrite it,
+        // no matter how old the file mtime looks relative to the package update.
+        if (File(clashDir, "$name.user").exists()) return
+
+        if (forceRefresh && target.exists() && target.lastModified() < updateDate) {
             target.delete()
         }
         if (target.exists()) return
@@ -197,5 +213,9 @@ class MainApplication : Application() {
             "ASN.mmdb",
             "BundleMRS.7z",
         )
+
+        // Records the lastUpdateTime whose bundled geo assets were extracted. User-imported
+        // databases are marked with a sibling "<name>.user" file and are never overwritten.
+        private const val ASSETS_STAMP_FILE = "assets_stamp"
     }
 }

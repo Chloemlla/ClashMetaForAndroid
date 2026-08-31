@@ -24,15 +24,25 @@ object Components {
 
     /**
      * Override notification / VPN configure targets for white-label or SDK hosts.
-     * Pass null to restore the corresponding CMFA default.
+     *
+     * Only non-null components are replaced, so a partial override never clears the other
+     * target (B-135). Pass a component to override that target; use [reset] to restore every
+     * target to the corresponding CMFA default.
      */
     @JvmStatic
     fun configure(
         mainActivity: ComponentName? = null,
         propertiesActivity: ComponentName? = null,
     ) {
-        mainActivityOverride = mainActivity
-        propertiesActivityOverride = propertiesActivity
+        mainActivity?.let { mainActivityOverride = it }
+        propertiesActivity?.let { propertiesActivityOverride = it }
+    }
+
+    /** Restore both overridden components to their CMFA defaults. */
+    @JvmStatic
+    fun reset() {
+        mainActivityOverride = null
+        propertiesActivityOverride = null
     }
 
     val MAIN_ACTIVITY: ComponentName

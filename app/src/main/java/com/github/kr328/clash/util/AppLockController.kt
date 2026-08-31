@@ -21,6 +21,14 @@ object AppLockController {
     private const val AUTHENTICATORS =
         Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
 
+    /**
+     * In-process "the user has unlocked this session" flag. Cleared whenever the app goes to the
+     * background (see [ApplicationObserver.markBackgrounded]), so returning after the timeout
+     * re-verifies. While the app stays foreground, navigating between activities never re-prompts.
+     */
+    @Volatile
+    private var unlockedInProcess = false
+
     fun canAuthenticate(activity: FragmentActivity): Boolean {
         val manager = BiometricManager.from(activity)
         val result = manager.canAuthenticate(AUTHENTICATORS)
@@ -44,6 +52,7 @@ object AppLockController {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     uiStore.lastUnlockedAt = System.currentTimeMillis()
+                    unlockedInProcess = true
                     if (cont.isActive) cont.resume(true)
                 }
 
@@ -96,19 +105,49 @@ object AppLockController {
 
         uiStore.appLockEnabled = false
         uiStore.lastUnlockedAt = System.currentTimeMillis()
+        unlockedInProcess = true
 
         return true
     }
 
     fun markUnlocked(uiStore: UiStore, now: Long = System.currentTimeMillis()) {
         uiStore.lastUnlockedAt = now
+        unlockedInProcess = true
     }
 
-    fun isUnlockRequired(uiStore: UiStore, now: Long = System.currentTimeMillis()): Boolean {
-        return AppLockGate.requiresUnlock(
-            enabled = uiStore.appLockEnabled,
-            lastUnlockedAt = uiStore.lastUnlockedAt,
-            now = now,
+    /**
+     * Cold-start gate: requires unlock whenever the lock is enabled and this process has not
+     * already authenticated. A cleared unlock timestamp (the settings screen zeroes it when the
+     * lock is toggled off) forces a fresh authentication even if the in-process flag survived.
+     */
+    fun isUnlockRequired(uiStore: UiStore): Boolean {
+        if (!uiStore.appLockEnabled) return false
+        if (uiStore.lastUnlockedAt <= 0L) {
+            unlockedInProcess = false
+            return true
+        }
+        return !unlockedInProcess
+    }
+
+    /**
+     * Return-from-background gate: requires a fresh authentication only when the app actually went
+     * to the background and the trip lasted past [AppLockGate.DEFAULT_BACKGROUND_TIMEOUT_MS].
+     * While the app stays foreground (in-process navigation) this stays false.
+     */
+    fun isRecheckRequiredOnResume(
+        uiStore: UiStore,
+        now: Long = System.currentTimeMillis(),
+    ): Boolean {
+        if (!uiStore.appLockEnabled) return false
+        if (unlockedInProcess) return false
+        return AppLockGate.requiresUnlockOnResume(
+            enabled = true,
+            backgroundDurationMs = ApplicationObserver.backgroundReturnMs,
         )
+    }
+
+    /** Called by [ApplicationObserver] when the app leaves the foreground; drops the session flag. */
+    fun onAppBackgrounded() {
+        unlockedInProcess = false
     }
 }

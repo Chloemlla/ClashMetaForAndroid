@@ -22,6 +22,8 @@
     <string name="audit_vpn_settings_unavailable">Android VPN settings are unavailable on this device.</string>
     <string name="backup_before_uninstall">Backup before uninstall</string>
     <string name="backup_before_uninstall_summary">Export profiles and settings to a ZIP file before removing the app. Store it securely.</string>
+    <string name="backup_sensitive_title">Contains sensitive data</string>
+    <string name="backup_sensitive_message">This backup contains subscription credentials. Keep it somewhere only you can access and do not share it.</string>
     <string name="restore_after_reinstall">Restore after reinstall</string>
     <string name="restore_after_reinstall_summary">Import a previously exported ZIP backup. Existing data is preserved.</string>
     <string name="backup_exporting">Creating backup…</string>
@@ -186,6 +188,7 @@
     <string name="clash_logcat">Clash Logcat</string>
     <string name="history">History</string>
     <string name="logcat">Logcat</string>
+    <string name="logcat_dropped_messages">Log buffer overflowed; some earlier messages were dropped</string>
     <string name="filter_logs">Filter logs</string>
     <string name="filter_logs_active">Filter logs: %1$s</string>
     <string name="log_filter_hint">DNS, rule, match, or another keyword</string>
@@ -320,6 +323,7 @@
     <string name="warning">Warning</string>
     <string name="error">Error</string>
     <string name="debug">Debug</string>
+    <string name="failed_to_load_settings">Unable to load settings. The background service may be starting up; please try again.</string>
     <string name="silent">Silent</string>
 
     <string name="force_enable">Force Enable</string>
@@ -539,7 +543,7 @@
     <string name="hide_from_recents_title">Hide from Recents</string>
     <string name="hide_from_recents_desc">Hide app from the Recent apps screen</string>
     <string name="app_lock_title">App lock</string>
-    <string name="app_lock_desc">Require biometric or device credential after cold start and after 60s in the background</string>
+    <string name="app_lock_desc">Require biometric or device credential after cold start and after 60s in the background. Protects the visibility of your configs and subscription info; it does not gate one-tap quick settings or shortcut actions.</string>
     <string name="app_lock_prompt_title">Unlock Clash Meta</string>
     <string name="app_lock_prompt_subtitle">Confirm your identity to open the app</string>
     <string name="secure_screen_title">Secure screen</string>

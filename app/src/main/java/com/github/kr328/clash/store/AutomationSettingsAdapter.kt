@@ -19,10 +19,19 @@ import com.github.kr328.clash.service.scene.normalizeFailoverCooldownMillis
 import com.github.kr328.clash.service.scene.normalizeFailoverThreshold
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.sendAutomationChanged
+import com.github.kr328.clash.common.Global
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class AutomationSettingsAdapter(private val context: Context) : AutomationSettings {
     private val store = ServiceStore(context)
     private val sceneStore = SceneStore(context)
+
+    // B-16: saving one scene touches several properties; broadcasting on every setter would fire a
+    // storm of automation-changed broadcasts that each re-evaluate scenes service-side. Coalesce
+    // rapid writes into a single broadcast after a short quiet window.
+    private var automationChangedJob: Job? = null
 
     override var autoScenesEnabled: Boolean
         get() = store.autoScenesEnabled
@@ -73,17 +82,25 @@ class AutomationSettingsAdapter(private val context: Context) : AutomationSettin
 
     override fun addMissingTemplates() {
         sceneStore.addMissingTemplates()
-        context.sendAutomationChanged()
+        scheduleAutomationChanged()
     }
 
     override fun moveScene(id: String, offset: Int) {
         sceneStore.move(id, offset)
-        context.sendAutomationChanged()
+        scheduleAutomationChanged()
     }
 
     private fun updateSetting(update: () -> Unit) {
         update()
-        context.sendAutomationChanged()
+        scheduleAutomationChanged()
+    }
+
+    private fun scheduleAutomationChanged() {
+        if (automationChangedJob?.isActive == true) return
+        automationChangedJob = Global.launch {
+            delay(AUTOMATION_CHANGED_DEBOUNCE_MS)
+            context.sendAutomationChanged()
+        }
     }
 
     private inner class SceneSettingAdapter(private var snapshot: Scene) : SceneSetting {
@@ -171,11 +188,15 @@ class AutomationSettingsAdapter(private val context: Context) : AutomationSettin
         private fun current(): Scene = snapshot
 
         private fun update(transform: Scene.() -> Scene) {
+            // The read-modify-write is atomic within this process (synchronized on the store).
+            // Cross-process serialization (the service process also reads/writes scenesJson) needs
+            // a single write authority or a revision check on the service side (B-15); the app
+            // side alone cannot provide it without going through PreferenceProvider.
             snapshot = synchronized(sceneStore) {
                 val latest = sceneStore.scenes.firstOrNull { it.id == id } ?: snapshot
                 latest.transform().also(sceneStore::update)
             }
-            context.sendAutomationChanged()
+            scheduleAutomationChanged()
         }
     }
 
@@ -187,6 +208,9 @@ class AutomationSettingsAdapter(private val context: Context) : AutomationSettin
     }
 
     private companion object {
+        // Coalesce the automation-changed broadcast over a quiet window (B-16).
+        const val AUTOMATION_CHANGED_DEBOUNCE_MS = 200L
+
         val DAYTIME = SceneTimeWindow(
             startMinute = 7 * 60,
             endMinute = 19 * 60,

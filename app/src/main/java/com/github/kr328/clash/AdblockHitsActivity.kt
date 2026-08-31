@@ -33,22 +33,28 @@ class AdblockHitsActivity : BaseActivity<AdblockHitsDesign>() {
             }
         }
 
-        withContext(Dispatchers.IO) {
+        suspend fun registerObserver() {
             runCatching {
-                withClash {
-                    setAdblockObserver(observer)
-                }
+                withClash { setAdblockObserver(observer) }
             }.onFailure { Log.w("Failed to set adblock observer", it) }
         }
 
+        suspend fun unregisterObserver() {
+            runCatching {
+                withClash { setAdblockObserver(null) }
+            }.onFailure { Log.w("Failed to clear adblock observer", it) }
+        }
+
+        // B-84: stop polling while the page is not visible — this page used to keep querying and
+        // pushing into the RecyclerView from the background, wasting Binder bandwidth and battery.
         launch {
             while (isActive) {
-                runCatching {
-                    withClash {
-                        queryAdblockStats()
-                    }
-                }.onSuccess { design.setStats(it) }
-                    .onFailure { Log.w("queryAdblockStats failed", it) }
+                if (activityStarted) {
+                    runCatching {
+                        withClash { queryAdblockStats() }
+                    }.onSuccess { design.setStats(it) }
+                        .onFailure { Log.w("queryAdblockStats failed", it) }
+                }
 
                 delay(2000)
             }
@@ -60,12 +66,14 @@ class AdblockHitsActivity : BaseActivity<AdblockHitsDesign>() {
                     events.onReceive {
                         when (it) {
                             Event.ActivityStart -> {
+                                registerObserver()
                                 val history = withContext(Dispatchers.IO) {
                                     loadHistory()
                                 }
 
                                 design.patchHits(history)
                             }
+                            Event.ActivityStop -> unregisterObserver()
                             else -> Unit
                         }
                     }
@@ -99,11 +107,7 @@ class AdblockHitsActivity : BaseActivity<AdblockHitsDesign>() {
             }
         } finally {
             withContext(Dispatchers.IO + NonCancellable) {
-                runCatching {
-                    withClash {
-                        setAdblockObserver(null)
-                    }
-                }
+                unregisterObserver()
             }
         }
     }

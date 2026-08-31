@@ -341,7 +341,11 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     }
 
     private fun applySecureScreen() {
-        if (uiStore.secureScreen) {
+        // B-73: when app lock is on, the recents thumbnail can leak the protected page even before
+        // any re-authentication — FLAG_SECURE must be the union of the explicit secureScreen
+        // setting and the app lock, not just the former.
+        val secure = uiStore.secureScreen || uiStore.appLockEnabled
+        if (secure) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -376,13 +380,22 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     private fun maybeGateOnResume() {
         if (!initialStartHandled) return
         if (unlockGateInProgress) return
-        if (!AppLockController.isUnlockRequired(uiStore)) return
+        if (!AppLockController.isRecheckRequiredOnResume(uiStore)) return
 
         unlockGateInProgress = true
+
+        // B-73: the re-gate runs after the content is already drawn; obscure the design root
+        // until the fresh verification passes so protected content is not visible in the brief
+        // window before the prompt, nor in the frame captured for the recent-tasks preview.
+        val gateView = design?.root
+        gateView?.alpha = 0f
+
         launch {
             try {
                 val unlocked = AppLockController.authenticate(this@BaseActivity, uiStore)
-                if (!unlocked) {
+                if (unlocked) {
+                    gateView?.alpha = 1f
+                } else {
                     finish()
                 }
             } finally {

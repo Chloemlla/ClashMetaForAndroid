@@ -22,6 +22,8 @@ import com.github.kr328.clash.design.util.addScrolledToBottomObserver
 import com.github.kr328.clash.design.util.invalidateChildren
 import com.github.kr328.clash.design.util.preserveOrderFrom
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
 
@@ -37,6 +39,11 @@ class ProxyPageAdapter(
     private val boundRecyclerViews = mutableSetOf<RecyclerView>()
     private var extraTopInset = 0
     private var surfaceObserverInstalled = false
+
+    // Serializes the "snapshot -> background compute -> main-thread write-back" data paths
+    // (updateAdapter / applyDataset, patchDelays, setKeyword) so a concurrent delay poll can
+    // never clobber a fresh group dataset with a stale snapshot (or vice versa).
+    private val updateMutex = Mutex()
 
     private val allProxies = MutableList(adapters.size) { emptyList<Proxy>() }
     private val parents = MutableList(adapters.size) { ProxyState("") }
@@ -63,7 +70,7 @@ class ProxyPageAdapter(
         animateDelay: Boolean,
         preserveOrder: Boolean,
         scrollToSelected: Boolean = false,
-    ) {
+    ) = updateMutex.withLock {
         val adapter = adapters[position]
         val previousAll = allProxies[position]
         val normalized = withContext(Dispatchers.Default) {
@@ -99,11 +106,11 @@ class ProxyPageAdapter(
         position: Int,
         delays: Map<String, Int>,
         animateDelay: Boolean,
-    ) {
-        if (position !in allProxies.indices || delays.isEmpty()) return
+    ) = updateMutex.withLock {
+        if (position !in allProxies.indices || delays.isEmpty()) return@withLock
 
         val previous = allProxies[position]
-        if (previous.isEmpty()) return
+        if (previous.isEmpty()) return@withLock
 
         val patched = withContext(Dispatchers.Default) {
             previous.map { proxy ->
@@ -121,21 +128,25 @@ class ProxyPageAdapter(
         val adapter = adapters[position]
         val keyword = keywords[position]
 
-        val changedDisplayIndices = withContext(Dispatchers.Default) {
+        // Compute the filtered display and the changed indices in one background pass;
+        // the main thread only submits, so the keyword filter is not re-run on the UI thread.
+        val result = withContext(Dispatchers.Default) {
             val display = patched.filterByKeyword(keyword)
             val oldDisplay = adapter.states.map { it.proxy }
-            if (oldDisplay.size != display.size) {
+            val changedIndices = if (oldDisplay.size != display.size) {
                 // Keyword filter view drifted; fall back to full rebind of display list.
-                return@withContext display.indices.toList()
+                display.indices.toList()
+            } else {
+                oldDisplay.indices.filter { index ->
+                    oldDisplay[index].name == display[index].name &&
+                        oldDisplay[index].delay != display[index].delay
+                }
             }
-            oldDisplay.indices.filter { index ->
-                oldDisplay[index].name == display[index].name &&
-                    oldDisplay[index].delay != display[index].delay
-            }
+            PatchDelaysResult(display, changedIndices)
         }
 
         withContext(Dispatchers.Main) {
-            val display = patched.filterByKeyword(keyword)
+            val display = result.display
             if (adapter.states.size != display.size) {
                 // Structural mismatch — rebuild states for this page without binder round-trip.
                 val parentState = parents[position]
@@ -156,16 +167,16 @@ class ProxyPageAdapter(
                 return@withContext
             }
 
-            changedDisplayIndices.forEach { index ->
+            result.changedIndices.forEach { index ->
                 adapter.states[index].updateProxy(display[index], animateDelay)
                 adapter.notifyItemChanged(index, ProxyAdapter.PAYLOAD_PROXY)
             }
         }
     }
 
-    suspend fun setKeyword(position: Int, keyword: String) {
+    suspend fun setKeyword(position: Int, keyword: String) = updateMutex.withLock {
         val normalized = keyword.trim()
-        if (keywords[position] == normalized) return
+        if (keywords[position] == normalized) return@withLock
 
         keywords[position] = normalized
         pendingScrollToSelected[position] = normalized.isEmpty()
@@ -392,16 +403,23 @@ class ProxyPageAdapter(
         }
     }
 
+    // Keyed tag so the page index cannot be silently overwritten by a library (or other code)
+    // that uses the tag's single anonymous slot.
     private var RecyclerView.position: Int
-        get() = tag as? Int ?: -1
+        get() = getTag(R.id.proxy_page_position) as? Int ?: -1
         set(value) {
-            tag = value
+            setTag(R.id.proxy_page_position, value)
         }
 
     private data class AdapterUpdate(
         val proxies: List<Proxy>,
         val changedIndices: List<Int>,
         val diff: androidx.recyclerview.widget.DiffUtil.DiffResult?,
+    )
+
+    private data class PatchDelaysResult(
+        val display: List<Proxy>,
+        val changedIndices: List<Int>,
     )
 }
 

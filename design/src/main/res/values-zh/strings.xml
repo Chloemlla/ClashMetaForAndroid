@@ -23,6 +23,8 @@
     <string name="audit_vpn_settings_unavailable">此设备无法打开 Android VPN 设置。</string>
     <string name="backup_before_uninstall">卸载前备份</string>
     <string name="backup_before_uninstall_summary">卸载应用前将配置和设置导出为 ZIP 文件，请妥善保管。</string>
+    <string name="backup_sensitive_title">包含敏感数据</string>
+    <string name="backup_sensitive_message">此备份包含订阅凭据，请保存在只有你能访问的地方，不要分享给他人。</string>
     <string name="restore_after_reinstall">重装后恢复</string>
     <string name="restore_after_reinstall_summary">导入之前导出的 ZIP 备份，现有数据不会被覆盖。</string>
     <string name="backup_exporting">正在创建备份…</string>
@@ -77,6 +79,7 @@
     <string name="bypass_private_network_summary">绕过私有网络地址</string>
     <string name="cancel">取消</string>
     <string name="clash_logcat">Clash 日志捕捉工具</string>
+    <string name="logcat_dropped_messages">日志缓冲已满，部分较早的日志被丢弃</string>
     <string name="create_profile">创建配置</string>
     <string name="dark_mode">暗黑模式</string>
     <string name="dynamic_colors_title">跟随壁纸配色</string>
@@ -117,7 +120,7 @@
     <string name="hide_from_recents_title">从最近任务隐藏</string>
     <string name="hide_from_recents_desc">在最近任务中隐藏应用</string>
     <string name="app_lock_title">应用锁</string>
-    <string name="app_lock_desc">冷启动或后台超过 60 秒后，需通过生物识别或设备凭据解锁</string>
+    <string name="app_lock_desc">冷启动或后台超过 60 秒后，需通过生物识别或设备凭据解锁。该锁保护配置与订阅信息的可见性，不拦截快捷设置或桌面快捷方式等一键开关动作。</string>
     <string name="app_lock_prompt_title">解锁 Clash Meta</string>
     <string name="app_lock_prompt_subtitle">请验证身份以打开应用</string>
     <string name="secure_screen_title">安全屏幕</string>
@@ -291,6 +294,7 @@
     <string name="warning">警告</string>
     <string name="error">错误</string>
     <string name="debug">调试</string>
+    <string name="failed_to_load_settings">无法加载设置，后台服务可能正在启动，请重试。</string>
     <string name="silent">停用</string>
     <string name="format_elements">%d 个条目</string>
     <string name="strategy">策略</string>

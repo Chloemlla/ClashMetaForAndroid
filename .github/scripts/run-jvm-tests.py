@@ -5,7 +5,8 @@ import sys
 
 
 # Reuse the Gradle daemon within a job (setup-gradle caches it). Avoid --info noise unless debugging.
-command = ["./gradlew", "--stacktrace", "testAlphaDebugUnitTest"]
+# B-138: run unit tests on both flavor variants (meta used to be silently skipped).
+command = ["./gradlew", "--stacktrace", "testAlphaDebugUnitTest", "testMetaDebugUnitTest"]
 process = subprocess.Popen(
     command,
     stdout=subprocess.PIPE,

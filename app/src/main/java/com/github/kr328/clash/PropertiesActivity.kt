@@ -1,5 +1,6 @@
 package com.github.kr328.clash
 
+import android.widget.Toast
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
@@ -26,10 +27,22 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         setResult(RESULT_CANCELED)
 
         val uuid = intent.uuid ?: return finish()
+
+        // A-35: PropertiesDesign binds profile fields directly, so there is no safe "empty"
+        // skeleton to attach before the read (drawing with a null profile would NPE). On failure
+        // surface the error and close instead of leaving a silent blank window.
         val design = PropertiesDesign(this)
         serviceStore = ServiceStore(this)
 
-        original = withProfile { queryByUUID(uuid) }?.toDesignProfile() ?: return finish()
+        original = try {
+            withProfile { queryByUUID(uuid) }?.toDesignProfile() ?: return finish()
+        } catch (e: Exception) {
+            runCatching {
+                Toast.makeText(this, R.string.failed_to_load_settings, Toast.LENGTH_LONG).show()
+            }
+            finish()
+            return
+        }
 
         originalLocalTrafficBilling = serviceStore.getLocalSubscriptionTraffic(uuid)
         design.profile = original

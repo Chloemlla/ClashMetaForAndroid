@@ -3,12 +3,16 @@ package com.github.kr328.clash
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
+import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.remote.StatusClient
 import com.github.kr328.clash.util.presentPendingLumenCrashReportIfNeeded
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** App-private target for launcher shortcuts that change VPN state. */
 class InternalControlActivity : Activity() {
@@ -19,17 +23,31 @@ class InternalControlActivity : Activity() {
 
         if (presentPendingLumenCrashReportIfNeeded()) return
 
-        when (intent.action) {
-            Intents.ACTION_TOGGLE_CLASH -> if (isClashRunning()) stopClash() else startClash()
-            Intents.ACTION_START_CLASH -> if (isClashRunning()) showStarted() else startClash()
-            Intents.ACTION_STOP_CLASH -> stopClash()
-        }
+        // B-82: the state query can cold-start :background and must not block the main thread of a
+        // transparent noHistory trampoline. Dispatch the whole query + action on a short-lived
+        // coroutine and finish immediately; the coroutine outlives this window by design.
+        executeControl(intent.action)
 
         finish()
     }
 
-    private fun isClashRunning(): Boolean {
-        return StatusClient(this).currentProfile() != null
+    private fun executeControl(action: String?) {
+        Global.launch(Dispatchers.IO) {
+            val running = when (action) {
+                Intents.ACTION_STOP_CLASH -> false
+                else -> runCatching {
+                    StatusClient(applicationContext).currentProfile() != null
+                }.getOrDefault(false)
+            }
+
+            withContext(Dispatchers.Main) {
+                when (action) {
+                    Intents.ACTION_TOGGLE_CLASH -> if (running) stopClash() else startClash()
+                    Intents.ACTION_START_CLASH -> if (running) showStarted() else startClash()
+                    Intents.ACTION_STOP_CLASH -> stopClash()
+                }
+            }
+        }
     }
 
     private fun startClash() {

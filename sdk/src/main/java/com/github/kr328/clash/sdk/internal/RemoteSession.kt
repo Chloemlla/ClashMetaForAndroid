@@ -26,6 +26,24 @@ internal class RemoteSession(
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            handleDeath("RemoteService killed or crashed")
+        }
+
+        override fun onBindingDied(name: ComponentName?) {
+            // Binding was alive and then died without a clean disconnect; the system will not
+            // deliver another callback, so unbind now so a later bind() can re-connect.
+            handleDeath("RemoteService binding died")
+        }
+
+        override fun onNullBinding(name: ComponentName?) {
+            // Service returned a null Binder: a contract violation that will never recover.
+            remote.set(null)
+            unbind()
+            onCrashed()
+            Log.w("RemoteService returned a null binder")
+        }
+
+        private fun handleDeath(message: String) {
             remote.set(null)
 
             if (System.currentTimeMillis() - lastCrashed < TOGGLE_CRASHED_INTERVAL) {
@@ -34,7 +52,7 @@ internal class RemoteSession(
             }
 
             lastCrashed = System.currentTimeMillis()
-            Log.w("RemoteService killed or crashed")
+            Log.w(message)
         }
     }
 

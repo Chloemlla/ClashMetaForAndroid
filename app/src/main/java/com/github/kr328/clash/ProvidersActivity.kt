@@ -13,7 +13,14 @@ import com.github.kr328.clash.design.R
 
 class ProvidersActivity : BaseActivity<ProvidersDesign>() {
     override suspend fun main() {
-        val providers = withClash { queryProviders().sorted() }
+        // A-35: if the query fails, attach an empty skeleton so the page is not a blank window;
+        // BaseActivity surfaces the error toast and keeps this visible degraded state.
+        val providers = try {
+            withClash { queryProviders().sorted() }
+        } catch (e: Exception) {
+            setContentDesign(ProvidersDesign(this, emptyList()))
+            throw e
+        }
         val design = ProvidersDesign(this, providers)
 
         setContentDesign(design)

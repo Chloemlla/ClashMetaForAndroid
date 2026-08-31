@@ -1,11 +1,26 @@
 package com.github.kr328.clash.common.store
 
+import com.github.kr328.clash.common.log.Log
 import kotlin.reflect.KProperty
 
 class Store(val provider: StoreProvider) {
     interface Delegate<T> {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): T
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
+    }
+
+    fun contains(key: String): Boolean = provider.contains(key)
+
+    fun remove(key: String) {
+        provider.remove(key)
+    }
+
+    /**
+     * Synchronously flushes pending writes. Call before starting another process that must
+     * observe the just-written settings (B-123).
+     */
+    fun flush() {
+        provider.flush()
     }
 
     fun int(key: String, defaultValue: Int): Delegate<Int> {
@@ -73,7 +88,16 @@ class Store(val provider: StoreProvider) {
             override fun getValue(thisRef: Any?, property: KProperty<*>): T {
                 val name = provider.getString(key, defaultValue.name)
 
-                return values.find { name == it.name } ?: defaultValue
+                return values.find { name == it.name } ?: run {
+                    // B-124: an unrecognized stored name means the enum member was renamed or
+                    // removed. Log so the silent fallback to the default is observable, and keep
+                    // the raw value on disk (it is still stored under the key) for a future migration.
+                    Log.w(
+                        "Store.enum: unrecognized stored value '$name' for key '$key', " +
+                            "falling back to '${defaultValue.name}' (raw value preserved on disk)"
+                    )
+                    defaultValue
+                }
             }
 
             override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
@@ -82,17 +106,47 @@ class Store(val provider: StoreProvider) {
         }
     }
 
-    fun <T> typedString(key: String, from: (String) -> T?, to: (T?) -> String): Delegate<T?> {
+    /**
+     * Typed-string delegate that serializes [T?] through the supplied lambdas.
+     *
+     * Reads of an absent key return [default] directly instead of round-tripping the value
+     * through `to` and back through `from`, which silently depended on the two lambdas being
+     * exact inverses of each other for null (B-125).
+     *
+     * @param default value returned when the key has never been written.
+     * @param from parses a non-null stored string into [T] (or null when unparseable).
+     * @param to serializes a non-null [T] into a stored string. Null is stored as an empty string.
+     */
+    fun <T> typedString(
+        key: String,
+        default: T?,
+        from: (String) -> T?,
+        to: (T) -> String,
+    ): Delegate<T?> {
         return object : Delegate<T?> {
             override fun getValue(thisRef: Any?, property: KProperty<*>): T? {
-                val value = provider.getString(key, to(null))
-
-                return from(value)
+                if (!provider.contains(key)) return default
+                return from(provider.getString(key, ""))
             }
 
             override fun setValue(thisRef: Any?, property: KProperty<*>, value: T?) {
-                provider.setString(key, to(value))
+                provider.setString(key, value?.let(to) ?: "")
             }
         }
+    }
+
+    /**
+     * Convenience overload for the previous [typedString] API. [default] is derived once from
+     * `to(null)` (the serialized form of null); prefer the overload with an explicit [default]
+     * for new call sites.
+     */
+    fun <T> typedString(key: String, from: (String) -> T?, to: (T?) -> String): Delegate<T?> {
+        val serializedNull = to(null)
+        return typedString(
+            key = key,
+            default = from(serializedNull),
+            from = from,
+            to = { value -> to(value) },
+        )
     }
 }

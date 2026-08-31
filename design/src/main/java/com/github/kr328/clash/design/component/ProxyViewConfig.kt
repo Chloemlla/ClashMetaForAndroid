@@ -28,13 +28,5 @@ class ProxyViewConfig(val context: Context, var proxyLine: Int) {
     val textSize
         get() = if (proxyLine==2) context.getPixels(R.dimen.proxy_text_size).toFloat() else context.getPixels(R.dimen.proxy_text_size_grid3).toFloat()
 
-    val shadow = Color.argb(
-        0x15,
-        Color.red(Color.DKGRAY),
-        Color.green(Color.DKGRAY),
-        Color.blue(Color.DKGRAY),
-    )
-
     val cardRadius = context.getPixels(R.dimen.proxy_card_radius).toFloat()
-    var cardOffset = context.getPixels(R.dimen.proxy_card_offset).toFloat()
 }

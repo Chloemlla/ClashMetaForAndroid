@@ -24,6 +24,18 @@ fun PreferenceScreen.clickable(
     @DrawableRes icon: Int? = null,
     @StringRes summary: Int? = null,
     configure: ClickablePreference.() -> Unit = {}
+): ClickablePreference = clickable(
+    title = context.getText(title),
+    icon = icon,
+    summary = summary?.let { context.getText(it) },
+    configure = configure,
+)
+
+fun PreferenceScreen.clickable(
+    title: CharSequence,
+    @DrawableRes icon: Int? = null,
+    summary: CharSequence? = null,
+    configure: ClickablePreference.() -> Unit = {}
 ): ClickablePreference {
     val binding = PreferenceClickableBinding
         .inflate(context.layoutInflater, root, false)
@@ -63,17 +75,13 @@ fun PreferenceScreen.clickable(
         }
     }
 
-    impl.title = context.getText(title)
+    impl.title = title
 
     if (icon != null) {
         impl.icon = context.getDrawableCompat(icon)
     }
 
-    if (summary != null) {
-        impl.summary = context.getText(summary)
-    } else {
-        impl.summary = null
-    }
+    impl.summary = summary
 
     impl.configure()
 

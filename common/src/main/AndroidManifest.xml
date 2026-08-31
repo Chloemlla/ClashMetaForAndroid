@@ -7,11 +7,17 @@
         android:protectionLevel="privileged|signature" />
     <uses-permission android:name="${applicationId}.permission.RECEIVE_BROADCASTS" />
 
-    <!-- Same-signing apps (alpha <-> meta) may exchange migration payloads. -->
+    <!-- Legacy declaration, kept only to pin the MIGRATE_DATA permission name per-applicationId
+         (B-131: a fixed name collides across differently-signed forks with
+         INSTALL_FAILED_DUPLICATE_PERMISSION). It is NOT attached to any component: the migration
+         provider carries no android:permission so its runtime checkSignatures() in
+         MigrationProvider.enforceCaller — the real trust control — is reached for cross-flavor
+         (alpha <-> meta) payload exchange. Do not re-attach this name as a manifest permission
+         attribute without re-checking that cross-flavor migration still works. -->
     <permission
-        android:name="com.github.metacubex.clash.permission.MIGRATE_DATA"
+        android:name="${applicationId}.permission.MIGRATE_DATA"
         android:description="@string/migrate_data_permission_description"
         android:label="@string/migrate_data_permission_label"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.github.metacubex.clash.permission.MIGRATE_DATA" />
+    <uses-permission android:name="${applicationId}.permission.MIGRATE_DATA" />
 </manifest>

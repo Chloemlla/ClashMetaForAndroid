@@ -10,10 +10,19 @@ import kotlinx.coroutines.selects.select
 class AutomationSettingsActivity : BaseActivity<AutomationSettingsDesign>() {
     override suspend fun main() {
         val settings = AutomationSettingsAdapter(this)
-        val profiles = withProfile {
-            queryAll()
-                .filter { it.imported }
-                .map { SceneProfileOption(it.uuid.toString(), it.name) }
+
+        // A-35: the adapter is local; only the profile list is a cross-process read. If that read
+        // fails, keep a visible skeleton (settings with an empty profile picker) and let
+        // BaseActivity show the error instead of a blank window.
+        val profiles = try {
+            withProfile {
+                queryAll()
+                    .filter { it.imported }
+                    .map { SceneProfileOption(it.uuid.toString(), it.name) }
+            }
+        } catch (e: Exception) {
+            setContentDesign(AutomationSettingsDesign(this, settings, emptyList()))
+            throw e
         }
         val design = AutomationSettingsDesign(this, settings, profiles)
 

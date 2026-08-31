@@ -102,9 +102,9 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         if (!adapter.states.beginUpdateAll()) return
 
         changeUpdateAllButtonStatus()
-        if (requests.trySend(Request.UpdateAll).isFailure) {
-            finishUpdateAll()
-        }
+        // requests is an unbounded Channel that is never closed, so trySend cannot fail;
+        // the previous isFailure fallback was unreachable dead code.
+        requests.trySend(Request.UpdateAll)
     }
 
     fun finishUpdateAll() {

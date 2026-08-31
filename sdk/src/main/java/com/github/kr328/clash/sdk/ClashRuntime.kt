@@ -4,7 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
-import android.os.DeadObjectException
+import android.os.RemoteException
+import android.os.TransactionTooLargeException
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.startForegroundServiceCompat
 import com.github.kr328.clash.common.constants.Components
@@ -21,10 +22,11 @@ import com.github.kr328.clash.service.TunService
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.IProfileManager
+import com.github.kr328.clash.service.remote.IRemoteService
 import com.github.kr328.clash.service.util.sendBroadcastSelf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import kotlin.coroutines.CoroutineContext
@@ -59,19 +61,20 @@ object ClashRuntime {
     @Volatile
     private var session: RemoteSession? = null
 
-    @Volatile
-    private var eventHub: EventHub? = null
+    // Process-level resident hub: the event stream is created with the facade, so subscribing
+    // to [events] before [install] is legal and simply yields no events until receivers register.
+    private val eventHub: EventHub = EventHub()
 
     @Volatile
     private var enableVpn: Boolean = true
 
-    /** Runtime lifecycle events; empty until [install]. */
-    val events: SharedFlow<ClashRuntimeEvent>
-        get() = requireEventHub().events
+    /** Runtime lifecycle events; empty until receivers are registered via [bind]. */
+    val events: Flow<ClashRuntimeEvent>
+        get() = eventHub.events
 
     /** Best-effort running flag from last received start/stop broadcasts. */
     val isRunning: Boolean
-        get() = eventHub?.clashRunning == true
+        get() = eventHub.clashRunning
 
     /**
      * Initialize Global, host component overrides, and binder session plumbing.
@@ -102,9 +105,7 @@ object ClashRuntime {
             if (session == null) {
                 session = RemoteSession(application, onServiceCrashed)
             }
-            if (eventHub == null) {
-                eventHub = EventHub(application)
-            }
+            eventHub.attach(application)
         }
     }
 
@@ -127,14 +128,14 @@ object ClashRuntime {
     @JvmStatic
     fun bind() {
         requireInstalled()
-        requireEventHub().register()
+        eventHub.register()
         requireSession().bind()
     }
 
     /** Unbind remote service and drop event receivers. */
     @JvmStatic
     fun unbind() {
-        eventHub?.unregister()
+        eventHub.unregister()
         session?.unbind()
     }
 
@@ -175,7 +176,7 @@ object ClashRuntime {
         name: String,
         source: String = "",
         ageSecretKey: String? = null,
-    ): UUID = withProfile {
+    ): UUID = withProfileWrite {
         create(type, name, source, ageSecretKey)
     }
 
@@ -193,20 +194,20 @@ object ClashRuntime {
         return uuid
     }
 
-    suspend fun commitProfile(uuid: UUID) = withProfile {
+    suspend fun commitProfile(uuid: UUID) = withProfileWrite {
         commit(uuid)
     }
 
-    suspend fun deleteProfile(uuid: UUID) = withProfile {
+    suspend fun deleteProfile(uuid: UUID) = withProfileWrite {
         delete(uuid)
     }
 
     /** Reset local-from-0 used counters for a profile (subscription quota unchanged). */
-    suspend fun resetLocalTraffic(uuid: UUID) = withProfile {
+    suspend fun resetLocalTraffic(uuid: UUID) = withProfileWrite {
         resetLocalTraffic(uuid)
     }
 
-    suspend fun updateProfile(uuid: UUID) = withProfile {
+    suspend fun updateProfile(uuid: UUID) = withProfileWrite {
         update(uuid)
     }
 
@@ -218,7 +219,7 @@ object ClashRuntime {
         queryActive()
     }
 
-    suspend fun setActive(profile: Profile) = withProfile {
+    suspend fun setActive(profile: Profile) = withProfileWrite {
         setActive(profile)
     }
 
@@ -257,11 +258,11 @@ object ClashRuntime {
         queryProxyGroup(name, sort)
     }
 
-    suspend fun selectProxy(group: String, name: String): Boolean = withClash {
+    suspend fun selectProxy(group: String, name: String): Boolean = withClashWrite {
         patchSelector(group, name)
     }
 
-    suspend fun healthCheck(group: String) = withClash {
+    suspend fun healthCheck(group: String) = withClashWrite {
         healthCheck(group)
     }
 
@@ -273,47 +274,96 @@ object ClashRuntime {
     // endregion
 
     /**
-     * Execute a block against [IClashManager] with bounded DeadObjectException retry
-     * and exponential backoff.
+     * Execute a read-only / idempotent block against [IClashManager] with bounded
+     * retry and exponential backoff. Safe because a retry cannot double-apply a mutation.
+     * Prefer [withClashWrite] for mutating calls.
      */
     suspend fun <T> withClash(
         context: CoroutineContext = Dispatchers.IO,
         block: suspend IClashManager.() -> T,
-    ): T {
-        var attempt = 0
-        while (true) {
-            val remote = requireSession().remote.get()
-            val client = remote.clash()
-            try {
-                return withContext(context) { client.block() }
-            } catch (e: DeadObjectException) {
-                attempt += 1
-                if (attempt > MAX_BINDER_RETRIES) throw e
-                Log.w("ClashRuntime: IClashManager dead, retrying ($attempt/$MAX_BINDER_RETRIES)")
-                requireSession().remote.reset(remote)
-                delay(BINDER_RETRY_BASE_DELAY_MS * attempt)
-            }
-        }
-    }
+    ): T = withClashImpl(context, idempotent = true, block)
 
     /**
-     * Execute a block against [IProfileManager] with bounded DeadObjectException retry
-     * and exponential backoff.
+     * Execute a mutating block against [IClashManager] exactly once — never automatically
+     * retried, because a retry could apply the mutation a second time. On failure throws
+     * [ClashRuntimeRemoteException] with `mayHaveExecuted = true`.
+     */
+    suspend fun <T> withClashWrite(
+        context: CoroutineContext = Dispatchers.IO,
+        block: suspend IClashManager.() -> T,
+    ): T = withClashImpl(context, idempotent = false, block)
+
+    /**
+     * Execute a read-only / idempotent block against [IProfileManager] with bounded
+     * retry and exponential backoff. Prefer [withProfileWrite] for mutating calls.
      */
     suspend fun <T> withProfile(
         context: CoroutineContext = Dispatchers.IO,
         block: suspend IProfileManager.() -> T,
+    ): T = withProfileImpl(context, idempotent = true, block)
+
+    /**
+     * Execute a mutating block against [IProfileManager] exactly once — never automatically
+     * retried, because a retry could apply the mutation a second time. On failure throws
+     * [ClashRuntimeRemoteException] with `mayHaveExecuted = true`.
+     */
+    suspend fun <T> withProfileWrite(
+        context: CoroutineContext = Dispatchers.IO,
+        block: suspend IProfileManager.() -> T,
+    ): T = withProfileImpl(context, idempotent = false, block)
+
+    private suspend fun <T> withClashImpl(
+        context: CoroutineContext,
+        idempotent: Boolean,
+        block: suspend IClashManager.() -> T,
+    ): T = withRemoteImpl(context, "IClashManager", idempotent, { clash() }, block)
+
+    private suspend fun <T> withProfileImpl(
+        context: CoroutineContext,
+        idempotent: Boolean,
+        block: suspend IProfileManager.() -> T,
+    ): T = withRemoteImpl(context, "IProfileManager", idempotent, { profile() }, block)
+
+    private suspend fun <C, T> withRemoteImpl(
+        context: CoroutineContext,
+        operation: String,
+        idempotent: Boolean,
+        client: suspend IRemoteService.() -> C,
+        block: suspend C.() -> T,
     ): T {
         var attempt = 0
         while (true) {
             val remote = requireSession().remote.get()
-            val client = remote.profile()
             try {
-                return withContext(context) { client.block() }
-            } catch (e: DeadObjectException) {
+                val target = remote.client()
+                return withContext(context) { target.block() }
+            } catch (e: TransactionTooLargeException) {
+                // Not a transient failure: the payload exceeds the Binder buffer and every
+                // retry would rebuild the same oversized transaction. The transaction never
+                // reached the service, so it was definitely not executed.
+                throw ClashRuntimeRemoteException(
+                    mayHaveExecuted = false,
+                    "ClashRuntime $operation failed: transaction too large",
+                    e,
+                )
+            } catch (e: RemoteException) {
+                if (!idempotent) {
+                    // Mutation: never retry — the service may have executed it before dying.
+                    throw ClashRuntimeRemoteException(
+                        mayHaveExecuted = true,
+                        "ClashRuntime $operation write failed; it may or may not have been applied",
+                        e,
+                    )
+                }
                 attempt += 1
-                if (attempt > MAX_BINDER_RETRIES) throw e
-                Log.w("ClashRuntime: IProfileManager dead, retrying ($attempt/$MAX_BINDER_RETRIES)")
+                if (attempt > MAX_BINDER_RETRIES) {
+                    throw ClashRuntimeRemoteException(
+                        mayHaveExecuted = false,
+                        "ClashRuntime $operation failed after $MAX_BINDER_RETRIES retries",
+                        e,
+                    )
+                }
+                Log.w("ClashRuntime: $operation remote dead, retrying ($attempt/$MAX_BINDER_RETRIES)")
                 requireSession().remote.reset(remote)
                 delay(BINDER_RETRY_BASE_DELAY_MS * attempt)
             }
@@ -331,7 +381,17 @@ object ClashRuntime {
 
     private fun requireSession(): RemoteSession =
         session ?: error("ClashRuntime.install(application) must be called first")
-
-    private fun requireEventHub(): EventHub =
-        eventHub ?: error("ClashRuntime.install(application) must be called first")
 }
+
+/**
+ * Thrown when a ClashRuntime Binder call fails.
+ *
+ * @property mayHaveExecuted whether the failed call was a mutation that may have reached the
+ *   service before the connection broke. Always `false` for read/idempotent calls whose retries
+ *   were exhausted; `true` for write calls, where the caller must decide whether to reconcile.
+ */
+class ClashRuntimeRemoteException(
+    val mayHaveExecuted: Boolean,
+    message: String,
+    cause: RemoteException,
+) : RuntimeException(message, cause)

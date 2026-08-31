@@ -15,7 +15,6 @@ import com.github.kr328.clash.common.constants.Adblock
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
-import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
@@ -407,7 +406,10 @@ class MainActivity : BaseActivity<MainDesign>() {
 
     private suspend fun queryAppVersionName(): String {
         return withContext(Dispatchers.IO) {
-            packageManager.getPackageInfo(packageName, 0).versionName + "\n" + Bridge.nativeCoreVersion().replace("_", "-")
+            // B-78: never touch core.bridge.Bridge from the UI process — merely referencing it
+            // loads the whole mihomo native library (and class-init side effects) into the app
+            // process. The core version is baked into BuildConfig at build time instead.
+            packageManager.getPackageInfo(packageName, 0).versionName + "\n" + BuildConfig.CORE_VERSION.replace("_", "-")
         }
     }
 

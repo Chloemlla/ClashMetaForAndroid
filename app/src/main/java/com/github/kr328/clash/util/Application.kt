@@ -17,6 +17,19 @@ object ApplicationObserver {
 
     private var visibleChanged: (Boolean) -> Unit = {}
 
+    /** Epoch millis when the app last went fully to the background (all activities stopped). */
+    @Volatile
+    private var lastBackgroundedAt: Long = 0L
+
+    /**
+     * One-shot: the length of the last background trip (ms), captured when the app returns to the
+     * foreground. Used by the app-lock resume gate (B-72) so a fresh authentication is required
+     * only when the app actually came back after the timeout, never while the app stays foreground.
+     */
+    @Volatile
+    var backgroundReturnMs: Long = 0L
+        private set
+
     private var appVisible = false
         private set(value) {
             if (field != value) {
@@ -39,24 +52,49 @@ object ApplicationObserver {
         override fun onActivityDestroyed(activity: Activity) {
             _createdActivities.remove(activity)
             _visibleActivities.remove(activity)
-            appVisible = _visibleActivities.isNotEmpty()
+            if (_visibleActivities.isEmpty()) {
+                appVisible = false
+                markBackgrounded()
+            }
         }
 
         @Synchronized
         override fun onActivityStarted(activity: Activity) {
+            val wasVisible = appVisible
             _visibleActivities.add(activity)
             appVisible = true
+            if (!wasVisible && lastBackgroundedAt > 0L) {
+                // Returning from a real background trip: capture how long it lasted, then reset
+                // the background clock so foreground navigation never re-arms the gate.
+                backgroundReturnMs = System.currentTimeMillis() - lastBackgroundedAt
+                lastBackgroundedAt = 0L
+            }
         }
 
         @Synchronized
         override fun onActivityStopped(activity: Activity) {
             _visibleActivities.remove(activity)
-            appVisible = _visibleActivities.isNotEmpty()
+            if (_visibleActivities.isEmpty()) {
+                appVisible = false
+                markBackgrounded()
+            }
         }
 
         override fun onActivityPaused(activity: Activity) {}
         override fun onActivityResumed(activity: Activity) {}
         override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+    }
+
+    private fun markBackgrounded() {
+        // Only the first stop of a background trip stamps the clock. A later onActivityDestroyed /
+        // onActivityStopped while still fully backgrounded (e.g. system reclaims a stopped
+        // activity) must not shrink the measured background duration.
+        if (lastBackgroundedAt == 0L) {
+            lastBackgroundedAt = System.currentTimeMillis()
+            // An in-process "unlocked" flag must not survive a real background trip: the next
+            // return from background is exactly when the app lock should re-check.
+            AppLockController.onAppBackgrounded()
+        }
     }
 
     fun onVisibleChanged(visibleChanged: (Boolean) -> Unit) {

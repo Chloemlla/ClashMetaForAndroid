@@ -2,6 +2,9 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.LinearLayout
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
 import com.github.kr328.clash.design.model.AutomationSettings
 import com.github.kr328.clash.design.model.FailoverSortOption
@@ -150,11 +153,7 @@ class AutomationSettingsDesign(
             selectableList(
                 value = settings::failoverSort,
                 values = FailoverSortOption.values(),
-                valuesText = arrayOf(
-                    R.string.default_,
-                    R.string.name,
-                    R.string.delay,
-                ),
+                valuesText = FailoverSortOption.values().map { context.getString(it.labelRes) },
                 title = R.string.failover_candidate_order,
                 configure = failoverDependencies::add,
             )
@@ -176,26 +175,61 @@ class AutomationSettingsDesign(
         profiles: List<SceneProfileOption>,
         ssidDependencies: MutableList<Preference>,
     ) {
-        category(scene.name)
+        // Collapse each scene to a summary row; its detail controls are only constructed on
+        // first expand, so a setup with many scenes does not inflate every control up front.
+        val detailsContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+        var detailsBuilt = false
+
+        clickable(title = scene.name) {
+            clicked {
+                if (!detailsBuilt) {
+                    val details = preferenceScreen(context) {
+                        addSceneDetails(
+                            scene = scene,
+                            priority = priority,
+                            sceneCount = sceneCount,
+                            profiles = profiles,
+                            ssidDependencies = ssidDependencies,
+                        )
+                    }
+                    detailsContainer.addView(
+                        details.root,
+                        LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT),
+                    )
+                    detailsBuilt = true
+                }
+                detailsContainer.visibility =
+                    if (detailsContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            }
+        }
 
         switch(value = scene::enabled) {
             title = context.getString(R.string.scene_enabled)
             summary = context.getString(
                 R.string.format_scene_summary,
                 priority,
-                scene.network.label(),
-                scene.mode.label(),
+                context.getString(scene.network.labelRes),
+                context.getString(scene.mode.labelRes),
             )
         }
 
+        root.addView(detailsContainer, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+    }
+
+    private fun com.github.kr328.clash.design.preference.PreferenceScreen.addSceneDetails(
+        scene: SceneSetting,
+        priority: Int,
+        sceneCount: Int,
+        profiles: List<SceneProfileOption>,
+        ssidDependencies: MutableList<Preference>,
+    ) {
         selectableList(
             value = scene::network,
             values = SceneNetworkOption.values(),
-            valuesText = arrayOf(
-                R.string.unmetered_wifi,
-                R.string.metered_or_cellular,
-                R.string.any_network,
-            ),
+            valuesText = SceneNetworkOption.values().map { context.getString(it.labelRes) },
             title = R.string.scene_network_trigger,
         )
 
@@ -211,25 +245,14 @@ class AutomationSettingsDesign(
         selectableList(
             value = scene::schedule,
             values = scheduleValues,
-            valuesText = scheduleValues.map {
-                when (it) {
-                    SceneScheduleOption.Always -> R.string.scene_schedule_always
-                    SceneScheduleOption.Daytime -> R.string.scene_schedule_daytime
-                    SceneScheduleOption.Night -> R.string.scene_schedule_night
-                    SceneScheduleOption.Custom -> R.string.scene_schedule_custom
-                }
-            }.toTypedArray(),
+            valuesText = scheduleValues.map { context.getString(it.labelRes) },
             title = R.string.scene_time_window,
         )
 
         selectableList(
             value = scene::mode,
             values = SceneModeOption.values(),
-            valuesText = arrayOf(
-                R.string.direct_mode,
-                R.string.global_mode,
-                R.string.rule_mode,
-            ),
+            valuesText = SceneModeOption.values().map { context.getString(it.labelRes) },
             title = R.string.scene_mode_action,
         )
 
@@ -259,8 +282,12 @@ class AutomationSettingsDesign(
             adapter = NullableTextAdapter.String,
             title = R.string.scene_ssid,
             placeholder = R.string.scene_ssid_not_set,
-            configure = ssidDependencies::add,
-        )
+        ) {
+            ssidDependencies.add(this)
+            // This scene is built lazily, after the global ssid-toggle listener has already run;
+            // apply the current global state so the field is disabled when matching is off.
+            enabled = settings.sceneSsidMatchingEnabled
+        }
 
         if (sceneCount > 1) {
             clickable(
@@ -279,20 +306,4 @@ class AutomationSettingsDesign(
             }
         }
     }
-
-    private fun SceneNetworkOption.label(): String = context.getString(
-        when (this) {
-            SceneNetworkOption.UnmeteredWifi -> R.string.unmetered_wifi
-            SceneNetworkOption.Metered -> R.string.metered_or_cellular
-            SceneNetworkOption.Any -> R.string.any_network
-        },
-    )
-
-    private fun SceneModeOption.label(): String = context.getString(
-        when (this) {
-            SceneModeOption.Direct -> R.string.direct_mode
-            SceneModeOption.Global -> R.string.global_mode
-            SceneModeOption.Rule -> R.string.rule_mode
-        },
-    )
 }

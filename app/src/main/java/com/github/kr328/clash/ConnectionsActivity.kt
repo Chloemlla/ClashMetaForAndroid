@@ -27,19 +27,29 @@ class ConnectionsActivity : BaseActivity<ConnectionsDesign>() {
             }
         }
 
-        withContext(Dispatchers.IO) {
+        suspend fun registerObserver() {
             runCatching {
-                withClash {
-                    setConnectionsObserver(observer)
-                }
+                withClash { setConnectionsObserver(observer) }
             }.onFailure { Log.w("Failed to set connections observer", it) }
+        }
+
+        suspend fun unregisterObserver() {
+            runCatching {
+                withClash { setConnectionsObserver(null) }
+            }.onFailure { Log.w("Failed to clear connections observer", it) }
         }
 
         try {
             while (isActive) {
                 select<Unit> {
                     events.onReceive {
-                        // ignore lifecycle events; subscription is bound to this activity
+                        // B-84: keep the kernel-side subscription and the RecyclerView updates tied
+                        // to visibility; a backgrounded page must not keep receiving snapshots.
+                        when (it) {
+                            Event.ActivityStart -> registerObserver()
+                            Event.ActivityStop -> unregisterObserver()
+                            else -> Unit
+                        }
                     }
                     snapshots.onReceive { snapshot ->
                         design.updateConnections(snapshot.connections)
@@ -76,11 +86,7 @@ class ConnectionsActivity : BaseActivity<ConnectionsDesign>() {
             }
         } finally {
             withContext(Dispatchers.IO + NonCancellable) {
-                runCatching {
-                    withClash {
-                        setConnectionsObserver(null)
-                    }
-                }
+                unregisterObserver()
             }
         }
     }

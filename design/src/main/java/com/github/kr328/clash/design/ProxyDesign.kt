@@ -28,7 +28,6 @@ import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -62,9 +61,8 @@ class ProxyDesign(
         }
     }
 
-    private val adapter: ProxyPageAdapter
+    private val adapter: ProxyPageAdapter?
         get() = binding.pagesView.adapter as? ProxyPageAdapter
-            ?: error("pagesView adapter is not a ProxyPageAdapter")
 
     private val groupListView: RecyclerView? =
         binding.root.findViewById<RecyclerView>(R.id.group_list_view)
@@ -81,19 +79,23 @@ class ProxyDesign(
 
     private var horizontalScrolling = false
     private val verticalBottomScrolled: Boolean
-        get() = adapter.states[binding.pagesView.currentItem].bottom
+        get() = adapter?.states?.getOrNull(binding.pagesView.currentItem)?.bottom ?: false
     private var urlTesting: Boolean
-        get() = adapter.states[binding.pagesView.currentItem].urlTesting
+        get() = adapter?.states?.getOrNull(binding.pagesView.currentItem)?.urlTesting ?: false
         set(value) {
-            adapter.states[binding.pagesView.currentItem].urlTesting = value
+            adapter?.states?.getOrNull(binding.pagesView.currentItem)?.urlTesting = value
         }
 
-    private var searchFilterJob: Job? = null
     private val searchFilter = Channel<Unit>(Channel.CONFLATED)
     private var syncingKeyword = false
 
     override val root: View = binding.root
 
+    /**
+     * Design scope runs on [kotlinx.coroutines.Dispatchers.Main.immediate], so this method and
+     * its view updates are guaranteed to execute on the main thread; the adapter internally moves
+     * only the heavy computation off-thread and submits the result back on Main.
+     */
     suspend fun updateGroup(
         position: Int,
         proxies: List<Proxy>,
@@ -106,7 +108,9 @@ class ProxyDesign(
         selectionChanged: Boolean = false,
         scrollToSelected: Boolean = false,
     ) {
-        adapter.updateAdapter(
+        val a = adapter ?: return
+
+        a.updateAdapter(
             position,
             proxies,
             selectable,
@@ -118,11 +122,11 @@ class ProxyDesign(
         )
 
         if (selectionChanged) {
-            adapter.notifySelectionChanged(position)
+            a.notifySelectionChanged(position)
         }
 
         if (completeUrlTest) {
-            adapter.states[position].urlTesting = false
+            a.states[position].urlTesting = false
         }
 
         updateUrlTestButtonStatus()
@@ -137,13 +141,14 @@ class ProxyDesign(
         delays: Map<String, Int>,
         animateDelay: Boolean = true,
     ) {
-        adapter.patchDelays(position, delays, animateDelay)
+        val a = adapter ?: return
+        a.patchDelays(position, delays, animateDelay)
         updateUrlTestButtonStatus()
     }
 
     suspend fun notifySelectionChanged(position: Int) {
         withContext(Dispatchers.Main) {
-            adapter.notifySelectionChanged(position)
+            adapter?.notifySelectionChanged(position)
         }
     }
 
@@ -206,16 +211,19 @@ class ProxyDesign(
                 }
             }
 
-            searchFilterJob = launch {
+            // Single consumer coroutine + CONFLATED channel: rapid keystrokes collapse onto the
+            // latest value, so the filter is at most slightly stale, never duplicated.
+            launch {
                 while (isActive) {
                     searchFilter.receive()
                     delay(150)
 
                     if (groupNamesEmpty()) continue
 
+                    val a = adapter ?: continue
                     val page = binding.pagesView.currentItem
                     val keyword = binding.keywordView.text?.toString().orEmpty()
-                    adapter.setKeyword(page, keyword)
+                    a.setKeyword(page, keyword)
                     updateSearchButtonStatus()
                 }
             }
@@ -298,7 +306,8 @@ class ProxyDesign(
     private fun syncKeywordField() {
         if (groupNamesEmpty()) return
 
-        val keyword = adapter.keyword(binding.pagesView.currentItem)
+        val a = adapter ?: return
+        val keyword = a.keyword(binding.pagesView.currentItem)
         syncingKeyword = true
         try {
             if (binding.keywordView.text?.toString() != keyword) {
@@ -339,7 +348,8 @@ class ProxyDesign(
     private fun updateSearchButtonStatus() {
         if (groupNamesEmpty()) return
 
-        val hasKeyword = adapter.keyword(binding.pagesView.currentItem).isNotEmpty()
+        val a = adapter ?: return
+        val hasKeyword = a.keyword(binding.pagesView.currentItem).isNotEmpty()
         binding.searchView.alpha = if (hasKeyword || binding.searchBar.visibility == View.VISIBLE) 1f else 0.85f
         binding.searchView.isSelected = hasKeyword
     }
@@ -365,12 +375,14 @@ class ProxyDesign(
 
     private fun updateListTopInset() {
         if (groupNamesEmpty()) return
+
+        val a = adapter ?: return
         val extra = if (binding.searchBar.visibility == View.VISIBLE) {
             context.resources.getDimensionPixelSize(R.dimen.proxy_search_bar_height)
         } else {
             0
         }
-        adapter.setExtraTopInset(extra)
+        a.setExtraTopInset(extra)
     }
 
     private fun hideKeyboard() {

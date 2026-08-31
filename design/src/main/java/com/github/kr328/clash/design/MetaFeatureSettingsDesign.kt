@@ -1,8 +1,10 @@
 package com.github.kr328.clash.design
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.PersistableBundle
 import android.view.View
 import androidx.core.content.getSystemService
 import androidx.core.widget.doOnTextChanged
@@ -15,8 +17,12 @@ import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class MetaFeatureSettingsDesign(
@@ -130,9 +136,7 @@ class MetaFeatureSettingsDesign(
                     R.string.always,
                 ),
                 title = R.string.find_process_mode,
-            ) {
-
-            }
+            )
 
             category(R.string.sniffer_setting)
 
@@ -271,39 +275,6 @@ class MetaFeatureSettingsDesign(
 
             sniffer.listener?.onChanged()
 
-            /*
-            category(R.string.geox_url_setting)
-
-            val geoxUrlDependencies: MutableList<Preference> = mutableListOf()
-
-            editableText(
-                value = configuration.geoxurl::geoip,
-                adapter = NullableTextAdapter.String,
-                title = R.string.geox_geoip,
-                placeholder = R.string.dont_modify,
-                empty = R.string.geoip_url,
-                configure = geoxUrlDependencies::add,
-            )
-
-            editableText(
-                value = configuration.geoxurl::mmdb,
-                adapter = NullableTextAdapter.String,
-                title = R.string.geox_mmdb,
-                placeholder = R.string.dont_modify,
-                empty = R.string.mmdb_url,
-                configure = geoxUrlDependencies::add,
-            )
-
-            editableText(
-                value = configuration.geoxurl::geosite,
-                adapter = NullableTextAdapter.String,
-                title = R.string.geox_geosite,
-                placeholder = R.string.dont_modify,
-                empty = R.string.geosite_url,
-                configure = geoxUrlDependencies::add,
-            )
-            */
-
             category(R.string.geox_files)
 
             clickable (
@@ -355,55 +326,101 @@ class MetaFeatureSettingsDesign(
                 .setView(binding.root)
                 .create()
 
-            fun copy(label: String, value: String) {
+            var secretVerifyJob: Job? = null
+            var publicVerifyJob: Job? = null
+
+            fun copy(label: String, value: String, sensitive: Boolean = false) {
                 if (value.isBlank())
                     return
 
                 val data = ClipData.newPlainText(label, value)
+                if (sensitive) {
+                    // Android 13+ shows a preview of copied content; mark the long-lived age
+                    // secret as sensitive so the system does not expose the plaintext.
+                    data.description.extras = PersistableBundle().apply {
+                        putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                    }
+                }
                 context.getSystemService<ClipboardManager>()?.setPrimaryClip(data)
 
                 launch { showToast(R.string.copied, ToastDuration.Short) }
             }
 
-            fun patchSecretKeyState() {
+            // Verification runs through the native runtime (JNI); debounce input and run it off
+            // the main thread so typing a long key does not block the UI / cause an ANR.
+            fun scheduleSecretKeyCheck() {
+                secretVerifyJob?.cancel()
                 val secretKey = binding.secretKeyView.text?.toString() ?: ""
-                val valid = secretKey.isBlank() || Clash.veritySecretKeys(secretKey)
-
-                binding.secretKeyLayout.error = if (valid) null else context.getText(R.string.age_secret_key_error)
+                if (secretKey.isBlank()) {
+                    binding.secretKeyLayout.error = null
+                    return
+                }
+                secretVerifyJob = launch {
+                    delay(300)
+                    val valid = withContext(Dispatchers.Default) {
+                        Clash.veritySecretKeys(secretKey)
+                    }
+                    if (!isActive) return@launch
+                    binding.secretKeyLayout.error =
+                        if (valid) null else context.getText(R.string.age_secret_key_error)
+                }
             }
 
-            fun patchPublicKeyState() {
+            fun schedulePublicKeyCheck() {
+                publicVerifyJob?.cancel()
                 val publicKey = binding.publicKeyView.text?.toString() ?: ""
-                val valid = publicKey.isBlank() || Clash.verityPublicKeys(publicKey)
-
-                binding.publicKeyLayout.error = if (valid) null else context.getText(R.string.age_public_key_error)
+                if (publicKey.isBlank()) {
+                    binding.publicKeyLayout.error = null
+                    return
+                }
+                publicVerifyJob = launch {
+                    delay(300)
+                    val valid = withContext(Dispatchers.Default) {
+                        Clash.verityPublicKeys(publicKey)
+                    }
+                    if (!isActive) return@launch
+                    binding.publicKeyLayout.error =
+                        if (valid) null else context.getText(R.string.age_public_key_error)
+                }
             }
 
             dialog.setOnShowListener {
-                binding.secretKeyView.doOnTextChanged { _, _, _, _ -> patchSecretKeyState() }
-                binding.publicKeyView.doOnTextChanged { _, _, _, _ -> patchPublicKeyState() }
+                binding.secretKeyView.doOnTextChanged { _, _, _, _ -> scheduleSecretKeyCheck() }
+                binding.publicKeyView.doOnTextChanged { _, _, _, _ -> schedulePublicKeyCheck() }
 
                 binding.generateView.setOnClickListener {
-                    val keyPair = if (hybrid) {
-                        Clash.genHybridKeyPair()
-                    } else {
-                        Clash.genX25519KeyPair()
+                    binding.generateView.isEnabled = false
+                    launch {
+                        val keyPair = withContext(Dispatchers.Default) {
+                            if (hybrid) {
+                                Clash.genHybridKeyPair()
+                            } else {
+                                Clash.genX25519KeyPair()
+                            }
+                        }
+                        if (!isActive) return@launch
+                        binding.generateView.isEnabled = true
+                        binding.secretKeyView.setText(keyPair.secretKey)
+                        binding.publicKeyView.setText(keyPair.publicKey)
                     }
-
-                    binding.secretKeyView.setText(keyPair.secretKey)
-                    binding.publicKeyView.setText(keyPair.publicKey)
                 }
 
                 binding.toPublicKeyView.setOnClickListener {
-                    val publicKey = Clash.toPublicKeys(binding.secretKeyView.text?.toString() ?: "")
-                        .firstOrNull()
-                        ?: ""
-
-                    binding.publicKeyView.setText(publicKey)
+                    binding.toPublicKeyView.isEnabled = false
+                    launch {
+                        val publicKey = withContext(Dispatchers.Default) {
+                            Clash.toPublicKeys(binding.secretKeyView.text?.toString() ?: "")
+                                .firstOrNull()
+                                ?: ""
+                        }
+                        if (!isActive) return@launch
+                        binding.toPublicKeyView.isEnabled = true
+                        binding.publicKeyView.setText(publicKey)
+                    }
                 }
 
                 binding.copySecretKeyView.setOnClickListener {
-                    copy("age_secret_key", binding.secretKeyView.text?.toString() ?: "")
+                    copy("age_secret_key", binding.secretKeyView.text?.toString() ?: "", sensitive = true)
                 }
 
                 binding.copyPublicKeyView.setOnClickListener {

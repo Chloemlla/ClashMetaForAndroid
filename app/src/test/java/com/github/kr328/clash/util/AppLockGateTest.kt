@@ -68,4 +68,47 @@ class AppLockGateTest {
             )
         )
     }
+
+    // B-72: the resume gate measures the duration of the last background trip (captured once on
+    // return), so foreground navigation between activities never re-prompts.
+    @Test
+    fun requiresUnlockOnResume_neverBackgroundedDoesNotRecheck() {
+        assertFalse(AppLockGate.requiresUnlockOnResume(enabled = true, backgroundDurationMs = 0L))
+    }
+
+    @Test
+    fun requiresUnlockOnResume_disabledNeverRechecks() {
+        assertFalse(
+            AppLockGate.requiresUnlockOnResume(
+                enabled = false,
+                backgroundDurationMs = 999_999L,
+            )
+        )
+    }
+
+    @Test
+    fun requiresUnlockOnResume_withinTimeoutDoesNotRecheck() {
+        assertFalse(
+            AppLockGate.requiresUnlockOnResume(
+                enabled = true,
+                backgroundDurationMs = AppLockGate.DEFAULT_BACKGROUND_TIMEOUT_MS - 1,
+            )
+        )
+    }
+
+    @Test
+    fun requiresUnlockOnResume_afterTimeoutRechecks() {
+        assertTrue(
+            AppLockGate.requiresUnlockOnResume(
+                enabled = true,
+                backgroundDurationMs = AppLockGate.DEFAULT_BACKGROUND_TIMEOUT_MS + 5_000L,
+            )
+        )
+    }
+
+    @Test
+    fun requiresUnlockOnResume_clockRewoundFailsClosed() {
+        // A negative duration (device clock moved backwards during background) must fail closed.
+        assertTrue(AppLockGate.requiresUnlockOnResume(enabled = true, backgroundDurationMs = -10_000L))
+    }
 }

@@ -174,7 +174,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             TunnelState.Mode.Direct -> context.getString(R.string.direct_mode)
             TunnelState.Mode.Global -> context.getString(R.string.global_mode)
             TunnelState.Mode.Rule -> context.getString(R.string.rule_mode)
-            else -> context.getString(R.string.rule_mode)
+            TunnelState.Mode.Script -> context.getString(R.string.script_mode)
         }
     }
 
