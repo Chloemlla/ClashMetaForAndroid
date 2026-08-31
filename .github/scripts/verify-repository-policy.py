@@ -67,10 +67,30 @@ if external is not None:
 main_activity = (ROOT / "app/src/main/java/com/github/kr328/clash/MainActivity.kt").read_text(
     encoding="utf-8"
 )
+shortcuts = (ROOT / "app/src/main/java/com/github/kr328/clash/util/Shortcuts.kt").read_text(
+    encoding="utf-8"
+)
 require(
-    main_activity.count("InternalControlActivity::class.java.name") == 3
-    and "ExternalControlActivity::class.java.name" not in main_activity,
+    "InternalControlActivity::class.java.name" in shortcuts
+    and "ExternalControlActivity" not in shortcuts,
     "dynamic shortcuts do not exclusively target the internal control activity",
+)
+# Publishing has to stay funnelled through util/Shortcuts.kt: that is the only path that also
+# revokes the shortcuts when the launcher icon is hidden.
+shortcut_publishers = sorted(
+    path
+    for path in tracked
+    if path.endswith(".kt")
+    and (ROOT / path).is_file()
+    and "setDynamicShortcuts" in (ROOT / path).read_text(encoding="utf-8")
+)
+require(
+    shortcut_publishers == ["app/src/main/java/com/github/kr328/clash/util/Shortcuts.kt"],
+    f"dynamic shortcuts must be published only from util/Shortcuts.kt, found {shortcut_publishers}",
+)
+require(
+    "ExternalControlActivity::class.java.name" not in main_activity,
+    "MainActivity must not route control intents through the exported activity",
 )
 
 def backup_includes(root_nodes):
