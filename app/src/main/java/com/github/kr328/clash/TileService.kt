@@ -1,5 +1,6 @@
 package com.github.kr328.clash
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -109,6 +110,9 @@ class TileService : TileService() {
         }
     }
 
+    // Lint flags the Intent overload regardless of the version gate below; the PendingIntent
+    // overload does not exist before 34, so there is nothing else to call there.
+    @SuppressLint("StartActivityAndCollapseDeprecated")
     private fun openApp() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
