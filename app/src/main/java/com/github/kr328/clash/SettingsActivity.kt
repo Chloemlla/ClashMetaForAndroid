@@ -46,7 +46,8 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                         SettingsDesign.Request.BackupBeforeUninstall -> {
                             // B-18: the export is plaintext and contains subscription credentials.
                             // Warn before the SAF picker so the user knows not to share it.
-                            MaterialAlertDialogBuilder(this)
+                            // this inside select {} is the SelectBuilder, not the Activity.
+                            MaterialAlertDialogBuilder(this@SettingsActivity)
                                 .setTitle(DesignR.string.backup_sensitive_title)
                                 .setMessage(DesignR.string.backup_sensitive_message)
                                 .setPositiveButton(DesignR.string.continue_) { _, _ ->

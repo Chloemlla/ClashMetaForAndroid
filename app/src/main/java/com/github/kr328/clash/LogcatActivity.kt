@@ -151,16 +151,21 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
     }
 
     private suspend fun bindLogcatService(): LogcatService {
+        // onServiceConnected runs on the main thread once bindService succeeds, but the
+        // continuation only exists inside the suspendCancellableCoroutine created below,
+        // after the connection object. Route the result through a captured callback.
+        var onResult: ((Result<LogcatService>) -> Unit)? = null
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 val srv = service?.queryLocalInterface("") as? LogcatService
 
                 if (srv != null) {
-                    ctx.resume(srv)
+                    onResult?.invoke(Result.success(srv))
                 } else {
                     // A null binder or wrong interface would otherwise hang the coroutine
                     // or throw NPE on the binder thread; surface it to the caller instead.
-                    ctx.resumeWithException(IllegalStateException("LogcatService binder unavailable"))
+                    onResult?.invoke(Result.failure(
+                        IllegalStateException("LogcatService binder unavailable")))
                 }
             }
 
@@ -175,6 +180,11 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         conn = connection
 
         return suspendCancellableCoroutine { ctx ->
+            onResult = { result ->
+                result.onSuccess { ctx.resume(it) }
+                result.onFailure { ctx.resumeWithException(it) }
+            }
+
             ctx.invokeOnCancellation {
                 unbindServiceSilent(connection)
             }

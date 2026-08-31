@@ -1028,9 +1028,13 @@
   - 触发：`:sdk` 是给第三方嵌入用的模块，却不在 CI 的构建目标里。它坏了要等到有人集成时才知道。
   - 修法：CI 至少 `assemble` `:sdk`，并加 API 快照校验（见 C-02）。
   - 已修：`build-debug.yaml` 与 `build-pre-release.yaml` 在 JVM 单测前新增 `Assemble SDK facade` 步骤（`./gradlew :sdk:assemble`，带 GITHUB_TOKEN 环境）。API 快照校验属 C-02，推迟。
-  - 验证补充：该步骤第一次真编译 `:sdk`，立刻暴露两处潜伏缺陷（此前 `:sdk` 从不被 `:app` 依赖，永远不构建）：
-    1. 根 `build.gradle.kts` 的 flavor `resValue` 把 `launch_name`/`application_name` 注入**所有**子项目，而 `launch_name_alpha` 只定义在 `:design`；单独构建不依赖 `:design` 的 `:sdk` 时 AAPT 报 `resource ... not found`。改为仅 `:app` 与 `:design` 注入（只有它们消费这两个字符串）。
+  - 验证补充：该步骤第一次真编译 `:sdk`，立刻暴露潜伏缺陷（此前 `:sdk` 从不被 `:app` 依赖，永远不构建）：
+    1. 根 `build.gradle.kts` 的 flavor `resValue` 把 `launch_name`/`application_name` 注入**所有**子项目，而 `launch_name_alpha` 只定义在 `:design`；单独构建不依赖 `:design` 的 `:sdk` 时 AAPT 报 `resource ... not found`。改为仅 `:app`、`:design` 与 `:service` 注入（前两者消费自己的 R 内这两个字符串；`:service` 的 R 被 `TileService` 引用，见第 3 条）。
     2. `sdk/.../internal/EventHub.kt` 用 `asSharedFlow()` 扩展但漏 import，编译失败。补 `import kotlinx.coroutines.flow.asSharedFlow`。
+    3. 逐轮解开后，暴露 app 模块 batch-3 三处编译缺陷：
+       - `LogcatActivity.bindLogcatService` 在 `suspendCancellableCoroutine` 块**之前**创建 `ServiceConnection`，`onServiceConnected` 却引用块内才定义的 `ctx`（作用域外不可见，还连带 T 推断失败）。改为捕获回调 `onResult: ((Result<LogcatService>) -> Unit)?`，在协程块里装配到 continuation。
+       - `SettingsActivity` 的 `select<Unit> {}` 块内 `this` 是 `SelectBuilder<Unit>` 而非 Activity，`MaterialAlertDialogBuilder(this)` 类型不匹配。显式 `this@SettingsActivity`。
+       - `TileService` 用 `service.R.string.launch_name` 设置 QS tile 标签；`:service` 不依赖 `:design`，引用式注入本就无法解析，guard 收紧后该资源直接消失。`:service` 改为注入字面量（alpha="Clash Meta Alpha"、meta="Clash Meta"，该字符串在各语言环境本就一致，未破坏本地化）。
 
 - [x] **B-70 `-dontobfuscate` 掩盖了缺失的 keep 规则；四个模块的 `consumer-rules.pro` 是空的**
   - `app/proguard-rules.pro`、各模块 `consumer-rules.pro`

@@ -103,6 +103,10 @@ subprojects {
     // flavor name ("alpha"/"meta"), not the project name, so the flavor resValue guard must
     // use this captured value (see launch_name/application_name injection below).
     val isDesign = name == "design"
+    // :service cannot reference :design's launch_name_alpha/meta (no :design dependency), but
+    // TileService reads service.R.string.launch_name for the QS tile label, so it gets a
+    // flavor-appropriate literal instead.
+    val isService = name == "service"
 
     apply(plugin = if (isApp) "com.android.application" else "com.android.library")
 
@@ -231,6 +235,8 @@ subprojects {
                 if (isApp || isDesign) {
                     resValue("string", "launch_name", "@string/launch_name_alpha")
                     resValue("string", "application_name", "@string/application_name_alpha")
+                } else if (isService) {
+                    resValue("string", "launch_name", "Clash Meta Alpha")
                 }
 
                 if (isApp && !removeSuffix) {
@@ -250,6 +256,8 @@ subprojects {
                 if (isApp || isDesign) {
                     resValue("string", "launch_name", "@string/launch_name_meta")
                     resValue("string", "application_name", "@string/application_name_meta")
+                } else if (isService) {
+                    resValue("string", "launch_name", "Clash Meta")
                 }
 
                 if (isApp && !removeSuffix) {
