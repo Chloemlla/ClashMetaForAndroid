@@ -287,18 +287,24 @@ subprojects {
         }
 
         if (isApp) {
-            val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
-            val releaseBuildRequested = requestedTasks.any {
-                val taskName = it.lowercase(Locale.ROOT)
-                taskName == "build" ||
-                    taskName == "assemble" ||
-                    taskName == "bundle" ||
-                    (taskName.contains("release") &&
-                        (taskName.startsWith("assemble") ||
-                            taskName.startsWith("bundle") ||
-                            taskName.startsWith("package") ||
-                            taskName.startsWith("publish") ||
-                            taskName.startsWith("sign")))
+            val requestedTasks = gradle.startParameter.taskNames
+            val releaseBuildRequested = requestedTasks.any { requested ->
+                val taskName = requested.substringAfterLast(':').lowercase(Locale.ROOT)
+                // Only tasks that actually build the :app module may require release signing:
+                // a bare root-level task (e.g. `assemble`, which configures :app too) or an
+                // explicit :app:... task. A non-app task such as `:sdk:assemble` (the CI SDK
+                // facade compile) must never trip this gate — the app module is not being built.
+                val appTargeted = requested == "build" || requested == "assemble" ||
+                    requested == "bundle" || requested.startsWith(":app:")
+                appTargeted && (
+                    taskName == "build" || taskName == "assemble" || taskName == "bundle" ||
+                        (taskName.contains("release") &&
+                            (taskName.startsWith("assemble") ||
+                                taskName.startsWith("bundle") ||
+                                taskName.startsWith("package") ||
+                                taskName.startsWith("publish") ||
+                                taskName.startsWith("sign")))
+                )
             }
             val onGithubActions = System.getenv("GITHUB_ACTIONS") == "true"
             if (releaseBuildRequested && releaseKeystore == null) {
