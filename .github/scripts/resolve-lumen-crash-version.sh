@@ -6,6 +6,16 @@ set -euo pipefail
 
 OWNER_REPO="${LUMEN_CRASH_OWNER_REPO:-Chloemlla/Project-Lumen}"
 OUT_FILE="${LUMEN_CRASH_VERSION_FILE:-lumen-crash.resolved.version}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Every success path ends here: knowing the version is only half the job, the artifact still has to
+# be reachable. Staging it from the public release keeps the build off the read-packages PAT.
+stage_and_exit() {
+  LUMEN_CRASH_OWNER_REPO="$OWNER_REPO" \
+  LUMEN_CRASH_VERSION_FILE="$OUT_FILE" \
+    bash "$HERE/sync-lumen-crash-local-maven.sh"
+  exit 0
+}
 
 # If a pinned version file exists, use it directly and skip API resolution.
 # This allows the repo to pin a specific lumen-crash version when the latest
@@ -15,7 +25,7 @@ if [[ -s "$PIN_FILE" ]]; then
   pinned_version="$(tr -d '\r\n' < "$PIN_FILE")"
   printf '%s\n' "$pinned_version" > "$OUT_FILE"
   echo "Pinned lumen-crash version: $pinned_version -> $OUT_FILE (from $PIN_FILE)"
-  exit 0
+  stage_and_exit
 fi
 
 # If the resolved version file already exists, keep it (don't overwrite).
@@ -23,7 +33,7 @@ fi
 if [[ -s "$OUT_FILE" ]]; then
   existing="$(tr -d '\r\n' < "$OUT_FILE")"
   echo "Keeping existing lumen-crash version: $existing"
-  exit 0
+  stage_and_exit
 fi
 
 API_URL="https://api.github.com/repos/${OWNER_REPO}/releases?per_page=100"
@@ -46,7 +56,7 @@ if ! curl -fsSL \
   -o "$tmp_json"; then
   if [[ -s "$OUT_FILE" ]]; then
     echo "GitHub API unavailable; keeping existing $OUT_FILE ($(tr -d '\r\n' < "$OUT_FILE"))" >&2
-    exit 0
+    stage_and_exit
   fi
   echo "Failed to fetch releases and no existing $OUT_FILE" >&2
   exit 1
@@ -75,7 +85,7 @@ PY
 )"; then
   if [[ -s "$OUT_FILE" ]]; then
     echo "Failed to parse releases; keeping existing $OUT_FILE ($(tr -d '\r\n' < "$OUT_FILE"))" >&2
-    exit 0
+    stage_and_exit
   fi
   exit 1
 fi
@@ -87,3 +97,4 @@ fi
 
 printf '%s\n' "$version" > "$OUT_FILE"
 echo "Resolved lumen-crash version: $version -> $OUT_FILE"
+stage_and_exit
