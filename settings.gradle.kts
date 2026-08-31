@@ -43,7 +43,7 @@ dependencyResolutionManagement {
         // Declared before GitHub Packages so the no-auth mirror wins when present.
         maven {
             name = "LocalMavenLumenCrash"
-            url = rootDir.resolve("local-maven")
+            url = rootDir.resolve("local-maven").toURI()
         }
         // B-137: only attach the GitHub Packages repo when credentials actually exist,
         // and narrow it to the lumen-crash group. With empty credentials this repo used
