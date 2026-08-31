@@ -164,13 +164,13 @@ class OverrideSettingsDesign(
             ) {
                 // Warn before enabling LAN sharing without authentication, and let the user
                 // back out: the value is only written after the confirmation is accepted.
-                confirmBeforeSet = { newValue ->
-                    if (newValue != true) return@confirmBeforeSet true
+                confirmBeforeSet = confirm@{ newValue ->
+                    if (newValue != true) return@confirm true
 
                     val authentication = configuration.authentication
                     val requiresWarning = authentication.isNullOrEmpty() ||
                         authentication.all { it.isBlank() }
-                    if (!requiresWarning) return@confirmBeforeSet true
+                    if (!requiresWarning) return@confirm true
 
                     suspendCancellableCoroutine { ctx ->
                         val dialog = MaterialAlertDialogBuilder(context)

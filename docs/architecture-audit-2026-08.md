@@ -1028,6 +1028,9 @@
   - 触发：`:sdk` 是给第三方嵌入用的模块，却不在 CI 的构建目标里。它坏了要等到有人集成时才知道。
   - 修法：CI 至少 `assemble` `:sdk`，并加 API 快照校验（见 C-02）。
   - 已修：`build-debug.yaml` 与 `build-pre-release.yaml` 在 JVM 单测前新增 `Assemble SDK facade` 步骤（`./gradlew :sdk:assemble`，带 GITHUB_TOKEN 环境）。API 快照校验属 C-02，推迟。
+  - 验证补充：该步骤第一次真编译 `:sdk`，立刻暴露两处潜伏缺陷（此前 `:sdk` 从不被 `:app` 依赖，永远不构建）：
+    1. 根 `build.gradle.kts` 的 flavor `resValue` 把 `launch_name`/`application_name` 注入**所有**子项目，而 `launch_name_alpha` 只定义在 `:design`；单独构建不依赖 `:design` 的 `:sdk` 时 AAPT 报 `resource ... not found`。改为仅 `:app` 与 `:design` 注入（只有它们消费这两个字符串）。
+    2. `sdk/.../internal/EventHub.kt` 用 `asSharedFlow()` 扩展但漏 import，编译失败。补 `import kotlinx.coroutines.flow.asSharedFlow`。
 
 - [x] **B-70 `-dontobfuscate` 掩盖了缺失的 keep 规则；四个模块的 `consumer-rules.pro` 是空的**
   - `app/proguard-rules.pro`、各模块 `consumer-rules.pro`

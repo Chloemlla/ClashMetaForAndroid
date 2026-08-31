@@ -30,7 +30,7 @@ import com.github.kr328.clash.design.util.root
 
 class AutomationSettingsDesign(
     context: Context,
-    settings: AutomationSettings,
+    val settings: AutomationSettings,
     profiles: List<SceneProfileOption>,
 ) : Design<AutomationSettingsDesign.Request>(context) {
     sealed class Request {
