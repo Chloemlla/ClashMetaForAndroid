@@ -3,6 +3,7 @@ package com.github.kr328.clash.core.model
 import android.os.Parcel
 import android.os.Parcelable
 import com.github.kr328.clash.core.util.Parcelizer
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -346,6 +347,7 @@ data class ConfigurationOverride(
     }
 }
 
+@OptIn(InternalSerializationApi::class)
 private fun enumDescriptor(serialName: String, names: List<String>): SerialDescriptor =
     buildSerialDescriptor(serialName, SerialKind.ENUM) {
         names.forEach { element(it, String.serializer().descriptor) }
