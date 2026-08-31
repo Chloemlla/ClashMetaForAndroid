@@ -848,6 +848,7 @@
   - `service/.../data/Imported.kt` ↔ `Pending.kt`
   - 触发：两张孪生表的字段定义各写一遍，默认值已经开始漂移；任何一侧加字段都要记得改另一侧（本次审查已发现 B-62 的冲突策略也漂了）。
   - 修法：抽公共基类/接口，或明确一张表 + 状态字段。
+  - 本轮：`createdAt` 默认值已统一为 `System.currentTimeMillis()`。抽公共基类/单表会破坏 `copy()`（`ProfileManager.patch`/`ProfileProcessor` 依赖）且需 schema 迁移，留待后续批次。
   - 清单项：第 9 章"不一致的丑"
 
 - [x] **B-62 孪生表上的冲突策略相反：`Pending` 用 REPLACE，`Imported` 用 ABORT**
@@ -881,6 +882,7 @@
   - `service/.../data/Database.kt:25`
   - 触发：Room 的迁移正确性完全靠人眼。本次审查里 A-10 / A-11 这类迁移缺陷之所以"无法本地验证"，根因就在这里。
   - 修法：打开 `exportSchema`，把 schema json 纳入版本管理，加 `MigrationTestHelper` 测试（CI 跑）。
+  - 本轮：`exportSchema = true` + KSP `room.schemaLocation` 已开，`service/schemas/` 已建目录；CI 下次构建即生成 schema json 基线。生成物落库与 `MigrationTestHelper` 用例需本地构建，留待后续批次。
   - 清单项：① 一致性 + 可验证性
 
 - [x] **B-68 流量量化换算的三处疑点**
