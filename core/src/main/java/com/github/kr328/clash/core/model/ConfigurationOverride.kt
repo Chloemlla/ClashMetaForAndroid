@@ -3,8 +3,15 @@ package com.github.kr328.clash.core.model
 import android.os.Parcel
 import android.os.Parcelable
 import com.github.kr328.clash.core.util.Parcelizer
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.SerialKind
+import kotlinx.serialization.descriptors.buildSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 @Serializable
 data class ConfigurationOverride(
@@ -149,38 +156,28 @@ data class ConfigurationOverride(
         var baidupanAdblock: Boolean? = null
     )
 
-    @Serializable
-    enum class FindProcessMode {
-        @SerialName("off")
-        Off,
-
-        @SerialName("strict")
-        Strict,
-
-        @SerialName("always")
-        Always,
+    @Serializable(with = FindProcessModeSerializer::class)
+    sealed class FindProcessMode {
+        data object Off : FindProcessMode()
+        data object Strict : FindProcessMode()
+        data object Always : FindProcessMode()
+        data class Unknown(val raw: String) : FindProcessMode()
     }
-    @Serializable
-    enum class DnsEnhancedMode {
-        @SerialName("normal")
-        None,
 
-        @SerialName("redir-host")
-        Mapping,
-
-        @SerialName("fake-ip")
-        FakeIp,
+    @Serializable(with = DnsEnhancedModeSerializer::class)
+    sealed class DnsEnhancedMode {
+        data object None : DnsEnhancedMode()
+        data object Mapping : DnsEnhancedMode()
+        data object FakeIp : DnsEnhancedMode()
+        data class Unknown(val raw: String) : DnsEnhancedMode()
     }
-    @Serializable
-    enum class FilterMode {
-        @SerialName("blacklist")
-        BlackList,
 
-        @SerialName("whitelist")
-        WhiteList,
-
-        @SerialName("rule")
-        Rule,
+    @Serializable(with = FilterModeSerializer::class)
+    sealed class FilterMode {
+        data object BlackList : FilterMode()
+        data object WhiteList : FilterMode()
+        data object Rule : FilterMode()
+        data class Unknown(val raw: String) : FilterMode()
     }
 
     @Serializable
@@ -272,4 +269,84 @@ data class ConfigurationOverride(
             return arrayOfNulls(size)
         }
     }
+
+    private object FindProcessModeSerializer : KSerializer<FindProcessMode> {
+        override val descriptor: SerialDescriptor =
+            enumDescriptor("FindProcessMode", listOf("off", "strict", "always"))
+
+        override fun deserialize(decoder: Decoder): FindProcessMode {
+            return when (val name = decoder.decodeString()) {
+                "off" -> FindProcessMode.Off
+                "strict" -> FindProcessMode.Strict
+                "always" -> FindProcessMode.Always
+                else -> FindProcessMode.Unknown(name)
+            }
+        }
+
+        override fun serialize(encoder: Encoder, value: FindProcessMode) {
+            encoder.encodeString(
+                when (value) {
+                    FindProcessMode.Off -> "off"
+                    FindProcessMode.Strict -> "strict"
+                    FindProcessMode.Always -> "always"
+                    is FindProcessMode.Unknown -> value.raw
+                }
+            )
+        }
+    }
+
+    private object DnsEnhancedModeSerializer : KSerializer<DnsEnhancedMode> {
+        override val descriptor: SerialDescriptor =
+            enumDescriptor("DnsEnhancedMode", listOf("normal", "redir-host", "fake-ip"))
+
+        override fun deserialize(decoder: Decoder): DnsEnhancedMode {
+            return when (val name = decoder.decodeString()) {
+                "normal" -> DnsEnhancedMode.None
+                "redir-host" -> DnsEnhancedMode.Mapping
+                "fake-ip" -> DnsEnhancedMode.FakeIp
+                else -> DnsEnhancedMode.Unknown(name)
+            }
+        }
+
+        override fun serialize(encoder: Encoder, value: DnsEnhancedMode) {
+            encoder.encodeString(
+                when (value) {
+                    DnsEnhancedMode.None -> "normal"
+                    DnsEnhancedMode.Mapping -> "redir-host"
+                    DnsEnhancedMode.FakeIp -> "fake-ip"
+                    is DnsEnhancedMode.Unknown -> value.raw
+                }
+            )
+        }
+    }
+
+    private object FilterModeSerializer : KSerializer<FilterMode> {
+        override val descriptor: SerialDescriptor =
+            enumDescriptor("FilterMode", listOf("blacklist", "whitelist", "rule"))
+
+        override fun deserialize(decoder: Decoder): FilterMode {
+            return when (val name = decoder.decodeString()) {
+                "blacklist" -> FilterMode.BlackList
+                "whitelist" -> FilterMode.WhiteList
+                "rule" -> FilterMode.Rule
+                else -> FilterMode.Unknown(name)
+            }
+        }
+
+        override fun serialize(encoder: Encoder, value: FilterMode) {
+            encoder.encodeString(
+                when (value) {
+                    FilterMode.BlackList -> "blacklist"
+                    FilterMode.WhiteList -> "whitelist"
+                    FilterMode.Rule -> "rule"
+                    is FilterMode.Unknown -> value.raw
+                }
+            )
+        }
+    }
 }
+
+private fun enumDescriptor(serialName: String, names: List<String>): SerialDescriptor =
+    buildSerialDescriptor(serialName, SerialKind.ENUM) {
+        names.forEach { element(it, String.serializer().descriptor) }
+    }

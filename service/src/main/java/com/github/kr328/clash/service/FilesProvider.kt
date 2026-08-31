@@ -59,6 +59,11 @@ class FilesProvider : DocumentsProvider() {
                 throw FileNotFoundException("invalid path $documentId")
             }
 
+            // A file that exists but cannot be read must not be truncated by a write open.
+            if (Flag.Unreadable in document.flags) {
+                throw FileNotFoundException("file is not readable: $documentId")
+            }
+
             ParcelFileDescriptor.open(document.file, m)
         }
     }
@@ -192,6 +197,9 @@ class FilesProvider : DocumentsProvider() {
                 Flag.Writable -> flags or D.FLAG_SUPPORTS_WRITE
                 Flag.Deletable -> flags or D.FLAG_SUPPORTS_DELETE
                 Flag.Virtual -> flags or FLAG_VIRTUAL
+                // No DocumentsProvider bit for this; write support is already withheld and
+                // openDocument rejects the file with a clear error.
+                Flag.Unreadable -> flags
             }
         }
 

@@ -83,8 +83,10 @@ class MigrationProvider : ContentProvider() {
                 withTimeout(EXPORT_TIMEOUT_MS) { MigrationBundle.exportToZip(ctx, file) }
             }
         } catch (e: TimeoutCancellationException) {
-            Log.w("MigrationProvider: export timed out", e)
-            file.delete()
+            // The blocking export keeps running on the IO dispatcher; it writes to a temp
+            // file and renames only on completion, so the public path is never truncated.
+            // On timeout we just don't cache a result for this request.
+            Log.w("MigrationProvider: export timed out (continuing in background)", e)
             false
         }
         if (!ok || !file.isFile || file.length() <= 0L) {

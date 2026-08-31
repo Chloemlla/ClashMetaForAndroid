@@ -13,7 +13,6 @@ import java.util.*
         childColumns = ["uuid"],
         parentColumns = ["uuid"],
         onDelete = ForeignKey.CASCADE,
-        onUpdate = ForeignKey.CASCADE
     )],
     primaryKeys = ["uuid", "proxy"]
 )

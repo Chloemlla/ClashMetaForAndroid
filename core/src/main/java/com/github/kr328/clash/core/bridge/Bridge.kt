@@ -1,5 +1,6 @@
 package com.github.kr328.clash.core.bridge
 
+import android.content.Context
 import android.os.Build
 import androidx.annotation.Keep
 import com.github.kr328.clash.common.Global
@@ -81,18 +82,32 @@ object Bridge {
 
     private external fun nativeInit(home: String, versionName: String, sdkVersion: Int)
 
+    @Volatile
+    private var initResult: Result<Unit>? = null
+
     init {
         System.loadLibrary("bridge")
+    }
 
-        val ctx = Global.application
-        // Previous code opened packageCodePath and detachFd()'d without retaining the fd,
-        // permanently leaking one APK file descriptor per process that loads Bridge.
-        val home = ctx.filesDir.resolve("clash").apply { mkdirs() }.absolutePath
-        val versionName = ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "unknown"
-        val sdkVersion = Build.VERSION.SDK_INT
+    @Synchronized
+    fun init(context: Context): Result<Unit> {
+        initResult?.let { return it }
 
-        Log.d("Home = $home")
+        val result = runCatching {
+            val home = context.filesDir.resolve("clash").apply { mkdirs() }.absolutePath
+            val versionName = context.packageManager
+                .getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+            val sdkVersion = Build.VERSION.SDK_INT
 
-        nativeInit(home, versionName, sdkVersion)
+            Log.d("Home = $home")
+
+            nativeInit(home, versionName, sdkVersion)
+        }
+
+        // A failed init is not cached so a transient failure can be retried on the next start
+        // instead of poisoning the object for the rest of the process lifetime.
+        if (result.isSuccess) initResult = result
+
+        return result
     }
 }

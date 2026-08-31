@@ -4,13 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.github.kr328.clash.common.constants.Migration
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.service.data.Database
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.Pending
 import com.github.kr328.clash.service.data.PendingDao
 import com.github.kr328.clash.service.data.Selection
 import com.github.kr328.clash.service.data.SelectionDao
-import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -25,6 +26,7 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -34,6 +36,10 @@ object MigrationBundle {
     private val exportLock = Mutex()
     private val importLock = Mutex()
 
+    // Version of the profiles.json shape; independent of the manifest format version so
+    // the records can evolve without bumping the whole-bundle format.
+    private const val PROFILES_SCHEMA = 1
+
     // Bounds for extracting a migration bundle. The bundle comes from a same-signature
     // sibling app (enforced by MigrationProvider.enforceCaller), but a corrupt cache or
     // buggy sibling could still supply a crafted zip. Cap per-entry and total extracted
@@ -41,6 +47,12 @@ object MigrationBundle {
     private const val MAX_ENTRY_BYTES = 64L * 1024 * 1024
     private const val MAX_TOTAL_BYTES = 256L * 1024 * 1024
     private const val MAX_ENTRIES = 10_000
+
+    private val bundleJson = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        encodeDefaults = true
+    }
 
     data class ImportResult(
         val importedProfiles: Int,
@@ -57,9 +69,10 @@ object MigrationBundle {
         exportLock.withLock {
             runCatching {
                 output.parentFile?.mkdirs()
-                if (output.exists()) output.delete()
+                val staging = File(output.parentFile, "${output.name}.tmp")
+                staging.delete()
 
-                ZipOutputStream(BufferedOutputStream(FileOutputStream(output))).use { zip ->
+                ZipOutputStream(BufferedOutputStream(FileOutputStream(staging))).use { zip ->
                     writeTextEntry(
                         zip,
                         Migration.MANIFEST_FILE,
@@ -91,10 +104,16 @@ object MigrationBundle {
                     addDirectory(zip, context.importedDir, Migration.IMPORTED_DIR)
                     addDirectory(zip, context.pendingDir, Migration.PENDING_DIR)
                 }
+
+                // Swap in only after the archive is fully written so a concurrent reader or
+                // a crash mid-export never sees a truncated bundle at the public path.
+                if (!staging.renameTo(output)) {
+                    throw IOException("failed to move export into place")
+                }
                 true
             }.onFailure {
                 Log.w("Migration export failed: $it", it)
-                output.delete()
+                File(output.parentFile, "${output.name}.tmp").delete()
             }.getOrDefault(false)
         }
     }
@@ -106,9 +125,12 @@ object MigrationBundle {
             }
 
             val extractRoot = context.cacheDir.resolve("migration-import-${System.currentTimeMillis()}")
+            val stagingRoot = context.cacheDir.resolve("migration-import-staging")
             try {
                 extractRoot.deleteRecursively()
                 extractRoot.mkdirs()
+                stagingRoot.deleteRecursively()
+                stagingRoot.mkdirs()
                 unzip(input, extractRoot)
 
                 val manifest = extractRoot.resolve(Migration.MANIFEST_FILE)
@@ -138,6 +160,10 @@ object MigrationBundle {
                 }
 
                 val root = JSONObject(profilesFile.readText())
+                val schema = root.optInt("schema", 0)
+                if (schema > PROFILES_SCHEMA) {
+                    Log.w("Migration: profiles schema $schema is newer than supported $PROFILES_SCHEMA")
+                }
                 val importedArray = root.optJSONArray("imported") ?: JSONArray()
                 val pendingArray = root.optJSONArray("pending") ?: JSONArray()
                 val selectionsArray = root.optJSONArray("selections") ?: JSONArray()
@@ -145,48 +171,50 @@ object MigrationBundle {
 
                 var importedCount = 0
                 var pendingCount = 0
+                val importedRecords = mutableListOf<Imported>()
+                val pendingRecords = mutableListOf<Pending>()
+                val selectionRecords = mutableListOf<Selection>()
 
-                // Import each record independently: a single malformed record (unknown
-                // Profile.Type from a newer alpha build, bad UUID, corrupt JSON) is skipped
-                // and logged rather than aborting the whole batch and leaving partial state.
+                val seenImported = HashSet<UUID>()
                 for (i in 0 until importedArray.length()) {
                     runCatching {
                         val obj = importedArray.getJSONObject(i)
-                        val uuid = UUID.fromString(obj.getString("uuid"))
-                        if (ImportedDao().exists(uuid) || PendingDao().exists(uuid)) return@runCatching false
+                        val imported = bundleJson.decodeFromString(Imported.serializer(), obj.toString())
+                        if (!seenImported.add(imported.uuid)) return@runCatching false
+                        if (ImportedDao().exists(imported.uuid) || PendingDao().exists(imported.uuid)) return@runCatching false
 
-                        val sourceDir = extractRoot.resolve(Migration.IMPORTED_DIR).resolve(uuid.toString())
+                        val sourceDir = extractRoot.resolve(Migration.IMPORTED_DIR).resolve(imported.uuid.toString())
                         if (!sourceDir.isDirectory) return@runCatching false
 
-                        val targetDir = context.importedDir.resolve(uuid.toString())
-                        targetDir.deleteRecursively()
-                        sourceDir.copyRecursively(targetDir, overwrite = true)
-
-                        ImportedDao().insert(obj.toImported())
+                        sourceDir.copyRecursively(stagingRoot.resolve(imported.uuid.toString()), overwrite = true)
+                        importedRecords += imported
                         true
                     }.onFailure {
                         Log.w("Migration: skipping imported record $i: $it", it)
                     }.getOrDefault(false).let { if (it) importedCount++ }
                 }
 
+                val importedUuids = importedRecords.mapTo(HashSet()) { it.uuid }
+                val seenPending = HashSet<UUID>()
                 for (i in 0 until pendingArray.length()) {
                     runCatching {
                         val obj = pendingArray.getJSONObject(i)
-                        val uuid = UUID.fromString(obj.getString("uuid"))
-                        if (ImportedDao().exists(uuid) || PendingDao().exists(uuid)) return@runCatching false
+                        val pending = bundleJson.decodeFromString(Pending.serializer(), obj.toString())
+                        if (!seenPending.add(pending.uuid)) return@runCatching false
+                        if (pending.uuid in importedUuids) return@runCatching false
+                        if (ImportedDao().exists(pending.uuid) || PendingDao().exists(pending.uuid)) return@runCatching false
 
-                        val sourceDir = extractRoot.resolve(Migration.PENDING_DIR).resolve(uuid.toString())
-                        val targetDir = context.pendingDir.resolve(uuid.toString())
-                        targetDir.deleteRecursively()
+                        val sourceDir = extractRoot.resolve(Migration.PENDING_DIR).resolve(pending.uuid.toString())
+                        val staging = stagingRoot.resolve(pending.uuid.toString())
                         if (sourceDir.isDirectory) {
-                            sourceDir.copyRecursively(targetDir, overwrite = true)
+                            sourceDir.copyRecursively(staging, overwrite = true)
                         } else {
-                            targetDir.mkdirs()
-                            targetDir.resolve("config.yaml").createNewFile()
-                            targetDir.resolve("providers").mkdir()
+                            staging.mkdirs()
+                            staging.resolve("config.yaml").createNewFile()
+                            staging.resolve("providers").mkdir()
                         }
 
-                        PendingDao().insert(obj.toPending())
+                        pendingRecords += pending
                         true
                     }.onFailure {
                         Log.w("Migration: skipping pending record $i: $it", it)
@@ -197,16 +225,36 @@ object MigrationBundle {
                     runCatching {
                         val obj = selectionsArray.getJSONObject(i)
                         val uuid = UUID.fromString(obj.getString("uuid"))
-                        if (!ImportedDao().exists(uuid)) return@runCatching
-                        SelectionDao().setSelected(
-                            Selection(
-                                uuid = uuid,
-                                proxy = obj.getString("proxy"),
-                                selected = obj.getString("selected"),
-                            )
+                        if (uuid !in importedUuids && !ImportedDao().exists(uuid)) return@runCatching
+                        selectionRecords += Selection(
+                            uuid = uuid,
+                            proxy = obj.getString("proxy"),
+                            selected = obj.getString("selected"),
                         )
                     }.onFailure {
                         Log.w("Migration: skipping selection record $i: $it", it)
+                    }
+                }
+
+                // One transaction commits all rows or none, so an interrupted import can
+                // never leave half of the profile set visible.
+                Database.database.importAll(importedRecords, pendingRecords, selectionRecords)
+
+                // Move the staged directories into place only after the rows are durable.
+                context.importedDir.mkdirs()
+                context.pendingDir.mkdirs()
+                importedRecords.forEach { rec ->
+                    val staging = stagingRoot.resolve(rec.uuid.toString())
+                    val target = context.importedDir.resolve(rec.uuid.toString())
+                    if (staging.isDirectory && !target.exists() && !staging.renameTo(target)) {
+                        Log.w("Migration: failed to move staged directory for imported ${rec.uuid}")
+                    }
+                }
+                pendingRecords.forEach { rec ->
+                    val staging = stagingRoot.resolve(rec.uuid.toString())
+                    val target = context.pendingDir.resolve(rec.uuid.toString())
+                    if (staging.isDirectory && !target.exists() && !staging.renameTo(target)) {
+                        Log.w("Migration: failed to move staged directory for pending ${rec.uuid}")
                     }
                 }
 
@@ -228,7 +276,7 @@ object MigrationBundle {
 
                 if (!activeProfile.isNullOrBlank()) {
                     val activeUuid = runCatching { UUID.fromString(activeProfile) }.getOrNull()
-                    if (activeUuid != null && ImportedDao().exists(activeUuid)) {
+                    if (activeUuid != null && (activeUuid in importedUuids || ImportedDao().exists(activeUuid))) {
                         ServiceStore(context).activeProfile = activeUuid
                     }
                 }
@@ -243,6 +291,7 @@ object MigrationBundle {
                 ImportResult(0, 0, null, skipped = true, reason = e.message)
             } finally {
                 extractRoot.deleteRecursively()
+                stagingRoot.deleteRecursively()
             }
         }
     }
@@ -254,7 +303,7 @@ object MigrationBundle {
 
         ImportedDao().queryAllUUIDs().forEach { uuid ->
             val item = ImportedDao().queryByUUID(uuid) ?: return@forEach
-            imported.put(item.toJson())
+            imported.put(JSONObject(bundleJson.encodeToString(Imported.serializer(), item)))
             SelectionDao().querySelections(uuid).forEach { selection ->
                 selections.put(
                     JSONObject()
@@ -267,10 +316,11 @@ object MigrationBundle {
 
         PendingDao().queryAllUUIDs().forEach { uuid ->
             val item = PendingDao().queryByUUID(uuid) ?: return@forEach
-            pending.put(item.toJson())
+            pending.put(JSONObject(bundleJson.encodeToString(Pending.serializer(), item)))
         }
 
         return JSONObject()
+            .put("schema", PROFILES_SCHEMA)
             .put("activeProfile", ServiceStore(context).activeProfile?.toString() ?: "")
             .put("imported", imported)
             .put("pending", pending)
@@ -387,67 +437,5 @@ object MigrationBundle {
                 zip.closeEntry()
             }
         }
-    }
-
-    private fun Imported.toJson(): JSONObject {
-        return JSONObject()
-            .put("uuid", uuid.toString())
-            .put("name", name)
-            .put("type", type.name)
-            .put("source", source)
-            .put("interval", interval)
-            .put("upload", upload)
-            .put("download", download)
-            .put("total", total)
-            .put("expire", expire)
-            .put("createdAt", createdAt)
-            .put("ageSecretKey", ageSecretKey)
-    }
-
-    private fun Pending.toJson(): JSONObject {
-        return JSONObject()
-            .put("uuid", uuid.toString())
-            .put("name", name)
-            .put("type", type.name)
-            .put("source", source)
-            .put("interval", interval)
-            .put("upload", upload)
-            .put("download", download)
-            .put("total", total)
-            .put("expire", expire)
-            .put("createdAt", createdAt)
-            .put("ageSecretKey", ageSecretKey)
-    }
-
-    private fun JSONObject.toImported(): Imported {
-        return Imported(
-            uuid = UUID.fromString(getString("uuid")),
-            name = getString("name"),
-            type = Profile.Type.valueOf(getString("type")),
-            source = optString("source"),
-            interval = optLong("interval"),
-            upload = optLong("upload"),
-            download = optLong("download"),
-            total = optLong("total"),
-            expire = optLong("expire"),
-            createdAt = optLong("createdAt", System.currentTimeMillis()),
-            ageSecretKey = optString("ageSecretKey").takeIf { it.isNotBlank() },
-        )
-    }
-
-    private fun JSONObject.toPending(): Pending {
-        return Pending(
-            uuid = UUID.fromString(getString("uuid")),
-            name = getString("name"),
-            type = Profile.Type.valueOf(getString("type")),
-            source = optString("source"),
-            interval = optLong("interval"),
-            upload = optLong("upload"),
-            download = optLong("download"),
-            total = optLong("total"),
-            expire = optLong("expire"),
-            createdAt = optLong("createdAt", System.currentTimeMillis()),
-            ageSecretKey = optString("ageSecretKey").takeIf { it.isNotBlank() },
-        )
     }
 }

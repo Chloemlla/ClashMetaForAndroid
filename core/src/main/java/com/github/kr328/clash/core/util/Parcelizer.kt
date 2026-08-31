@@ -3,6 +3,7 @@ package com.github.kr328.clash.core.util
 import android.os.Parcel
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.CompositeDecoder
@@ -11,8 +12,17 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
+import java.util.concurrent.ConcurrentHashMap
 
 object Parcelizer {
+    // Fields are written bare and read back positionally, so a reader built from a different
+    // version of a model would silently decode a shifted layout. Every payload therefore carries
+    // a magic word plus an id derived from the model's descriptor, and models crossing the process
+    // boundary may only gain fields at the end.
+    private const val MAGIC = 0x43464150
+
+    private val schemaIds = ConcurrentHashMap<String, Int>()
+
     private class ParcelDecoder(private val parcel: Parcel) : Decoder, CompositeDecoder {
         override val serializersModule: SerializersModule = SerializersModule {}
 
@@ -61,7 +71,17 @@ object Parcelizer {
         }
 
         override fun decodeCollectionSize(descriptor: SerialDescriptor): Int {
-            return decodeInt()
+            val size = decodeInt()
+
+            // Every element costs at least one byte, so a length beyond the remaining payload can
+            // only mean the parcel is truncated or desynced — never pre-allocate for it.
+            if (size < 0 || size > parcel.dataAvail()) {
+                throw SerializationException(
+                    "invalid collection size $size for ${descriptor.serialName}"
+                )
+            }
+
+            return size
         }
 
         override fun decodeBoolean(): Boolean {
@@ -116,7 +136,8 @@ object Parcelizer {
         }
 
         override fun decodeString(): String {
-            return parcel.readString()!!
+            return parcel.readString()
+                ?: throw SerializationException("truncated parcel: expected a string")
         }
     }
 
@@ -247,10 +268,45 @@ object Parcelizer {
     }
 
     fun <T> decodeFromParcel(deserializer: DeserializationStrategy<T>, parcel: Parcel): T {
+        val magic = parcel.readInt()
+        val schemaId = parcel.readInt()
+        val expected = schemaIdOf(deserializer.descriptor)
+
+        if (magic != MAGIC || schemaId != expected) {
+            throw SerializationException(
+                "parcel schema mismatch for ${deserializer.descriptor.serialName}: " +
+                        "got $magic/$schemaId, expected $MAGIC/$expected"
+            )
+        }
+
         return deserializer.deserialize(ParcelDecoder(parcel))
     }
 
     fun <T> encodeToParcel(serializer: SerializationStrategy<T>, parcel: Parcel, value: T) {
+        parcel.writeInt(MAGIC)
+        parcel.writeInt(schemaIdOf(serializer.descriptor))
+
         serializer.serialize(ParcelEncoder(parcel), value)
+    }
+
+    private fun schemaIdOf(descriptor: SerialDescriptor): Int =
+        schemaIds.getOrPut(descriptor.serialName) { fingerprintOf(descriptor, HashSet()) }
+
+    private fun fingerprintOf(descriptor: SerialDescriptor, visiting: MutableSet<String>): Int {
+        var hash = descriptor.serialName.hashCode()
+
+        hash = hash * 31 + if (descriptor.isNullable) 1 else 0
+
+        // Self-referencing models would otherwise recurse forever.
+        if (!visiting.add(descriptor.serialName)) return hash
+
+        for (i in 0 until descriptor.elementsCount) {
+            hash = hash * 31 + descriptor.getElementName(i).hashCode()
+            hash = hash * 31 + fingerprintOf(descriptor.getElementDescriptor(i), visiting)
+        }
+
+        visiting.remove(descriptor.serialName)
+
+        return hash
     }
 }

@@ -16,14 +16,23 @@ interface PendingDao {
     suspend fun exists(uuid: UUID): Boolean
 
     @Query("SELECT uuid FROM pending ORDER BY createdAt")
-    suspend fun queryAllUUIDs(): List<UUID>
+    suspend fun rawQueryAllUUIDs(): List<UUID>
 
     @Query("SELECT * FROM pending ORDER BY createdAt")
-    suspend fun queryAll(): List<Pending>
+    suspend fun rawQueryAll(): List<Pending>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // A corrupt uuid string converts to the sentinel; drop those rows so one bad row
+    // cannot surface as a nil-uuid profile and break the whole profile list.
+    suspend fun queryAllUUIDs(): List<UUID> = rawQueryAllUUIDs().filter { it != Converters.INVALID_UUID }
+
+    suspend fun queryAll(): List<Pending> = rawQueryAll().filter { it.uuid != Converters.INVALID_UUID }
+
+    // UUID keys are generated app-side, so a conflict is a corrupt write; fail loudly
+    // instead of silently overwriting an existing profile. Both twin tables agree on
+    // this. Import paths pre-filter duplicates with exists() before inserting.
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(pending: Pending)
 
-    @Update(onConflict = OnConflictStrategy.REPLACE)
+    @Update(onConflict = OnConflictStrategy.ABORT)
     suspend fun update(pending: Pending)
 }

@@ -5,6 +5,7 @@ import android.net.Uri
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.FetchStatus
+import com.github.kr328.clash.service.data.Database
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.Pending
@@ -42,60 +43,53 @@ object ProfileProcessor {
                     .getLocalSubscriptionTraffic(snapshot.uuid)
 
                 profileLock.withLock {
-                    if (PendingDao().queryByUUID(snapshot.uuid) == snapshot) {
+                    val old = ImportedDao().queryByUUID(snapshot.uuid)
+                    val updateInterval = subscriptionInfo?.subUpdateInterval
+                        ?.takeIf { old == null && snapshot.interval == 0L }
+                        ?: snapshot.interval
+
+                    // Local mode: bill used traffic from 0 B via LocalSubscriptionTrafficStore,
+                    // but still persist upstream total/expire so the config UI can show a
+                    // progress bar against the subscription quota.
+                    // Upstream mode: persist full subscription-userinfo into Imported.
+                    val upload: Long
+                    val download: Long
+                    val total: Long
+                    val expire: Long
+                    if (useLocalTraffic) {
+                        upload = 0
+                        download = 0
+                        total = subscriptionInfo?.subTotal ?: old?.total ?: 0
+                        expire = subscriptionInfo?.subExpire ?: old?.expire ?: 0
+                    } else {
+                        upload = subscriptionInfo?.subUpload ?: 0
+                        download = subscriptionInfo?.subDownload ?: 0
+                        total = subscriptionInfo?.subTotal ?: 0
+                        expire = subscriptionInfo?.subExpire ?: 0
+                    }
+
+                    val imported = Imported(
+                        uuid = snapshot.uuid,
+                        name = snapshot.name,
+                        type = snapshot.type,
+                        source = snapshot.source,
+                        interval = updateInterval,
+                        upload = upload,
+                        download = download,
+                        total = total,
+                        expire = expire,
+                        createdAt = old?.createdAt ?: System.currentTimeMillis(),
+                        ageSecretKey = snapshot.ageSecretKey,
+                    )
+
+                    // The transaction consumes the pending row and writes the imported row
+                    // atomically; the directory moves after it are idempotent.
+                    if (Database.database.commitImported(imported, snapshot)) {
                         replaceDirectoryAtomically(
                             context.processingDir,
                             context.importedDir.resolve(snapshot.uuid.toString()),
                         )
-
-                        val old = ImportedDao().queryByUUID(snapshot.uuid)
-                        val updateInterval = subscriptionInfo?.subUpdateInterval
-                            ?.takeIf { old == null && snapshot.interval == 0L }
-                            ?: snapshot.interval
-
-                        // Local mode: bill used traffic from 0 B via LocalSubscriptionTrafficStore,
-                        // but still persist upstream total/expire so the config UI can show a
-                        // progress bar against the subscription quota.
-                        // Upstream mode: persist full subscription-userinfo into Imported.
-                        val upload: Long
-                        val download: Long
-                        val total: Long
-                        val expire: Long
-                        if (useLocalTraffic) {
-                            upload = 0
-                            download = 0
-                            total = subscriptionInfo?.subTotal ?: old?.total ?: 0
-                            expire = subscriptionInfo?.subExpire ?: old?.expire ?: 0
-                        } else {
-                            upload = subscriptionInfo?.subUpload ?: 0
-                            download = subscriptionInfo?.subDownload ?: 0
-                            total = subscriptionInfo?.subTotal ?: 0
-                            expire = subscriptionInfo?.subExpire ?: 0
-                        }
-
-                        val new = Imported(
-                            snapshot.uuid,
-                            snapshot.name,
-                            snapshot.type,
-                            snapshot.source,
-                            updateInterval,
-                            upload,
-                            download,
-                            total,
-                            expire,
-                            old?.createdAt ?: System.currentTimeMillis(),
-                            ageSecretKey = snapshot.ageSecretKey
-                        )
-                        if (old != null) {
-                            ImportedDao().update(new)
-                        } else {
-                            ImportedDao().insert(new)
-                        }
-
-                        PendingDao().remove(snapshot.uuid)
-
                         context.pendingDir.resolve(snapshot.uuid.toString()).deleteRecursively()
-
                         context.sendProfileChanged(snapshot.uuid)
                     }
                 }

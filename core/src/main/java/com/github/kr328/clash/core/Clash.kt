@@ -1,5 +1,6 @@
 package com.github.kr328.clash.core
 
+import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.core.model.*
@@ -15,7 +16,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 import java.net.InetSocketAddress
 
@@ -36,6 +37,7 @@ object Clash {
     }
 
     fun reset() {
+        Bridge.init(Global.application).getOrThrow()
         Bridge.nativeReset()
     }
 
@@ -50,7 +52,12 @@ object Clash {
     fun queryTunnelState(): TunnelState {
         val json = Bridge.nativeQueryTunnelState()
 
-        return Json.decodeFromString(TunnelState.serializer(), json)
+        return runCatching {
+            EventJson.decodeFromString(TunnelState.serializer(), json)
+        }.getOrElse { e ->
+            Log.w("queryTunnelState: decode failed, falling back to rule mode: ${e.message}")
+            TunnelState(TunnelState.Mode.Rule)
+        }
     }
 
     fun queryTrafficNow(): Traffic {
@@ -86,15 +93,19 @@ object Clash {
     ) {
         Bridge.nativeStartTun(fd, stack, gateway, portal, dns, object : TunInterface {
             override fun markSocket(fd: Int) {
-                markSocket(fd)
+                if (!markSocket(fd)) {
+                    Log.w("startTun: failed to protect socket $fd; traffic may loop back into the tunnel")
+                }
             }
 
             override fun querySocketUid(protocol: Int, source: String, target: String): Int {
-                return querySocketUid(
-                    protocol,
-                    parseInetSocketAddress(source),
-                    parseInetSocketAddress(target)
-                )
+                return runCatching {
+                    querySocketUid(
+                        protocol,
+                        parseInetSocketAddress(source),
+                        parseInetSocketAddress(target)
+                    )
+                }.getOrElse { -1 }
             }
         })
     }
@@ -112,21 +123,31 @@ object Clash {
     }
 
     fun queryGroupNames(excludeNotSelectable: Boolean): List<String> {
-        val names = Json.Default.decodeFromString(
-            JsonArray.serializer(),
-            Bridge.nativeQueryGroupNames(excludeNotSelectable)
-        )
+        val names = runCatching {
+            EventJson.decodeFromString(
+                JsonArray.serializer(),
+                Bridge.nativeQueryGroupNames(excludeNotSelectable)
+            )
+        }.getOrElse { e ->
+            Log.w("queryGroupNames: decode failed, returning empty list: ${e.message}")
+            emptyList()
+        }
 
-        return names.map {
-            require(it.jsonPrimitive.isString)
-
-            it.jsonPrimitive.content
+        return names.mapNotNull { element ->
+            (element as? JsonPrimitive)?.takeIf { it.isString }?.content
         }
     }
 
     fun queryGroup(name: String, sort: ProxySort): ProxyGroup {
         return Bridge.nativeQueryGroup(name, sort.name)
-            ?.let { Json.Default.decodeFromString(ProxyGroup.serializer(), it) }
+            ?.let {
+                runCatching {
+                    EventJson.decodeFromString(ProxyGroup.serializer(), it)
+                }.getOrElse { e ->
+                    Log.w("queryGroup($name): decode failed, returning unknown group: ${e.message}")
+                    null
+                }
+            }
             ?: ProxyGroup("Unknown", emptyList(), "")
     }
 
@@ -137,10 +158,15 @@ object Clash {
 
     /** name → last delay ms; used during URL-test intermediate polls. */
     fun queryGroupDelays(name: String): Map<String, Int> {
-        return Json.Default.decodeFromString(
-            MapSerializer(String.serializer(), Int.serializer()),
-            Bridge.nativeQueryGroupDelays(name),
-        )
+        return runCatching {
+            EventJson.decodeFromString(
+                MapSerializer(String.serializer(), Int.serializer()),
+                Bridge.nativeQueryGroupDelays(name),
+            )
+        }.getOrElse { e ->
+            Log.w("queryGroupDelays($name): decode failed, returning empty map: ${e.message}")
+            emptyMap()
+        }
     }
 
     /** True when any non-compatible rule/proxy provider is loaded. */
@@ -235,10 +261,15 @@ object Clash {
     }
 
     fun queryProviders(): List<Provider> {
-        return Json.Default.decodeFromString(
-            ListSerializer(Provider.serializer()),
-            Bridge.nativeQueryProviders(),
-        )
+        return runCatching {
+            EventJson.decodeFromString(
+                ListSerializer(Provider.serializer()),
+                Bridge.nativeQueryProviders(),
+            )
+        }.getOrElse { e ->
+            Log.w("queryProviders: decode failed, returning empty list: ${e.message}")
+            emptyList()
+        }
     }
 
     fun updateProvider(type: Provider.Type, name: String): CompletableDeferred<Unit> {
@@ -441,7 +472,11 @@ object Clash {
     }
 
     private fun parseAgeKeyPair(value: String): AgeKeyPair {
-        return Json.Default.decodeFromString(AgeKeyPair.serializer(), value)
+        return runCatching {
+            EventJson.decodeFromString(AgeKeyPair.serializer(), value)
+        }.getOrElse { e ->
+            throw IllegalStateException("Core returned an invalid key pair payload", e)
+        }
     }
 
     private fun <T> decodeEvent(

@@ -24,19 +24,39 @@ internal suspend fun migrationFromLegacy(context: Context) {
     Log.i("Migration from legacy database")
 
     try {
-        SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+        var legacyVersion = 0
+        val skipped = SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             .use { db ->
                 val v = db.version
+                legacyVersion = v
 
                 Log.i("Legacy database version = $v")
 
                 when (v) {
                     1 -> migrationFromLegacy1(context, db)
                     2, 3, 4 -> migrationFromLegacy234(context, db, v)
+                    else -> {
+                        Log.w("Legacy database version $v is not supported; keeping legacy database")
+                        1
+                    }
                 }
             }
 
+        if (skipped > 0) {
+            Log.w("Legacy migration skipped $skipped unrecognized profile(s); keeping legacy database")
+            return
+        }
+
         context.deleteDatabase("clash-config")
+
+        if (legacyVersion in 2..4) {
+            context.filesDir.resolve("profiles").deleteRecursively()
+            context.filesDir.resolve("clash").listFiles()?.forEach {
+                if (it.name.isDigitsOnly()) {
+                    it.deleteRecursively()
+                }
+            }
+        }
 
         Log.i("Legacy database migrated")
     } catch (e: Exception) {
@@ -48,7 +68,9 @@ private suspend fun migrationFromLegacy234(
     context: Context,
     legacy: SQLiteDatabase,
     version: Int,
-) {
+): Int {
+    var skipped = 0
+
     legacy.query(
         "profiles",
         arrayOf("id", "name", "type", "uri", if (version == 2) "update_interval" else "interval"),
@@ -65,10 +87,12 @@ private suspend fun migrationFromLegacy234(
         val interval = cursor.getColumnIndex(if (version == 2) "update_interval" else "interval")
 
         if (!cursor.moveToFirst())
-            return
+            return 0
 
         do {
-            val newType = when (cursor.getInt(type)) {
+            val typeValue = cursor.getInt(type)
+
+            val newType = when (typeValue) {
                 1 -> { // TYPE_FILE
                     Profile.Type.File
                 }
@@ -79,6 +103,8 @@ private suspend fun migrationFromLegacy234(
                     Profile.Type.External
                 }
                 else -> { // unknown
+                    skipped++
+                    Log.w("Legacy migration: unrecognized profile type $typeValue for '${cursor.getString(name)}'; skipping")
                     continue
                 }
             }
@@ -92,8 +118,11 @@ private suspend fun migrationFromLegacy234(
                 type = newType,
                 source = if (newType != Profile.Type.File) cursor.getString(uri) else "",
                 interval = if (version == 2) intervalValue * 1000 else intervalValue,
-                0,0,0,0
-                )
+                upload = 0,
+                download = 0,
+                total = 0,
+                expire = 0,
+            )
 
             val base = context.pendingDir.resolve(pending.uuid.toString())
 
@@ -120,15 +149,12 @@ private suspend fun migrationFromLegacy234(
         } while (cursor.moveToNext())
     }
 
-    context.filesDir.resolve("profiles").deleteRecursively()
-    context.filesDir.resolve("clash").listFiles()?.forEach {
-        if (it.name.isDigitsOnly()) {
-            it.deleteRecursively()
-        }
-    }
+    return skipped
 }
 
-private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabase) {
+private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabase): Int {
+    var skipped = 0
+
     legacy.query(
         "profiles",
         arrayOf("name", "token", "id", "file"),
@@ -143,7 +169,7 @@ private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabas
         val file = cursor.getColumnIndex("file")
 
         if (!cursor.moveToFirst())
-            return
+            return 0
 
         do {
             val legacyToken = cursor.getString(token)
@@ -151,7 +177,11 @@ private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabas
             val newType = when {
                 legacyToken.startsWith("file|") -> Profile.Type.File
                 legacyToken.startsWith("url|") -> Profile.Type.Url
-                else -> continue
+                else -> {
+                    skipped++
+                    Log.w("Legacy migration: unrecognized token for profile '${cursor.getString(name)}'; skipping")
+                    continue
+                }
             }
 
             val source = if (newType == Profile.Type.Url) {
@@ -166,7 +196,10 @@ private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabas
                 type = newType,
                 source = source,
                 interval = 0,
-                0,0,0,0
+                upload = 0,
+                download = 0,
+                total = 0,
+                expire = 0,
             )
 
             val base = context.pendingDir.resolve(pending.uuid.toString())
@@ -197,4 +230,6 @@ private suspend fun migrationFromLegacy1(context: Context, legacy: SQLiteDatabas
             Log.i("${pending.name} migrated")
         } while (cursor.moveToNext())
     }
+
+    return skipped
 }

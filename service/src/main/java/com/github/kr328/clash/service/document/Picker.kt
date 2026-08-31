@@ -9,10 +9,16 @@ import com.github.kr328.clash.service.data.PendingDao
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
+import com.github.kr328.clash.service.util.replaceDirectoryAtomically
 import java.io.FileNotFoundException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class Picker(private val context: Context) {
+    private val cloneLocks = ConcurrentHashMap<UUID, Mutex>()
+
     suspend fun list(path: Path): List<Document> {
         if (path.uuid == null) {
             return ImportedDao().queryAllUUIDs().map {
@@ -48,10 +54,6 @@ class Picker(private val context: Context) {
             )
         }
 
-        if (writable) {
-            cloneToPending(path.uuid)
-        }
-
         val imported = ImportedDao().queryByUUID(path.uuid)
         val pending = PendingDao().queryByUUID(path.uuid)
 
@@ -78,17 +80,24 @@ class Picker(private val context: Context) {
                 if (writable && type != Profile.Type.File)
                     throw IllegalArgumentException("invalid open mode")
 
-                val flags: Set<Flag> = if (type == Profile.Type.File)
-                    setOf(Flag.Writable)
-                else
-                    emptySet()
+                // Clone only after all validation above, so a rejected open never
+                // leaves an orphan pending row or a copied directory behind.
+                val pendingAfterClone = if (writable) cloneToPending(path.uuid) else pending
+
+                val file = when {
+                    pendingAfterClone != null -> context.pendingDir.resolve(pendingAfterClone.uuid.toString())
+                    imported != null -> context.importedDir.resolve(imported.uuid.toString())
+                    else -> throw FileNotFoundException("profile not found")
+                }.resolve("config.yaml")
+
+                val flags: Set<Flag> = when {
+                    file.exists() && !file.canRead() -> setOf(Flag.Unreadable)
+                    type == Profile.Type.File -> setOf(Flag.Writable)
+                    else -> emptySet()
+                }
 
                 return FileDocument(
-                    file = when {
-                        pending != null -> context.pendingDir.resolve(pending.uuid.toString())
-                        imported != null -> context.importedDir.resolve(imported.uuid.toString())
-                        else -> throw FileNotFoundException("profile not found")
-                    }.resolve("config.yaml"),
+                    file = file,
                     flags = flags,
                     idOverride = Paths.CONFIGURATION_ID,
                     nameOverride = context.getString(R.string.configuration_yaml)
@@ -110,39 +119,57 @@ class Picker(private val context: Context) {
         if (path.scope != Path.Scope.Providers)
             throw FileNotFoundException("invalid path")
 
-        return FileDocument(
-            file = when {
+        val file = if (writable) {
+            val pendingAfterClone = cloneToPending(path.uuid)
+            context.pendingDir.resolve(pendingAfterClone.uuid.toString())
+                .resolve("providers")
+                .resolve(path.relative.joinToString(separator = "/"))
+        } else {
+            when {
                 pending != null -> context.pendingDir.resolve(pending.uuid.toString())
                 imported != null -> context.importedDir.resolve(imported.uuid.toString())
                 else -> throw FileNotFoundException("profile not found")
-            }.resolve("providers").resolve(path.relative.joinToString(separator = "/")),
-            flags = setOf(Flag.Writable, Flag.Deletable)
-        )
+            }.resolve("providers").resolve(path.relative.joinToString(separator = "/"))
+        }
+
+        val flags = if (file.exists() && !file.canRead())
+            setOf(Flag.Unreadable, Flag.Deletable)
+        else
+            setOf(Flag.Writable, Flag.Deletable)
+
+        return FileDocument(file = file, flags = flags)
     }
 
-    private suspend fun cloneToPending(uuid: UUID) {
-        if (PendingDao().queryByUUID(uuid) != null)
-            return
+    private suspend fun cloneToPending(uuid: UUID): Pending {
+        val lock = cloneLocks.computeIfAbsent(uuid) { Mutex() }
 
-        val imported =
-            ImportedDao().queryByUUID(uuid) ?: throw FileNotFoundException("profile not found")
+        return lock.withLock {
+            PendingDao().queryByUUID(uuid)?.let { return@withLock it }
 
-        PendingDao().insert(
-            Pending(
-                imported.uuid,
-                imported.name,
-                imported.type,
-                imported.source,
-                imported.interval,
-                0,0,0,0,
-                ageSecretKey = imported.ageSecretKey
+            val imported = ImportedDao().queryByUUID(uuid)
+                ?: throw FileNotFoundException("profile not found")
+
+            // Copy into a staging directory and swap it in before inserting the row, so
+            // a mid-copy crash never leaves a Pending row pointing at an empty directory.
+            replaceDirectoryAtomically(
+                context.importedDir.resolve(uuid.toString()),
+                context.pendingDir.resolve(uuid.toString()),
             )
-        )
 
-        val source = context.importedDir.resolve(uuid.toString())
-        val target = context.pendingDir.resolve(uuid.toString())
-
-        target.deleteRecursively()
-        source.copyRecursively(target)
+            val pending = Pending(
+                uuid = imported.uuid,
+                name = imported.name,
+                type = imported.type,
+                source = imported.source,
+                interval = imported.interval,
+                upload = imported.upload,
+                download = imported.download,
+                total = imported.total,
+                expire = imported.expire,
+                ageSecretKey = imported.ageSecretKey,
+            )
+            PendingDao().insert(pending)
+            pending
+        }
     }
 }

@@ -827,40 +827,40 @@
 
 #### B-4 core 与数据层 (g5)
 
-- [ ] **B-58 `SoftReference` 单例可能在同一个库文件上开出第二个 Room 实例**
+- [x] **B-58 `SoftReference` 单例可能在同一个库文件上开出第二个 Room 实例**
   - `service/.../data/Database.kt:31-38`
   - 触发：内存压力下 SoftReference 被回收，下一次访问重建实例；若旧实例仍被某个协程持有，同一 SQLite 文件上就有两个 Room（各自的写锁与失效追踪互不知情）——数据竞争与 `SQLiteDatabaseLockedException`。
   - 修法：改成真正的进程内单例（`by lazy`），Room 自己会管连接池。
 
-- [ ] **B-59 没有事务原语，"插入 Imported + 删除 Pending + 移动目录"三步各自独立**
+- [x] **B-59 没有事务原语，"插入 Imported + 删除 Pending + 移动目录"三步各自独立**
   - `service/.../data/Daos.kt:3-13`
   - 触发：三步之间任何一处被杀（内核进程随时可能被系统回收）就留下半状态：配置在库里但文件不在，或文件已移动但 Pending 行还在。这是本项目最核心的写路径。
   - 修法：给这组操作提供 `@Transaction` 方法；文件移动的不可回滚部分放在事务提交后并做成幂等。
   - 清单项：① 事务边界
 
-- [ ] **B-60 Room 转换器抛异常，一行坏数据让整个查询返回空**
+- [x] **B-60 Room 转换器抛异常，一行坏数据让整个查询返回空**
   - `service/.../data/Converters.kt:14-26`
   - 触发：`toUUID` / `toProfileType` 遇到坏值直接抛，Room 把异常上传，整条查询失败——**一行坏数据 = 配置列表整个空白**，用户以为配置全丢了。
   - 修法：坏行跳过（转换器返回可空 + 查询侧过滤），并记日志便于定位。
   - 清单项：② 降级
 
-- [ ] **B-61 `Imported` 与 `Pending` 是重复的实体定义，`createdAt` 默认值还不一致**
+- [x] **B-61 `Imported` 与 `Pending` 是重复的实体定义，`createdAt` 默认值还不一致**
   - `service/.../data/Imported.kt` ↔ `Pending.kt`
   - 触发：两张孪生表的字段定义各写一遍，默认值已经开始漂移；任何一侧加字段都要记得改另一侧（本次审查已发现 B-62 的冲突策略也漂了）。
   - 修法：抽公共基类/接口，或明确一张表 + 状态字段。
   - 清单项：第 9 章"不一致的丑"
 
-- [ ] **B-62 孪生表上的冲突策略相反：`Pending` 用 REPLACE，`Imported` 用 ABORT**
+- [x] **B-62 孪生表上的冲突策略相反：`Pending` 用 REPLACE，`Imported` 用 ABORT**
   - `service/.../data/PendingDao.kt:24,27` ↔ `ImportedDao.kt:18,21`
   - 触发：同一个导入流程的两个阶段对"重复 uuid"做出相反反应——一边静默覆盖、一边抛异常。哪种是对的没人写下来，于是行为取决于流程走到哪一步。
   - 修法：明确并统一语义（重复导入应当覆盖还是拒绝），写进注释。
 
-- [ ] **B-63 `ImportedDao.insert` 返回无意义的 `Long` rowid**
+- [x] **B-63 `ImportedDao.insert` 返回无意义的 `Long` rowid**
   - `service/.../data/ImportedDao.kt:19`
   - 触发：主键是 UUID，rowid 对调用方毫无意义，却让人以为可以拿它做后续引用。
   - 修法：返回 `Unit`。
 
-- [ ] **B-64 `Selection` 的 `onUpdate = CASCADE` 是死规则，且暂存阶段的选择无处安放**
+- [x] **B-64 `Selection` 的 `onUpdate = CASCADE` 是死规则，且暂存阶段的选择无处安放**
   - `service/.../data/Selection.kt:16`
   - 触发：主键是 UUID、从不更新，CASCADE 永不触发（无害但误导）。真问题是 Pending 阶段用户已经选了节点，而 `Selection` 只关联 `Imported`——这段选择在导入完成前无处存放，导入后需要重新选。
   - 修法：删掉死规则；为暂存阶段的选择设计落点。
@@ -869,14 +869,15 @@
   - `core/.../util/Serializers.kt:11-21`
   - 触发：硬编码描述符在换编码格式（JSON ↔ 二进制）时会静默出错；而 `java.util.Date` 是**可变**对象，跨进程/跨线程共享时任何一方调 `setTime` 都会改到别人手里那份。
   - 修法：用标准的 `PrimitiveSerialDescriptor`，模型层改用不可变时间类型（`Instant`/`Long`）。
+  - 本轮：描述符已改用标准 `PrimitiveSerialDescriptor("Date", LONG)`（核对时已确认）；类型迁移牵动 service/app 两模块，留待后续批次。
 
-- [ ] **B-66 `Flag` 无法表达"文件存在但不可读"**
+- [x] **B-66 `Flag` 无法表达"文件存在但不可读"**
   - `service/.../document/Flag.kt:3-5`
   - 触发：权限问题、加密目录未解锁、文件被占用这三种情况都被压成"不存在"，于是上层走"新建"分支——用**空配置覆盖掉实际存在的用户数据**。
   - 修法：把"不可读"作为独立状态，让上层能选择报错而不是重建。
   - 清单项：① 数据一致性
 
-- [ ] **B-67 `exportSchema = false`，没有 schema 基线也没有迁移测试**
+- [x] **B-67 `exportSchema = false`，没有 schema 基线也没有迁移测试**
   - `service/.../data/Database.kt:25`
   - 触发：Room 的迁移正确性完全靠人眼。本次审查里 A-10 / A-11 这类迁移缺陷之所以"无法本地验证"，根因就在这里。
   - 修法：打开 `exportSchema`，把 schema json 纳入版本管理，加 `MigrationTestHelper` 测试（CI 跑）。
@@ -893,17 +894,17 @@
     - **编码约定没动**（守住"不得让已落盘历史被重新解释"这条）：`decodeTrafficBytes` 里 type 0 = 原始字节、type 1..3 = 单位的百分之一，与 Go 侧编码保持原样。
     - g5 报的第三条"未知单位静默返回 0"**不成立**：`type = (value ushr 30) and 0x3` 只可能是 0..3，四个分支全覆盖，`else -> 0L` 是不可达分支，留着只是为了让 `when` 穷尽。
 
-- [ ] **B-100 `Picker.pick` 先产生副作用再做校验，失败留下孤儿 Pending 行与目录 (g5)**
+- [x] **B-100 `Picker.pick` 先产生副作用再做校验，失败留下孤儿 Pending 行与目录 (g5)**
   - `service/src/main/java/com/github/kr328/clash/service/document/Picker.kt:52,60`
   - 触发：`:52` 已经调用 `cloneToPending(uuid)`（插行 + 复制整个配置目录），`:60` 才做会抛异常的合法性校验，异常后没有任何回滚。SAF 客户端拿着旧 documentId 重放（profile 已删或类型不支持）即可：调用方收到失败，库里多了一条永远无人清理的 pending 记录和一份配置副本——副本里可能含 `ageSecretKey`。
   - 修法：所有校验前移到任何副作用之前；`cloneToPending` 内部失败要回滚（删行 + 删目录）。
 
-- [ ] **B-101 `cloneToPending` 先插行再 delete + copy，无锁、无回滚、非原子 (g5)**
+- [x] **B-101 `cloneToPending` 先插行再 delete + copy，无锁、无回滚、非原子 (g5)**
   - `service/src/main/java/com/github/kr328/clash/service/document/Picker.kt:123-147`
   - 触发：顺序是"插 Pending 行 → `target.deleteRecursively()` → `source.copyRecursively(target)`"，目标目录先被清空、复制期间处于不完整状态，全程没有任何锁。同一 profile 被并发 `pick`（SAF 编辑器与应用内编辑同时打开），或复制中途进程被杀 → Pending 行存在而目录是空的，之后 `apply` 拿空配置覆盖掉原本可用的 imported 配置。
   - 修法：复制到临时目录再 `renameTo` 做原子替换；per-uuid `Mutex` 串行化；行的插入放在复制成功之后。
 
-- [ ] **B-102 用位置参数构造 11 字段实体，插字段会静默错位 (g5)**
+- [x] **B-102 用位置参数构造 11 字段实体，插字段会静默错位 (g5)**
   - `service/.../document/Picker.kt:137`、`service/.../data/migrations/LegacyMigration.kt:95,169`
   - 触发：写法是 `Pending(uuid = …, name = …, type = …, source = …, interval = …, 0,0,0,0)`——后四个 `upload/download/total/expire` 靠位置，且同为 `Long`。将来在 `interval` 与 `upload` 之间插入任何 Long 字段，这三处会静默错位：`upload` 被写进新字段、`expire` 归零，表现为订阅流量与到期时间莫名变 0，编译期毫无提示。
   - 修法：全部改命名参数；对这类多同型字段的实体加静态检查规则禁止位置构造。
@@ -918,22 +919,22 @@
     - **设计上 g5 对**。同一个函数对"未知 scope"抛异常、对"穿越段"却静默改写调用方的输入并按改写后的路径继续执行 —— 这是第 9 章的"不一致的丑"。而且当前的安全性完全是**位置性**的：只因为"先过滤再拼接"这个顺序才没事，将来任何人把 `resolve` 改成保留原段、或让下游直接 `File(base, rawPath)`，防线就无声消失。
     - **已修（按"严格性/一致性"而非"补漏洞"来改）**：`require(segments.none { it == "." || it == ".." }) { "invalid path $path" }`，与同函数对未知 scope 的 `throw` 对齐。**空段仍然过滤**不能一起拒 —— 根 documentId 就是字面量 `"/"`（`FilesProvider.openDocument`/`deleteDocument`/`renameDocument` 都用 `documentId ?: "/"` 兜底），拒空段会把根路径本身打死。`canonicalPath` 前缀断言未加：拒绝之后它就是纯重复防御，按 g3 的意见不引入。
 
-- [ ] **B-104 未知 legacy 类型被 `continue` 静默跳过，随后旧库被删除 (g5)**
+- [x] **B-104 未知 legacy 类型被 `continue` 静默跳过，随后旧库被删除 (g5)**
   - `service/.../data/migrations/LegacyMigration.kt:81-83,151-155`
   - 触发：v2/3/4 与 v1 两条路径对无法识别的旧配置都是 `else -> continue`，不记日志、不计数；而外层 `migrationFromLegacy` 在没有异常的情况下会 `deleteDatabase("clash-config")`。旧库里存在 type 不在 `{1,2,3}` 内的行（旧分支版本写入，或 token 既不以 `file|` 也不以 `url|` 开头）时，该配置被跳过、随后旧库被删，用户永久丢失这条配置且完全无提示。
   - 修法：跳过时至少 `Log.w` 并累计计数；有任何行被跳过就**不要**删旧库，改为保留并提示"N 条旧配置无法识别"。
 
-- [ ] **B-105 `Parcelizer` 顺序解码，跨进程格式没有版本头也没有字段索引容错 (g5)**
+- [x] **B-105 `Parcelizer` 顺序解码，跨进程格式没有版本头也没有字段索引容错 (g5)**
   - `core/src/main/java/com/github/kr328/clash/core/util/Parcelizer.kt:20`
   - 触发：`decodeSequentially() = true` 配 `beginStructure` 直接 `return this`——格式就是"按声明顺序裸排的字段"，既没有 magic/版本号也没有字段计数。UI 进程与 `:background` 在升级瞬间短暂运行不同版本（后者未被一起杀），或同签名旁包互调时，某个 model 增删一个字段后读侧按旧顺序解析，得到位移后的垃圾值（把 Long 当 Int 读之类）——**不抛异常，静默读出错误数据**。
   - 修法：`encodeToParcel` 先写 magic + schema 版本，`decodeFromParcel` 校验不匹配即明确失败；跨进程模型只允许"末尾追加 + 显式字段计数"的演进方式，并写进注释约束。
 
-- [ ] **B-106 反序列化把另一进程的输入当可信数据：集合长度无上限、`readString` 用 `!!` (g5)**
+- [x] **B-106 反序列化把另一进程的输入当可信数据：集合长度无上限、`readString` 用 `!!` (g5)**
   - `core/.../util/Parcelizer.kt:63-65,118-120`
   - 触发：`decodeCollectionSize` 直接 `return decodeInt()` 没有上限，kotlinx 会按这个长度预分配；`decodeString()` 是 `parcel.readString()!!`。一旦发生 B-105 的错位读取或 Parcel 被截断，`decodeInt()` 可能返回一个巨大的数 → 立即 OOM，`readString()` 返回 null → NPE，两者都发生在 binder 线程上。
   - 修法：集合长度做上限校验并抛可捕获的解码异常；`readString()` 为 null 时按空串/可空处理；`decodeFromParcel` 的所有调用点统一 catch。
 
-- [ ] **B-107 `Clash` 里另外五处严格 Json 解码没有兜底 (g5，与 A-27 同型)**
+- [x] **B-107 `Clash` 里另外五处严格 Json 解码没有兜底 (g5，与 A-27 同型)**
   - `core/src/main/java/com/github/kr328/clash/core/Clash.kt:44,120,132,230,429`
   - 触发：`queryTunnelState`、`queryGroup`、`queryGroupDelays`、`queryProviders`、`parseAgeKeyPair` 都用默认严格 `Json` 解码内核输出、没有 `runCatching`，与同文件 `:148`/`:268`/`:367` 的写法不一致。内核给代理组或 provider 的 JSON 多一个字段，代理页整页打不开（正确行为是少显示一项）；`parseAgeKeyPair` 则让密钥导入直接抛异常而不是给出可读错误。
   - 修法：统一用宽松 `Json`（`ignoreUnknownKeys`）；解码失败返回上次成功值或空列表 + 明确错误态，不要静默返回默认值再被写回。
@@ -942,8 +943,9 @@
   - `core/src/main/java/com/github/kr328/clash/core/Clash.kt` 的 `startTun` 回调对象（`markSocket` / `querySocketUid` 两个 override）
   - 触发：`override fun markSocket(fd: Int) { markSocket(fd) }` 把外层返回的 `Boolean` 丢掉——`VpnService.protect` 失败无人知道，内核继续用未保护的 socket，流量绕回 TUN 形成环路；`querySocketUid` 里对内核传来的 `source`/`target` 调 `parseInetSocketAddress`，遇到带 scope 的 IPv6 或空串会抛异常，而这是 native 线程上的回调。
   - 修法：`markSocket` 的失败向上传递（参与内核决策或触发停止并记日志）；`querySocketUid` 整体 `runCatching`，失败返回约定的"未知 uid"。
+  - 本轮：`querySocketUid` 已整体 `runCatching`→-1；`markSocket` 失败记日志。失败向上传参与内核决策需 Go/C 桥签名改动（`mark_socket` 返回 bool），留待后续批次。
 
-- [ ] **B-109 `Net` 的地址解析会触发阻塞 DNS，而它在每连接热路径上 (g5)**
+- [x] **B-109 `Net` 的地址解析会触发阻塞 DNS，而它在每连接热路径上 (g5)**
   - `core/src/main/java/com/github/kr328/clash/core/util/Net.kt:29`
   - 触发：`InetAddress.getByName(host)` 在参数不是纯数字字面量时会做一次**阻塞的正向 DNS 查询**，而该函数被 `querySocketUid` 一类 per-connection 回调使用。内核传来的 target 含主机名、或 IPv6 写法未命中快路径时，native 线程上阻塞数百毫秒到超时，新连接建立被拖慢；更糟的是 DNS 本身要走内核，形成自依赖甚至互等。
   - 修法：改用只做字面量解析的 API（`InetAddresses.parseNumericAddress` 或手写解析），永不触发名称解析；解析不了返回 null 让调用方走"未知"分支。
@@ -953,8 +955,9 @@
   - 触发：`init` 里除了 `System.loadLibrary("bridge")` 还有 `getPackageInfo` 与 `mkdirs()`。这是 `object` 的静态初始化，任何一步抛异常都变成 `ExceptionInInitializerError`，此后同进程内每次访问 `Bridge` 都抛 `NoClassDefFoundError`，原始原因不在堆栈里。split APK 缺当前 abi、存储不可写、应用更新中 `getPackageInfo` 抛异常——用户侧表现为"一打开就闪退且重启无用"。
   - 修法：拆出显式的 `fun init(context): Result<Unit>` 由服务启动流程调用并把失败转成可展示错误；初始化块只保留 `loadLibrary`。
   - 关联：A-26（同一形状的类初始化污染）、B-78（这个 init 被 UI 进程意外触发）。
+  - 本轮：`init` 块只剩 `loadLibrary`，脆性步骤移入 `fun init(context): Result<Unit>`（幂等、失败不缓存可重试），经 `Clash.reset()` 在服务启动路径调用。注意：UI 进程 `MainActivity` 直接调 `Bridge.nativeCoreVersion()`，不再有类加载时的 nativeInit（与 B-78 同方向，但核对该 native 是否依赖 init 状态需 Go 侧确认）。
 
-- [ ] **B-111 `Content.open` 把三种异常抛给 native 调用者，`detachFd` 移交的 fd 无任何校验 (g5)**
+- [x] **B-111 `Content.open` 把三种异常抛给 native 调用者，`detachFd` 移交的 fd 无任何校验 (g5)**
   - `core/src/main/java/com/github/kr328/clash/core/bridge/Content.kt:11-20`
   - 触发：`open(url)` 会抛 `UnsupportedOperationException` / `SecurityException` / `FileNotFoundException`，而它是给内核调用的；同时用 `detachFd()` 把 fd 所有权交给 native，却不校验目标是普通文件还是管道/socket，也不设大小上限。内核请求一个 `content://` 资源而用户已撤销该 URI 权限或文件已删 → 异常从 JNI 回调抛出；URI 指向永不 EOF 的流或极大文件 → 内核侧读取无限挂住并泄漏 fd。
   - 修法：`open` 内部捕获全部异常并按约定返回无效 fd（-1）；移交前用 `statSize` + 文件类型校验，超限或非普通文件直接拒绝；注释写明 fd 所有权与各失败路径的 close 责任。
@@ -964,23 +967,24 @@
   - 触发：分别硬编码 `createListFromParcelSlice(parcel, 0, 20)` 与 `(parcel, 0, 50)`——按**条数**而非字节切，单个 provider/组名极长时 20/50 条一片仍可能越过 1MB；而 `writeToParcelSlice` 里 `SliceParcelableListBpBinder` 只被局部变量持有，写完 `writeStrongBinder` 后就没有强引用，若写侧函数已返回且 GC 介入，读侧回调远端 binder 可能读到不完整列表或 `DeadObjectException`。
   - 修法：把分片 binder 挂到调用方对象上（或用一次同步握手确认读完再释放）；分片按累积字节预算切而不是按条数写死。
   - 关联：同一机制在 common 侧还有三处具体 bug，见 B-5 小节（`tFlags`、静默截断、参数不校验）。
+  - 本轮：binder 生命周期前提不成立（Android 上 outstanding proxy 会扎根节点），且改挂在 `common/.../util/Parcelable.kt`，属于 common 批次——与 B-5 小节合并处理。
 
-- [ ] **B-113 `ConfigurationOverride` 整棵树 all-or-nothing 解码，三个嵌套枚举没有未知值兜底 (g5)**
+- [x] **B-113 `ConfigurationOverride` 整棵树 all-or-nothing 解码，三个嵌套枚举没有未知值兜底 (g5)**
   - `core/.../model/ConfigurationOverride.kt:152-182`（`FindProcessMode` / `DnsEnhancedMode` / `FilterMode`）
   - 触发：三个枚举每项都有 `@SerialName`（这部分是对的），但都没有未知值兜底项、也没有自定义 serializer，配上整体解码不容错——上游 mihomo 给 `find-process-mode` / `enhanced-mode` / `fake-ip-filter-mode` 增加一个取值（历史上多次发生），或用户手改覆写文件，整份 `ConfigurationOverride` 解码失败，直接引爆 A-28 的清空链路。
   - 修法：三个枚举各加 `Unknown` 兜底（配 `@JsonNames` 或自定义 serializer），未知值落 `Unknown` 并原样保留写回；覆写解码开 `ignoreUnknownKeys` 并逐段容错。
 
-- [ ] **B-114 迁移导入逐条 `runCatching`、无事务，失败留下半套数据 (g5)**
+- [x] **B-114 迁移导入逐条 `runCatching`、无事务，失败留下半套数据 (g5)**
   - `service/.../migration/MigrationBundle.kt:152-211`
   - 触发：导入循环里每条记录各自 `runCatching`，整批没有事务，完成标志的写入与"实际导入了多少条"脱钩。导入到中途磁盘写满或进程被杀：前面已入库、后面没有，而完成标志可能已置；重跑时按 `PendingDao` 的 REPLACE 覆盖、按 `ImportedDao` 的 ABORT 抛异常（见 B-62），用户看到"迁移过来一半"。
   - 修法：整包导入放进一个 Room 事务；目录先落临时位置、事务提交后原子改名；完成标志与实际条数一起写，便于断点续做。
 
-- [ ] **B-115 四份手写 JSON 映射与实体并行演化 (g5)**
+- [x] **B-115 四份手写 JSON 映射与实体并行演化 (g5)**
   - `service/.../migration/MigrationBundle.kt:392-452`（`Imported.toJson` / `Pending.toJson` / `JSONObject.toImported` / `JSONObject.toPending`）
   - 触发：实体本可用 kotlinx.serialization，这里却手写了四个 `JSONObject` 映射，而 `optLong`/`optString` 会把"字段缺失"伪装成 0 或空串。给实体加字段时漏改这四个函数——`ageSecretKey` 正是这种字段：迁移过来的订阅表面正常，实际私钥丢失，直到下次更新订阅解密失败才暴露。
   - 修法：删掉手写映射，直接用 `@Serializable` 实体（配 `@SerialName` 固定线格式）；bundle 内写 schema 版本，读侧按版本决定兼容策略。
 
-- [ ] **B-116 `withTimeout` 包着的同步导出没有挂起点，超时不生效；超时分支又去删仍在写的文件 (g5)**
+- [x] **B-116 `withTimeout` 包着的同步导出没有挂起点，超时不生效；超时分支又去删仍在写的文件 (g5)**
   - `service/.../migration/MigrationProvider.kt:81-89`
   - 触发：`runBlocking { withTimeout(EXPORT_TIMEOUT_MS) { MigrationBundle.exportToZip(ctx, file) } }`——`exportToZip` 是同步文件/zip IO，协程取消只在挂起点生效，所以这个 20s 超时对真正卡住的导出完全无效，注释里想避免的 binder 线程 ANR 依然发生；而若超时真的触发，`file.delete()` 删掉的是**另一条路径仍在写入**的目标文件（`cachedBundle` 可能还指着它）。
   - 修法：导出改成可取消（循环里 `ensureActive()`）或放到独立线程、超时后仅放弃引用；写临时文件、成功后 rename 到 `bundleFile`。
