@@ -785,7 +785,7 @@
   - 触发：授权项 `"pkg|sha256|expires"` 全明文，而 `data_extraction_rules.xml` / `full_backup_content.xml` 都含 `domain="sharedpref"`——备份会把"哪些第三方应用已获授权"整套搬到新设备（甚至攻击者设备），**绕过用户重新确认**。`decide`/`revoke` 还是多次非原子写，中途被杀留半写状态。另外 `decisionOf` 只比 sha256，而 `tunnelablePackages` 会重新校验签名者摘要——两条路径信任级别不一致。
   - 修法：授权集排除出备份或经 `SecureStorage` 加密；`decide`/`revoke` 合并为单次提交；两条路径统一走签名者校验。
   - 清单项：④ 安全（多租户/第三方隔离）+ ① 一致性
-  - 落地：`decide`/`revoke` 合并为单次 `putStringSet×3` 提交；`service.xml` 已从 `data_extraction_rules.xml` / `full_backup_content.xml` 排除（同时也把 age 私钥挡在备份外）；`decisionOf` 的 KDoc 明确要求传入**实时读取**的签名摘要，与 `tunnelablePackages` 同级校验。未引入 Keystore 加密（仓内并无 `SecureStorage` 实现）。
+  - 落地：`decide`/`revoke` 合并为单次 `putStringSet×3` 提交；备份规则改为**按文件 opt-in**（`data_extraction_rules.xml` / `full_backup_content.xml` 只列 `app.xml` 与 `ui.xml`），`service.xml` 因此不进云备份与换机迁移（同时把 age 私钥也挡在备份外）；`.github/scripts/verify-repository-policy.py` 的备份断言同步改为强制这份白名单，日后新增的偏好文件默认不备份。`decisionOf` 的 KDoc 明确要求传入**实时读取**的签名摘要，与 `tunnelablePackages` 同级校验。未引入 Keystore 加密（仓内并无 `SecureStorage` 实现）。
 
 - [ ] **B-45 三条独立的 2 秒 ticker 各自查询内核，职责重叠**
   - `TrafficHistoryModule.kt` / `LocalTrafficAccountingModule.kt` / `DynamicNotificationModule.kt`

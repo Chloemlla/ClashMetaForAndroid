@@ -98,7 +98,14 @@ def backup_includes(root_nodes):
 
 
 def assert_sharedpref_only_backup(includes: set[tuple[str | None, str | None]], label: str) -> None:
-    require(includes == {("sharedpref", ".")}, f"{label} must include only sharedpref/.")
+    # Opt-in per file, not the whole sharedpref domain: "service.xml" carries the age secret key
+    # and the partner authorization set, and a restore onto another device must not reinstate the
+    # owner's trust decisions without asking again (B-44). Naming the eligible files means a
+    # preference file added later is left out of backup until someone decides it belongs there.
+    require(
+        includes == {("sharedpref", "app.xml"), ("sharedpref", "ui.xml")},
+        f"{label} must include only sharedpref/app.xml and sharedpref/ui.xml",
+    )
     forbidden_domains = {"database", "file", "root", "external", "device_file", "device_root"}
     require(
         not any(domain in forbidden_domains for domain, _ in includes),

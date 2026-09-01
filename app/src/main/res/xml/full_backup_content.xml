@@ -3,14 +3,18 @@
     <!--
       Only non-sensitive UI preferences are eligible for legacy Auto Backup.
       Domain-level excludes are unnecessary (and rejected by Lint) when those
-      domains are never included; service.xml is a path-level exclude inside an
-      included domain, which is what keeps the age secret key and the partner
-      authorization set out of the backup (B-44).
+      domains are never included.
+
+      The eligible preference files are named one by one instead of including the
+      whole sharedpref domain: "service.xml" holds the age secret key and the
+      partner authorization set, and restoring those onto another device would
+      carry the owner's trust decisions over without re-confirmation (B-44). The
+      profiles those settings point at are not backed up either way.
     -->
     <include
         domain="sharedpref"
-        path="." />
-    <exclude
+        path="app.xml" />
+    <include
         domain="sharedpref"
-        path="service.xml" />
+        path="ui.xml" />
 </full-backup-content>

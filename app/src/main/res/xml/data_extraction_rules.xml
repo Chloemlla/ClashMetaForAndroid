@@ -5,17 +5,18 @@
       pending config files, and Clash state stay out of cloud backup and
       device-to-device transfer without redundant excludes.
 
-      service.xml is excluded (B-44): it holds the age secret key and the partner
+      Within that domain the eligible files are named one by one so that
+      service.xml is left out (B-44): it holds the age secret key and the partner
       authorization set ("which third-party apps may read status and enter the tunnel").
       Restoring those onto another device would carry the owner's trust decisions over
       without re-confirmation, and the profiles they refer to are not backed up anyway.
     -->
     <cloud-backup disableIfNoEncryptionCapabilities="true">
-        <include domain="sharedpref" path="." />
-        <exclude domain="sharedpref" path="service.xml" />
+        <include domain="sharedpref" path="app.xml" />
+        <include domain="sharedpref" path="ui.xml" />
     </cloud-backup>
     <device-transfer>
-        <include domain="sharedpref" path="." />
-        <exclude domain="sharedpref" path="service.xml" />
+        <include domain="sharedpref" path="app.xml" />
+        <include domain="sharedpref" path="ui.xml" />
     </device-transfer>
 </data-extraction-rules>
