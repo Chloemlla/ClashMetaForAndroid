@@ -10,6 +10,8 @@ import android.provider.DocumentsProvider
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.PatternFileName
 import com.github.kr328.clash.service.document.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import java.io.FileNotFoundException
 import android.provider.DocumentsContract.Document as D
@@ -46,32 +48,42 @@ class FilesProvider : DocumentsProvider() {
     override fun openDocument(
         documentId: String?,
         mode: String?,
-        signal: CancellationSignal?
+        signal: CancellationSignal?,
     ): ParcelFileDescriptor {
-        val m = ParcelFileDescriptor.parseMode(mode)
+        // B-172: an unspecified mode is a read; only an explicit write mode creates a pending
+        // edit, and the parsed mode (not a string heuristic) is the write-intent signal.
+        val m = if (mode != null) ParcelFileDescriptor.parseMode(mode) else ParcelFileDescriptor.MODE_READ_ONLY
+        val writable = m != ParcelFileDescriptor.MODE_READ_ONLY
 
-        return runBlocking {
-            val path = Paths.resolve(documentId ?: "/")
+        // B-171: the pick/DB/copy work runs on the IO dispatcher instead of the Binder thread, and
+        // the client's CancellationSignal cancels the coroutine rather than being ignored.
+        return runBlocking(Dispatchers.IO) {
+            signal?.setOnCancelListener { coroutineContext.cancel() }
+            try {
+                val path = Paths.resolve(documentId ?: "/")
 
-            val document = picker.pick(path, mode?.requestWrite ?: true)
+                val document = picker.pick(path, writable)
 
-            require(document is FileDocument) {
-                throw FileNotFoundException("invalid path $documentId")
+                require(document is FileDocument) {
+                    throw FileNotFoundException("invalid path $documentId")
+                }
+
+                // A file that exists but cannot be read must not be truncated by a write open.
+                if (Flag.Unreadable in document.flags) {
+                    throw FileNotFoundException("file is not readable: $documentId")
+                }
+
+                ParcelFileDescriptor.open(document.file, m)
+            } finally {
+                signal?.setOnCancelListener(null)
             }
-
-            // A file that exists but cannot be read must not be truncated by a write open.
-            if (Flag.Unreadable in document.flags) {
-                throw FileNotFoundException("file is not readable: $documentId")
-            }
-
-            ParcelFileDescriptor.open(document.file, m)
         }
     }
 
     override fun deleteDocument(documentId: String?) {
         val documentPath = documentId ?: "/"
 
-        runBlocking {
+        runBlocking(Dispatchers.IO) {
             val path = Paths.resolve(documentPath)
 
             if (path.relative == null)
@@ -93,7 +105,7 @@ class FilesProvider : DocumentsProvider() {
         if (!PatternFileName.matches(name))
             throw IllegalArgumentException("invalid name $displayName")
 
-        return runBlocking {
+        return runBlocking(Dispatchers.IO) {
             val path = Paths.resolve(documentId ?: "/")
 
             if (path.relative == null)
@@ -111,7 +123,18 @@ class FilesProvider : DocumentsProvider() {
                 throw IllegalArgumentException("unable to rename $document")
             }
 
-            document.file.renameTo(parent.resolve(name))
+            val target = parent.resolve(name)
+
+            // DocumentsProvider callers treat a failure as an exception. File.renameTo returns
+            // false (rather than throwing) when the target exists or the rename is denied, and the
+            // old code reported success anyway and handed back an id for a file that was never
+            // renamed (B-173).
+            if (target != document.file && target.exists()) {
+                throw IllegalStateException("unable to rename $document: target already exists")
+            }
+            if (!document.file.renameTo(target)) {
+                throw IllegalStateException("unable to rename $document")
+            }
 
             path.copy(relative = path.relative.dropLast(1) + name).toString()
         }
@@ -122,7 +145,7 @@ class FilesProvider : DocumentsProvider() {
         projection: Array<out String>?,
         sortOrder: String?
     ): Cursor {
-        return runBlocking {
+        return runBlocking(Dispatchers.IO) {
             try {
                 val doc = parentDocumentId ?: "/"
                 val path = Paths.resolve(doc)
@@ -144,7 +167,7 @@ class FilesProvider : DocumentsProvider() {
     }
 
     override fun queryDocument(documentId: String?, projection: Array<out String>?): Cursor {
-        return runBlocking {
+        return runBlocking(Dispatchers.IO) {
             try {
                 val doc = documentId ?: "/"
                 val path = Paths.resolve(doc)
@@ -186,7 +209,10 @@ class FilesProvider : DocumentsProvider() {
         if (parentDocumentId == null || documentId == null)
             return false
 
-        return documentId.startsWith(parentDocumentId)
+        // B-190: a raw startsWith treats "/uuid/providers/ab" as a parent of
+        // "/uuid/providers/abc". Require a path-boundary match instead.
+        return documentId == parentDocumentId ||
+            documentId.startsWith(parentDocumentId.removeSuffix("/") + "/")
     }
 
     private fun MatrixCursor.RowBuilder.applyDocument(document: Document): MatrixCursor.RowBuilder {
@@ -215,9 +241,4 @@ class FilesProvider : DocumentsProvider() {
     private fun resolveDocumentProjection(projection: Array<out String>?): Array<out String> {
         return projection ?: DEFAULT_DOCUMENT_COLUMNS
     }
-
-    private val String.requestWrite: Boolean
-        get() {
-            return contains("w", ignoreCase = true)
-        }
 }

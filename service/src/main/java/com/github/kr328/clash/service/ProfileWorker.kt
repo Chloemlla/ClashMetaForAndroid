@@ -14,6 +14,7 @@ import com.github.kr328.clash.common.compat.stopForegroundCompat
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.id.UndefinedIds
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.data.ImportedDao
@@ -36,6 +37,11 @@ class ProfileWorker : BaseService() {
     private val jobsLock = Any()
     private val jobs = mutableListOf<Job>()
 
+    // Latest startId passed to onStartCommand; stopSelf(startId) is used so a start request that
+    // just arrived cancels a pending stop instead of being torn down by it (B-180).
+    @Volatile
+    private var lastStartId = -1
+
     private fun addJob(job: Job) {
         synchronized(jobsLock) { jobs.add(job) }
     }
@@ -54,11 +60,35 @@ class ProfileWorker : BaseService() {
         launch {
             delay(TimeUnit.SECONDS.toMillis(10))
 
-            while (true) {
-                nextJob()?.join() ?: break
-            }
+            while (isActive) {
+                var job = nextJob()
 
-            stopSelf()
+                if (job == null) {
+                    // Queue momentarily empty: give a second update request time to land before
+                    // declaring the worker idle. Stopping right away would cancel a request that
+                    // arrives milliseconds later, leaving it with no notification or reschedule (B-180).
+                    delay(IDLE_STOP_TIMEOUT)
+                    job = nextJob()
+                }
+
+                if (job != null) {
+                    job.join()
+                    continue
+                }
+
+                // Final re-check before stopping: a request that landed during the idle wait is
+                // joined rather than orphaned. stopSelf(startId) additionally makes the stop a
+                // no-op when an even newer start request has since arrived.
+                val startId = lastStartId
+                job = nextJob()
+                if (job != null) {
+                    job.join()
+                    continue
+                }
+
+                if (startId < 0) stopSelf() else stopSelf(startId)
+                break
+            }
         }
     }
 
@@ -70,6 +100,8 @@ class ProfileWorker : BaseService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+
+        lastStartId = startId
 
         when (intent?.action) {
             Intents.ACTION_PROFILE_REQUEST_UPDATE -> {
@@ -83,7 +115,11 @@ class ProfileWorker : BaseService() {
             }
             Intents.ACTION_PROFILE_SCHEDULE_UPDATES -> {
                 val job = launch {
-                    ProfileReceiver.rescheduleAll(service)
+                    runCatching {
+                        ProfileReceiver.rescheduleAll(service)
+                    }.onFailure { e ->
+                        Log.e("Failed to reschedule profile updates", e)
+                    }
 
                     runCatching {
                         SubscriptionExpiryNotifier.checkAll(service)
@@ -250,6 +286,10 @@ class ProfileWorker : BaseService() {
         private const val SERVICE_CHANNEL = "profile_service_channel"
         private const val STATUS_CHANNEL = "profile_status_channel"
         private const val RESULT_CHANNEL = "profile_result_channel"
+
+        // How long an empty queue is tolerated before the worker stops itself, so a second update
+        // scheduled close behind the first is not cancelled by an immediate stop (B-180).
+        private const val IDLE_STOP_TIMEOUT = 10_000L
 
         private val RETRY_BACKOFF_MINUTES = longArrayOf(1, 5, 15, 60)
 

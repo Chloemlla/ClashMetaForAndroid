@@ -16,7 +16,10 @@ import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendOverrideChanged
 import com.github.kr328.clash.service.util.sendProfileChanged
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class ClashManager(private val context: Context) : IClashManager,
     CoroutineScope by CoroutineScope(Dispatchers.IO) {
@@ -25,6 +28,10 @@ class ClashManager(private val context: Context) : IClashManager,
     private var logReceiver: ReceiveChannel<LogMessage>? = null
     private var connectionsReceiver: ReceiveChannel<com.github.kr328.clash.core.model.ConnectionSnapshot>? = null
     private var adblockReceiver: ReceiveChannel<com.github.kr328.clash.core.model.AdblockHit>? = null
+
+    // Serializes Room selection writes so rapid node switching lands in click order; the writes
+    // are dispatched off the Binder thread (see patchSelector) and would otherwise race each other.
+    private val selectionWriteLock = Mutex()
 
     override fun queryTunnelState(): TunnelState {
         return Clash.queryTunnelState()
@@ -78,15 +85,27 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override fun patchSelector(group: String, name: String): Boolean {
-        return Clash.patchSelector(group, name).also {
-            val current = store.activeProfile ?: return@also
+        val result = Clash.patchSelector(group, name)
+        val current = store.activeProfile ?: return result
 
-            if (it) {
-                SelectionDao().setSelected(Selection(current, group, name))
-            } else {
-                SelectionDao().removeSelected(current, group)
+        // Selection persistence is a Room write; do it on the manager's IO scope, not the Binder
+        // thread that patchSelector runs on. The Mutex keeps rapid node-switch clicks ordered, and
+        // the selection is eventually consistent — the native patch already happened synchronously.
+        launch {
+            selectionWriteLock.withLock {
+                runCatching {
+                    if (result) {
+                        SelectionDao().setSelected(Selection(current, group, name))
+                    } else {
+                        SelectionDao().removeSelected(current, group)
+                    }
+                }.onFailure { e ->
+                    Log.w("Failed to persist selector selection group=$group name=$name", e)
+                }
             }
         }
+
+        return result
     }
 
     override fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride) {
@@ -126,13 +145,22 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override suspend fun updateAdblock(proxy: String?) {
-        val activeProfile = store.activeProfile
+        val startProfile = store.activeProfile
             ?: throw IllegalStateException("No active profile")
 
         // Download the MRS file into the active profile dir. proxy == null routes
         // through the running tunnel's default outbound; a group/node name forces
         // that specific outbound.
-        Clash.updateAdblock(context.importedDir.resolve(activeProfile.toString()), proxy).await()
+        Clash.updateAdblock(context.importedDir.resolve(startProfile.toString()), proxy).await()
+
+        // The download can take tens of seconds while the user switches profiles. Re-read the
+        // active profile: if it changed the MRS landed in a directory that is no longer active,
+        // and reloading it would leave the new config without the rule set (B-167).
+        val activeProfile = store.activeProfile
+            ?: throw IllegalStateException("No active profile after adblock update")
+        if (activeProfile != startProfile) {
+            throw IllegalStateException("Active profile changed during adblock update")
+        }
 
         // The loaded config likely carries the empty inline placeholder (the file
         // was missing when it was loaded), so reload to swap in the real HTTP
@@ -153,17 +181,35 @@ class ClashManager(private val context: Context) : IClashManager,
                 // this cancelled coroutine's finally after the channel drains, not here.
                 cancel()
             }
+            logReceiver = null
 
             if (observer != null) {
                 logReceiver = Clash.subscribeLogcat().also { c ->
                     launch {
                         try {
                             while (isActive) {
+                                // The native subscriber backs off (permanently) when the upstream
+                                // channel is full, so keep it near-empty: block for the next item,
+                                // forward it, then drain whatever arrived while forwarding (B-165).
                                 observer.newItem(c.receive())
+
+                                while (isActive) {
+                                    val item = c.tryReceive().getOrNull() ?: break
+
+                                    observer.newItem(item)
+                                }
                             }
                         } catch (e: CancellationException) {
                             // intended behavior
                             // ignore
+                        } catch (e: ClosedReceiveChannelException) {
+                            // Channel closed by a re-subscribe or teardown. Drop the stale
+                            // reference so a later subscribe starts fresh.
+                            synchronized(this@ClashManager) {
+                                if (logReceiver === c) {
+                                    logReceiver = null
+                                }
+                            }
                         } catch (e: Exception) {
                             Log.w("UI crashed", e)
                         } finally {

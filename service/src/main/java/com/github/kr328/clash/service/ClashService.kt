@@ -18,6 +18,9 @@ class ClashService : BaseService() {
     private val self: ClashService
         get() = this
 
+    // Written from the runtime coroutine (Dispatchers.IO/Default) and read on the main thread in
+    // onDestroy; without @Volatile the write can stay un-visible and the stop reason is lost (B-179).
+    @Volatile
     private var reason: String? = null
 
     private val runtime = clashRuntime {
@@ -113,6 +116,6 @@ class ClashService : BaseService() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
 
-        runtime.requestGc()
+        runtime.requestGc(level)
     }
 }

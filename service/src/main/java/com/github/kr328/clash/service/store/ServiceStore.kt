@@ -194,6 +194,16 @@ class ServiceStore(context: Context) {
         values = ProxySort.values(),
     )
 
+    /**
+     * Set when the legacy-database migration threw and the old database was kept for a retry.
+     * Written from the migration (in the `:background` process) and cleared by the UI once the user
+     * has been told — an empty profile list is otherwise indistinguishable from a total loss (A-39).
+     */
+    var legacyMigrationFailed by store.boolean(
+        key = "legacy_migration_failed",
+        defaultValue = false,
+    )
+
     private fun retainLatestExpiryKeys(keys: Set<String>): Set<String> {
         val latest = HashMap<String, Long>()
         for (key in keys) {

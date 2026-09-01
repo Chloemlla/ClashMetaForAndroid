@@ -586,6 +586,7 @@
     <string name="logs_empty_tips">Start Clash logcat to capture runtime logs. Saved sessions will appear here.</string>
 
     <string name="alpha_migration_success">Imported %1$d profile(s) from Alpha</string>
+    <string name="legacy_migration_failed">Could not import profiles from the old version. The old data was kept — reopen the app to retry.</string>
 
     <string name="open_source_notice_title">Open Source Notice</string>
     <string name="open_source_notice_intro"><![CDATA[This app is an <strong>open-source</strong> client for Clash Meta. Source code is public; you can inspect, build, and redistribute it under the project license.]]></string>

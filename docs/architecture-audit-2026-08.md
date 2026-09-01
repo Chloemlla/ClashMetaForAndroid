@@ -103,7 +103,7 @@
   - 修法：`try/catch`（`CancellationException` 原样抛出）；`design == null`（从未绘制）时 `finish()`，已绘制时 `showExceptionToast(e)` 保留可用界面。
   - 清单项：② 降级
 
-- [ ] **A-10 legacy 迁移不幂等，中断重试会产生重复配置**
+- [x] **A-10 legacy 迁移不幂等，中断重试会产生重复配置**
   - `service/src/main/java/com/github/kr328/clash/service/data/migrations/LegacyMigration.kt:26-44`
   - 缺陷：失败时**保留旧库等下次启动重试**，但每行都是 `generateProfileUUID()` + `insert` 的纯追加写，没有幂等键、也没有记录“这行已迁过”。
   - 触发：迁移到第 5 条时抛异常 → 前 4 条已入库、旧库仍在 → 下次启动重跑，前 4 条再插一遍，用户看到重复 profile。
@@ -111,7 +111,7 @@
   - 清单项：① 幂等
   - 未改原因：这是一条无法本地验证的历史迁移路径，改写遍历+删除逻辑的风险高于收益，需单独一次带 CI 的改动来做。A-01 已消除其中最严重的“数据永久丢失”后果。
 
-- [ ] **A-11 迁移副作用挂在 `companion object` 的 `init` 里**
+- [x] **A-11 迁移副作用挂在 `companion object` 的 `init` 里**
   - `service/src/main/java/com/github/kr328/clash/service/data/Database.kt`
   - 缺陷：`companion object { init { Global.launch(Dispatchers.IO) { LEGACY_MIGRATION(...) } } }`——类静态初始化即触发迁移。
   - 触发：**任何进程**第一次触到 `Database` 这个类（包括只是想读一条记录）就异步启动整套 legacy 迁移，与 `Room.databaseBuilder(...).build()` 竞争同一个库文件；时序由类加载顺序决定，不可控、不可测、不可禁用。
@@ -253,14 +253,14 @@
   - 修法：照邻居补分片。
   - 清单项：③ 分页上限 + 第 9 章"不一致的丑"
 
-- [ ] **A-31 含私钥的导出包永久留在 `cacheDir`，且 `cachedBundle` 从不失效 (g5)**
+- [x] **A-31 含私钥的导出包永久留在 `cacheDir`，且 `cachedBundle` 从不失效 (g5)**
   - `service/src/main/java/com/github/kr328/clash/service/migration/MigrationProvider.kt:72-96,110-112`
   - 缺陷：导出 zip 内含 `ageSecretKey`，写进 `cacheDir` 后没有任何清理；`cachedBundle` 也不会随数据变化失效。
   - 触发：任何能读到 `cacheDir` 的场景（root、备份提取、厂商日志工具）都能拿到私钥；用户导出一次后私钥就长期躺在磁盘上。二次导出还可能拿到过期内容。
   - 修法：用后即删（或 `deleteOnExit` 语义 + 显式清理），`cachedBundle` 加失效条件。
   - 清单项：④ 密钥管理
 
-- [ ] **A-32 迁移直写 `getSharedPreferences("service")`，绕过 `PreferenceProvider` (g5)**
+- [x] **A-32 迁移直写 `getSharedPreferences("service")`，绕过 `PreferenceProvider` (g5)**
   - `service/src/main/java/com/github/kr328/clash/service/migration/MigrationBundle.kt:76-87,213-227,300-329`
   - 缺陷：从**主进程**直接写属于 `:background` 的偏好文件，绕开了整套 `PreferenceProvider` 跨进程通道。
   - 触发：导入的设置对 `:background` 不可见（它持有自己的内存缓存），或被 `:background` 的下一次写入整体覆盖——"导入成功了但没生效"。
@@ -312,21 +312,22 @@
   - 建议先落**文案对齐**（零风险、消除误解），闸门收紧与否等用户回话。
 
   - 产品决策，仅文案对齐：应用锁是内容可见性防护（配置/订阅信息），不拦截快捷设置/快捷方式这类一键开关；`values/` 与 `values-zh/` 的 `app_lock_desc` 文案已更新为准确表述。
-- [ ] **A-38 下载无超时 + `NonCancellable` + 全局锁，整个配置子系统可永久死锁 (g3)**
+- [x] **A-38 下载无超时 + `NonCancellable` + 全局锁，整个配置子系统可永久死锁 (g3)**
   - `service/src/main/java/com/github/kr328/clash/service/ProfileProcessor.kt:30,32-34,110-112,130-132,195-220`
   - 缺陷：`apply` / `validate` / `update` 三条路径都是 `withContext(NonCancellable) { processLock.withLock { ... fetchProfile(...) } }`；`fetchProfile` 转发到 `Clash.fetchAndValid`（`core/.../Clash.kt:179-187`），Kotlin 侧不带任何超时参数，`NonCancellable` 又让调用方的取消完全无效。
   - 触发：订阅域名被阻断、TCP 连接建成后不返回响应（被墙的机场很常见）或极慢链路上的大文件 → `commit()` 这个 suspend IPC 永不返回（"保存"一直转圈且返回键无效），`processLock` 永不释放：其后的手动更新、自动更新（`ProfileWorker` 阻塞 → 前台通知常驻）、配置校验全部排在锁后面，只能杀进程恢复。是否挂死完全取决于 Go 侧 HTTP 客户端有没有自己的超时，Kotlin 侧零兜底。
   - 修法：`fetchProfile` 外层 `withTimeout`（如 120s，总时长与"无字节进展"分开计）；`NonCancellable` 收缩到落库 + 目录替换这段真正的临界区，下载阶段必须可取消；`processLock` 改带超时的加锁，拿不到锁对调用方返回"正忙"。
   - 清单项：② 超时 + ① 事务边界
 
-- [ ] **A-39 legacy 迁移失败只打一行 `Log.w`，用户看到"配置全没了"却没有任何提示 (g5)**
+- [x] **A-39 legacy 迁移失败只打一行 `Log.w`，用户看到"配置全没了"却没有任何提示 (g5)**
   - `service/src/main/java/com/github/kr328/clash/service/data/migrations/LegacyMigration.kt:42-44`
   - 缺陷：`catch` 里只 `Log.w` 就正常返回，函数返回 `Unit`，调用点（`Database` 的 init 块）不检查任何结果，异常被完全吞掉。
   - 触发：旧库被截断、权限异常、或 `profiles` 表列名不符预期 → 用户升级后配置列表空白，应用一切正常、无提示、无重试入口，只有 logcat 里一行 W。对"配置写坏 = 永久失联"的应用，这是最不该静默的一条路径。
   - 修法：迁移返回 `Result` 或写入持久化失败标志，由 UI 在下次启动时提示"旧配置迁移失败，可重试 / 导出旧库"；同时上报到崩溃与事件统计。
   - 清单项：② 可观测性 + ① 数据一致性
+  - 落地：失败标记存 `ServiceStore.legacyMigrationFailed`，`MainActivity.maybeShowLegacyMigrationFailureToast` 在下次 `ActivityStart` 读取并清除后弹 toast（`legacy_migration_failed`，en/zh/zh-rTW/zh-rHK）。崩溃上报未接。
 
-- [ ] **A-40 v1 迁移路径无条件删源文件，会删掉用户放在共享存储上的原始配置 (g5)**
+- [x] **A-40 v1 迁移路径无条件删源文件，会删掉用户放在共享存储上的原始配置 (g5)**
   - `service/src/main/java/com/github/kr328/clash/service/data/migrations/LegacyMigration.kt:181-193`
   - 缺陷：`legacyFile` 取的是旧库 `file` 列里的**绝对路径**；`:183-187` 只在 `newType == Profile.Type.File` 时 `copyTo`，但 `:193` 的 `legacyFile.delete()` 在循环体里**无条件执行**，对 `Type.Url` 的行也删。同功能的 `migrationFromLegacy234`（`:108-113`）只 copy 不 delete，两条路径策略不一致。
   - 触发：旧版本持有 `WRITE_EXTERNAL_STORAGE` 时这个路径完全可能指向 `/sdcard` 下用户自己放的 `config.yaml` —— 迁移完成后用户手里的原件消失，且不在应用可恢复的范围内。
@@ -779,11 +780,12 @@
   - 触发：在两个 Wi-Fi 之间来回切换（或信号抖动导致反复命中/失配）时每次都新增一条通知，短时间堆几十条，用户只能全部划掉。
   - 修法：固定 id 覆盖更新 + 最小间隔冷却；同一场景重复命中不重发。
 
-- [ ] **B-44 合作方授权明文存 SharedPreferences 并随备份/换机迁移带走**
+- [x] **B-44 合作方授权明文存 SharedPreferences 并随备份/换机迁移带走**
   - `service/.../store/PartnerGrantStore.kt:52-74`
   - 触发：授权项 `"pkg|sha256|expires"` 全明文，而 `data_extraction_rules.xml` / `full_backup_content.xml` 都含 `domain="sharedpref"`——备份会把"哪些第三方应用已获授权"整套搬到新设备（甚至攻击者设备），**绕过用户重新确认**。`decide`/`revoke` 还是多次非原子写，中途被杀留半写状态。另外 `decisionOf` 只比 sha256，而 `tunnelablePackages` 会重新校验签名者摘要——两条路径信任级别不一致。
   - 修法：授权集排除出备份或经 `SecureStorage` 加密；`decide`/`revoke` 合并为单次提交；两条路径统一走签名者校验。
   - 清单项：④ 安全（多租户/第三方隔离）+ ① 一致性
+  - 落地：`decide`/`revoke` 合并为单次 `putStringSet×3` 提交；`service.xml` 已从 `data_extraction_rules.xml` / `full_backup_content.xml` 排除（同时也把 age 私钥挡在备份外）；`decisionOf` 的 KDoc 明确要求传入**实时读取**的签名摘要，与 `tunnelablePackages` 同级校验。未引入 Keystore 加密（仓内并无 `SecureStorage` 实现）。
 
 - [ ] **B-45 三条独立的 2 秒 ticker 各自查询内核，职责重叠**
   - `TrafficHistoryModule.kt` / `LocalTrafficAccountingModule.kt` / `DynamicNotificationModule.kt`
@@ -1346,112 +1348,115 @@
 
 #### B-6 service · 核心与双进程边界 (g3)
 
-- [ ] **B-164 `lastModified() < 0` 的守卫恒不成立，配置文件缺失时变成开机更新风暴 (g3)**
+- [x] **B-164 `lastModified() < 0` 的守卫恒不成立，配置文件缺失时变成开机更新风暴 (g3)**
   - `service/src/main/java/com/github/kr328/clash/service/ProfileReceiver.kt:86-99`
   - 触发：注释写的是 `// file not existed`，但 `File.lastModified()` 在文件不存在时返回 **0**、从不返回负数，所以 `if (last < 0) return` 永远不命中。缺失时 `last = 0`，`current - last` 是纪元以来的毫秒数，`interval` 被 `coerceAtLeast(0)` 压成 0 → 闹钟排在"立刻"。`importedDir/<uuid>/config.yaml` 因迁移中断或原子替换半途失败而缺失时，`rescheduleAll` 会把所有这类订阅一次性排成立刻触发，开机瞬间并发拉起 N 个更新；配合 A-14 的"失败不重排"，这批更新一旦失败就彻底停摆。
   - 修法：改成 `if (!file.isFile) return`（或 `last <= 0L`），文件确实缺失时走"标记为需要一次修复性更新"的显式路径；`rescheduleAll` 对同时到期的多个订阅加抖动。
 
-- [ ] **B-165 日志缓冲满一次即永久退订 native 日志，中继协程随后永久阻塞 (g3)**
+- [x] **B-165 日志缓冲满一次即永久退订 native 日志，中继协程随后永久阻塞 (g3)**
   - `service/src/main/java/com/github/kr328/clash/service/ClashManager.kt:149-180`（native 侧 `core/.../Clash.kt:281-289`）
   - 触发：`subscribeLogcat()` 是 `Channel(32)`，native 回调按 `trySend(...).isSuccess` 决定是否继续订阅——返回 false 时 native **立即且永久**停止推送。打开日志页面后配置里有大量规则命中/内核报错，日志瞬时爆发几百条，UI 消费稍慢缓冲即满 → 退订发生 → 中继协程排空 32 条后在 `receive()` 上永久挂起，仍然持有 UI 侧的 `ILogObserver` binder。用户只能退出再进入才恢复，而问题现场已经错过。
   - 修法：native 回调侧改成"缓冲满则丢弃最旧一条并继续订阅"（不要用 false 表示背压）；中继侧按时间窗批量发送 `List<LogMessage>`；中继协程检测到 channel 关闭时主动清理 `logReceiver`。
 
-- [ ] **B-166 `patchSelector` 在 Binder 线程上同步写 Room (g3，g5 从 DAO 侧独立同报)**
+- [x] **B-166 `patchSelector` 在 Binder 线程上同步写 Room (g3，g5 从 DAO 侧独立同报)**
   - `service/.../ClashManager.kt:80-90`、`service/.../data/SelectionDao.kt:9-13`
   - 触发：`patchSelector` 是非 suspend 的 Binder 方法，内部直接调非 suspend 的 `setSelected`/`removeSelected`——即在 `:background` 的 Binder 线程池（最多 16 个）上做 SQLite 写事务；而同文件的 `querySelections`/`removeSelections` 都是 suspend，这两个是数据层唯一的例外。用户在代理组列表里连续快速切换节点时每次点击占用一个 Binder 线程做磁盘写，同时 UI 还在轮询 `queryProxyGroup`/`queryDashboardSummary`，线程池被写事务占满时所有跨进程查询排队，界面表现为"点一下卡半秒"。
   - 修法：两个 DAO 方法改 `suspend`，`patchSelector` 也改 suspend 并在 `withContext(Dispatchers.IO)` 落库（选中态允许最终一致）；配 per-uuid `Mutex` 或 CONFLATED channel 实现"最后一次生效"。
+  - 落地：`patchSelector` 先返回内核结果、Room 写入交给 `selectionWriteLock` 串行的协程；`SelectionDao` 未改为 suspend——`NodeFailoverController.kt:80` 从非挂起上下文调用它，改签名会连带重构故障转移路径，留待 C 批。
 
-- [ ] **B-167 `updateAdblock` 把规则集下载进"读取那一刻的"活动配置目录 (g3)**
+- [x] **B-167 `updateAdblock` 把规则集下载进"读取那一刻的"活动配置目录 (g3)**
   - `service/.../ClashManager.kt:128-141`
   - 触发：`store.activeProfile` 只在下载开始前读一次，而下载可能持续数十秒，结束后仍用同一个旧 uuid 去 `sendProfileChanged`。用户点"更新广告规则"后在下载中切换配置 → MRS 文件落到上一个 profile 的目录，`ConfigurationModule` 重载的却是当前活动配置 → 新配置仍然没有规则集，`isAdblockRulesReady()` 对它返回 false，用户重复点击也一样。
   - 修法：下载完成后重新读 `store.activeProfile` 并与开始时的值比较，不一致就丢弃结果并返回明确错误（或对新活动配置重下）；`sendProfileChanged` 用校验后的 uuid。
 
-- [ ] **B-168 `Clash.setAgeSecretKey` 是进程级全局态，两条路径互相踩 (g3)**
+- [x] **B-168 `Clash.setAgeSecretKey` 是进程级全局态，两条路径互相踩 (g3)**
   - `service/.../ProfileProcessor.kt:37,116,146`、`service/.../clash/module/ConfigurationModule.kt:61-63`
   - 触发：age 私钥写进 native 全局变量且用完不复位。`ProfileProcessor` 为"正在下载的那个 profile"设置它，`ConfigurationModule` 在加载前为"当前活动 profile"设置它，两者在同一进程的不同协程里并发，谁最后写谁生效。活动配置 A 用 keyA、后台自动更新配置 B 用 keyB：A 因 `PROFILE_CHANGED` 触发重载，设 keyA 后 `Clash.load` 之间若插入 B 的 `setAgeSecretKey(keyB)`，A 的加密 provider 解密失败 → `LoadException` → 隧道停止，用户看到"配置加载失败"却与自己的操作无关。
   - 修法：把密钥变成 native 调用的**参数**（`load(dir, key)` / `fetchAndValid(dir, url, force, key)`），删掉全局 setter；过渡期至少用一把与 `Clash.load` 共享的互斥锁把"设密钥 + 使用"合成原子段。
 
-- [ ] **B-169 `IProfileManager` 的写操作在 suspend 函数里做递归文件 IO，未固定到 IO 调度器 (g3)**
+- [x] **B-169 `IProfileManager` 的写操作在 suspend 函数里做递归文件 IO，未固定到 IO 调度器 (g3)**
   - `service/.../ProfileManager.kt:39-66,68-96,98-135,266-276`
   - 触发：`create`（`deleteRecursively`/`mkdirs`/`createNewFile`）与 `cloneImportedFiles`（`deleteRecursively` + 整目录 `copyRecursively`）都在 suspend 函数体里直接做阻塞 IO，没有 `withContext(Dispatchers.IO)`，而同文件的 `queryAll` 规规矩矩包了。实现 `CoroutineScope` 并不会给 suspend 函数体指定调度器——实际线程由 kaidl 生成的 Binder 桥接决定，而生成源码不在工作树内（`kaidl-compiler-patch` 以 maven 构件提供），无法审计。clone 一个带几十 MB provider 文件的订阅时，`copyRecursively` 在未知线程上阻塞数秒：落在 Binder 线程就占用线程池，落在主线程就是 ANR。`:60` 的 `@Suppress("BlockingMethodInNonBlockingContext")` 说明作者看见了告警并选择压制。
   - 修法：所有文件 IO 统一 `withContext(Dispatchers.IO)`（与 `queryAll` 一致）并删掉 `@Suppress`；在 `RemoteService` 侧固定明确的调度策略，让"Binder 方法跑在哪"成为可读的事实。
 
-- [ ] **B-170 `patch` 无条件把流量/到期字段清零，重命名本地配置会永久丢掉配额显示 (g3)**
+- [x] **B-170 `patch` 无条件把流量/到期字段清零，重命名本地配置会永久丢掉配额显示 (g3)**
   - `service/.../ProfileManager.kt:98-135`（`:114-117`、`:126-129`）
   - 触发：`patch` 两个分支都把 `upload/download/total/expire` 写成 0。对 Url 型 profile 无妨——`commit` → `apply` 会用 `subscription-userinfo` 填回；但对 `Type.File`，`apply` 拿不到 `subscriptionInfo`，0 就被直接写进 `Imported`。用户把订阅 clone 成本地配置（`clone` 特意保留了 `total`/`expire`），随后在属性页只改了个名字保存 → 清零 → 无 userinfo 可回填 → 配额进度条永久消失且无法恢复。
   - 修法：`patch` 只更新它的入参（name/source/interval/ageSecretKey），流量与到期字段保持原值；确需"重置用量"走已有的 `resetLocalTraffic` 显式入口。
 
-- [ ] **B-171 `FilesProvider` 全部方法在 Binder 线程上 `runBlocking`，且忽略 `CancellationSignal` (g3)**
+- [x] **B-171 `FilesProvider` 全部方法在 Binder 线程上 `runBlocking`，且忽略 `CancellationSignal` (g3)**
   - `service/.../FilesProvider.kt:46-64,66-83,85-113,115-139,141-158`
   - 触发：五个 `DocumentsProvider` 回调无一例外把工作塞进 `runBlocking { }`，在调用方的 Binder 线程上同步等待；`openDocument` 收到的 `signal: CancellationSignal` 从头到尾没被使用。而 `picker.pick(path, writable = true)` 会触发 `Picker.cloneToPending`——一次 DB 插入加一次整目录 `copyRecursively`。系统文件管理器浏览到一个带大量 provider 文件的 profile 并以写模式打开其中一个文件时，复制在 Binder 线程上跑几秒，DocumentsUI 只能干等（用户取消也没用），多个 SAF 操作并发就会吃掉 Binder 线程池，连累 `IClashManager`/`StatusProvider` 一起变慢。
   - 修法：耗时工作放到自有调度器执行并用 `CancellationSignal.setOnCancelListener` 取消（`runBlocking` 换成"提交任务 + 可中断等待"）；重操作不应发生在 `openDocument` 的同步路径里（见 B-172）。
 
-- [ ] **B-172 打开文档（默认按写模式）会顺带创建一份 pending 编辑，并把流量字段清零 (g3)**
+- [x] **B-172 打开文档（默认按写模式）会顺带创建一份 pending 编辑，并把流量字段清零 (g3)**
   - `service/.../FilesProvider.kt:46-64`（`:56`、`:211-214`）、`service/.../document/Picker.kt:51-53,123-147`
   - 触发：`picker.pick(path, mode?.requestWrite ?: true)`——`mode` 为 null 时**默认按可写处理**，而 `requestWrite` 只是 `contains("w")` 的粗判。可写会进入 `cloneToPending`：插一条 `Pending` 并把 `upload/download/total/expire` 全填 0，再整目录拷贝。任何持有 `MANAGE_DOCUMENTS` 的文档界面以 `"rw"`（或不传 mode）打开某个 provider 文件，该 profile 就凭空多出一条待提交的 pending 编辑，配置列表出现"未提交更改"，用户提交后配额显示就丢了。
   - 修法：`mode` 缺省视为只读（`?: false`），用 `ParcelFileDescriptor.parseMode` 的结果判断写意图；`cloneToPending` 从 `pick` 里移出改成显式的"开始编辑"操作；克隆时保留原有流量/到期字段。
+  - 落地：`mode` 缺省已按只读处理并改用 `ParcelFileDescriptor.parseMode` 判写意图；`Picker.cloneToPending` 本就完整搬运 `upload/download/total/expire`（无需改动）。`cloneToPending` 仍留在 `pick` 内——SAF 没有独立的“开始编辑”回调，写模式打开时克隆是唯一可行语义。
 
-- [ ] **B-173 `renameDocument` 丢弃 `renameTo` 的返回值，失败也返回新的 documentId (g3)**
+- [x] **B-173 `renameDocument` 丢弃 `renameTo` 的返回值，失败也返回新的 documentId (g3)**
   - `service/.../FilesProvider.kt:85-113`（`:109-111`）
   - 触发：`File.renameTo` 在目标已存在、跨设备、无权限时返回 false 而不抛异常，而这里忽略返回值紧接着无条件返回改名后的 documentId。在文件管理器里把 `providers/a.yaml` 改名成已存在的 `b.yaml`：实际没改，但 SAF 客户端收到"成功"和一个指向 `b.yaml` 的 id，客户端随后基于这个 id 的操作作用在**另一个文件**上（覆盖 b 的内容），或刷新后发现文件仍叫 a.yaml，界面与磁盘不一致。
   - 修法：`if (!renameTo(target)) throw IllegalStateException(...)`，并在改名前检查目标是否已存在——`DocumentsProvider` 约定失败要抛异常而非静默返回。
 
-- [ ] **B-174 `StatusProvider` 无权限导出：任意应用可让 `:background` 做重活并触发弹窗与高优通知 (g3)**
+- [x] **B-174 `StatusProvider` 无权限导出：任意应用可让 `:background` 做重活并触发弹窗与高优通知 (g3)**
   - `service/.../StatusProvider.kt:14-51,108-125`、`service/.../PartnerAccessResolver.kt:42-54,56-85`、`service/src/main/AndroidManifest.xml:64-69`
   - 触发：`StatusProvider` 是 `exported="true"` 且**没有任何 permission**（只加了 `tools:ignore`）。任何应用都能 `call("partnerStatus")` 进入 `PartnerAccessResolver.resolve`：对调用 UID 的每个包做 `getApplicationInfo` + `getPackageInfo(GET_SIGNING_CERTIFICATES)` + SHA-1/SHA-256 摘要，无缓存、无频率限制，全部同步跑在 Binder 线程上。① 第三方应用在循环里调它，就能持续让 `:background` 做 PackageManager 查询与证书摘要（耗电、拖慢自身 IPC）；② 把自己的 applicationId 设成尚未安装的已知伙伴包名，首次调用即让 CMFA 弹出配对 Activity + IMPORTANCE_HIGH 通知，用户视角是"莫名弹窗"。
   - 修法：给 `StatusProvider` 加签名级 permission（伙伴共用同一发布密钥，天然满足）；`resolve` 结果按 (uid, packageName, cert) 缓存并在包变更广播时失效；配对提示改为速率限制 + 仅在本应用处于前台时才 `startActivity`。
   - 清单项：④ 鉴权与越权 + ③ 规模
+  - 落地：只做运行期收敛（`PartnerAccessResolver` 10s 决策缓存 + 每包 60s 提示冷却 + 前台才起 Activity），**未**给 `StatusProvider` 加 manifest 级签名权限：权限名由 `${applicationId}` 派生，加上后所有伙伴应用都得同步声明 `uses-permission` 才能继续读状态。理由已写进 `service/src/main/AndroidManifest.xml` 注释。
 
-- [ ] **B-175 仅凭包名就授予 Basic 层，与"只有钉住的证书才算伙伴"的规则自相矛盾 (g3)**
+- [x] **B-175 仅凭包名就授予 Basic 层，与"只有钉住的证书才算伙伴"的规则自相矛盾 (g3)**
   - `service/.../PartnerAccessResolver.kt:86-105`（`:91-97`）
   - 触发：`PartnerTrust.HardcodedUnverified`（包名在 `hardcodePackages` 里但签名不匹配）在未获用户答复时被授予 `Basic` 层，而 `PartnerApps` 的 KDoc 明确写着"没有钉住的签名者就不是伙伴，无论它声称什么 applicationId"。Basic 层含 `running`/`vpnRunning`/`vpnState` 等。真实伙伴应用未安装时，攻击者以 `com.chloemlla.piliplus` 之类的 applicationId 安装自己的应用（包名先到先得，无需任何签名），即可持续读取"VPN 是否开启"这一隐私信号，用来判断用户何时在翻墙。
   - 修法：`HardcodedUnverified` 应与 `DeclaredUnverified` 同等对待（Denied + `REASON_SIGNER_UNVERIFIED`），"声称是伙伴"只用于伙伴列表 UI 展示、不参与授权；确要给未验证包一个降级层，也必须先经用户在配对页明确同意。
   - 清单项：④ 鉴权与越权 + ① 一致性
 
-- [ ] **B-176 配对通知用固定 id，第二个待授权伙伴会顶掉第一个且永不再提示 (g3)**
+- [x] **B-176 配对通知用固定 id，第二个待授权伙伴会顶掉第一个且永不再提示 (g3)**
   - `service/.../PartnerPairingNotifier.kt:29-46,54-85`（`:84`）
   - 触发：`notifyIfAllowed(R.id.nf_partner_pairing, ...)` 对所有伙伴共用一个通知 id，后来的直接替换先前的；而 `requestPairing(packageName, sha256)` 是"每个 (包, 证书) 只提示一次"的去重，被顶掉的那个不会再次提示。设备上装了两个尚未授权的伙伴应用（各自查一次状态）→ 只剩后者的配对通知，前者的提示永久消失，用户再也没有入口授权它，该应用长期停留在 `pending_user_approval`，"跟随代理"一直不可用且无任何原因说明。
   - 修法：通知 id 按包名派生（或用带 tag 的 `notify`），并把待授权项聚合成一条摘要通知 + 列表页；`requestPairing` 的去重要以"通知仍在"为前提，被清除后允许再次提示。
 
-- [ ] **B-177 配对提示只用应用自称的 label 标识调用方，可被冒名 (g3)**
+- [x] **B-177 配对提示只用应用自称的 label 标识调用方，可被冒名 (g3)**
   - `service/.../PartnerPairingNotifier.kt:62-66,87-90`
   - 触发：通知正文由 `labelOf(context, packageName)`（应用自己的 `android:label`，完全由调用方控制）+ 证书 sha256 的前 8 个十六进制字符组成。用户要做的是"是否允许该应用读取 Clash 状态"这一安全决策，而界面上最显眼的信息恰是攻击者可任意设定的字符串，8 位摘要前缀普通用户无法核对。恶意应用把 label 设成"PiliPlus"甚至"Clash Meta 官方组件"，用户看到熟悉名字直接点允许 → 该应用获得 Full 层，可持续读取活动配置名、当前节点、流量总量、内核错误。
   - 修法：提示中必须显示**包名**（不可伪造）并与 label 并列，明确标出"签名未验证"；对未通过证书校验的调用方，配对页默认焦点应为拒绝，并说明"官方伙伴应用不会出现此提示"。
   - 清单项：④ 安全
 
-- [ ] **B-178 `notifyIfAllowed` 无条件检查 `POST_NOTIFICATIONS`，Android 8–12 上通知全部静默丢失 (g3)**
+- [x] **B-178 `notifyIfAllowed` 无条件检查 `POST_NOTIFICATIONS`，Android 8–12 上通知全部静默丢失 (g3)**
   - `service/.../util/Notification.kt:10-19`（调用点 `ProfileWorker.kt:166,202,218`、`PartnerPairingNotifier.kt:84`）
   - 触发：`notifyIfAllowed` 无条件把 `checkSelfPermission(POST_NOTIFICATIONS)` 当作发通知的前置条件，没有 `SDK_INT >= 33` 分支。该权限是 API 33 才引入的，而 minSdk 是 26——API 26–32 的平台不认识这个权限名，`checkSelfPermission` 返回 `PERMISSION_DENIED`，`notify` 永不被调用（而这些系统上发通知本来无需授权）。于是 Android 8–12 设备上，订阅更新的成功/失败通知与伙伴配对提示（唯一的授权入口）全部不显示。
   - 修法：`if (SDK_INT < 33 || checkSelfPermission(...) == GRANTED) notify(...)`，或改用各版本语义一致的 `NotificationManagerCompat.areNotificationsEnabled()`。
   - 关联：B-32（同一函数在 API 33+ 的另一面：前台服务通知被它挡住而不刷新）。
 
-- [ ] **B-179 `reason` 是普通字段，跨线程读写导致停止原因经常丢失 (g3)**
+- [x] **B-179 `reason` 是普通字段，跨线程读写导致停止原因经常丢失 (g3)**
   - `service/.../ClashService.kt:21,52,68,103`、`service/.../TunService.kt:29,63,83,120`
   - 触发：`private var reason: String? = null` 没有 `@Volatile`；写入发生在 runtime 协程（`Dispatchers.IO`/`Default` 上的 select 分支与 catch 块），读取发生在主线程的 `onDestroy`，两者之间没有任何 happens-before 关系。配置加载失败（`LoadException`）→ runtime 协程写 `reason` 后 `stopSelf()` → 主线程 `onDestroy` 可能读到旧值 null → `sendClashStopped(null)`、`lastError = null`。用户看到"已正常停止"、日志也是 `destroyed: successfully`，真正的失败原因（伙伴应用还会通过 `partnerStatus` 读 `lastError`）就这么丢了。
   - 修法：字段加 `@Volatile`（或 `AtomicReference`）；更彻底的做法是让 runtime 通过显式结果通道把终止原因交给服务，而不是共享可变字段。
 
-- [ ] **B-180 排空循环一旦见到空队列就 `stopSelf`，之后到达的更新请求会被取消 (g3)**
+- [x] **B-180 排空循环一旦见到空队列就 `stopSelf`，之后到达的更新请求会被取消 (g3)**
   - `service/.../ProfileWorker.kt:46-62,70-99`
   - 触发：`onCreate` 的排空循环是 `while (true) { nextJob()?.join() ?: break }`，队列一空立刻 break 并 `stopSelf()`；而 `onStartCommand` 仍会把新任务 `launch` 后 `addJob`，此时已经没有消费者去 join 它，服务也正在停止，`BaseService.onDestroy` → `cancelAndJoinBlocking()` 直接把这个刚起步的下载协程掐掉。两个订阅的更新闹钟相隔十几秒（按各自 mtime 排程很容易错开）时，第二个更新在毫秒级内被取消，用户既看不到成功通知也看不到失败通知（`run` 只 catch `Exception`，`CancellationException` 不走 `failed`），因此也不会重排下一次闹钟。
   - 修法：用带缓冲的 `Channel<UUID>` 作任务队列，消费协程 `for (uuid in channel)` 持续消费，只在"通道空 + 无 in-flight + 达到空闲超时"时才 `stopSelf(startId)`（带 startId，避免停掉刚到达的启动请求）；停止前不要取消未完成的下载。
 
-- [ ] **B-181 服务作用域无 `SupervisorJob` 与异常处理器，一个失败会连坐并崩进程 (g3)**
+- [x] **B-181 服务作用域无 `SupervisorJob` 与异常处理器，一个失败会连坐并崩进程 (g3)**
   - `service/.../BaseService.kt:8`、`service/.../ProfileWorker.kt:83-95`
   - 触发：`BaseService` 用 `CoroutineScope(Dispatchers.Default)`——普通 `Job`、无 handler。`ProfileWorker` 的 `ACTION_PROFILE_SCHEDULE_UPDATES` 分支里 `ProfileReceiver.rescheduleAll(service)` 完全没有保护（同一块里的 `SubscriptionExpiryNotifier.checkAll` 反而包了 `runCatching`）。开机时 `rescheduleAll` 读库失败或 `AlarmManager.set` 抛（Android 12+ 每应用闹钟上限）→ 未捕获异常崩掉 `:background`；即使不崩，普通 `Job` 的失败会取消整个服务 scope，`jobs` 里排队的其它订阅更新一并静默消失。
   - 修法：`CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { ... })`；`ProfileWorker` 每个任务各自 `runCatching` 并把失败反映到通知与重排逻辑上。
 
-- [ ] **B-182 建立隧道的关键路径上做了三遍全量应用枚举（含签名证书） (g3)**
+- [x] **B-182 建立隧道的关键路径上做了三遍全量应用枚举（含签名证书） (g3)**
   - `service/.../TunService.kt:160-279`（`:198-202`、`:219`、`:145-158`）、`common/.../constants/PartnerApps.kt:174-179,194-208,238-250`
   - 触发：`open()` 里 `installedPartnerPackages(self)` 会 `getInstalledPackages(GET_SIGNING_CERTIFICATES)` 并对每个包的每张证书算 SHA-1；紧接着 `tunneledPartners(...)` 调 `installedCandidatePackages(self)`，内部**又**调一次 `installedPartnerPackages` 外加一次 `getInstalledApplications(GET_META_DATA)`。装了两三百个应用的设备上开 VPN，这三次枚举各自返回 MB 级数据并做数百次摘要计算，把 `Builder` 配置与 `establish()` 之间的耗时推到秒级——用户点开关后前台通知长时间停在"加载中"，每次重连/重建隧道都要重付。
   - 修法：`open()` 开头算一次 `Map<pkg, certSha1>` 快照，`partnerPackages`、`partnerDenyExclude`、`tunneledPartners` 全部复用它（作为参数传入）；结果按"包变更广播"失效缓存，供 `AppListCacheModule` 与本路径共用。
   - 关联：B-133（`PartnerApps` 自身的无缓存全量枚举）。
 
-- [ ] **B-183 `onTrimMemory` 在主线程触发 native GC (g3)**
+- [x] **B-183 `onTrimMemory` 在主线程触发 native GC (g3)**
   - `service/.../clash/ClashRuntime.kt:61-63`、`service/.../ClashService.kt:113-117`、`service/.../TunService.kt:134-138`
   - 触发：`onTrimMemory` 由系统在主线程回调，两个服务都直接 `runtime.requestGc()` → `Clash.forceGc()` → `Bridge.nativeForceGc()`，这是一次同步 JNI 调用，Go 侧的 GC + 归还内存是 stop-the-world 级操作。系统内存紧张时会连续下发多档 `TRIM_MEMORY_*`，每一档都在 `:background` 主线程上同步跑一次 native GC；主线程被占住期间该进程的前台通知更新、`onDestroy`、`onStartCommand` 全部排队——而这恰好是最容易被系统判定为无响应而杀掉的时刻。
   - 修法：`requestGc()` 内部 `launch(Dispatchers.Default)` 异步执行，并对连续调用做合并（最小间隔 5s、只在 `level >= TRIM_MEMORY_RUNNING_LOW` 时才真的执行）。
 
-- [ ] **B-184 `RemoteService` 销毁时取消了 manager 的作用域，却让 binder 和字段继续可用 (g3)**
+- [x] **B-184 `RemoteService` 销毁时取消了 manager 的作用域，却让 binder 和字段继续可用 (g3)**
   - `service/.../RemoteService.kt:12-47`
   - 触发：`onDestroy` 只对 `clash`/`profile` 调 `cancelAndJoinBlocking()`（实为单纯 cancel），既不置空字段也不让 binder 失效，`clash()`/`profile()` 仍用 `!!` 返回同一批对象。取消后 `ClashManager` 里三个观察者中继的 `launch` 立即变成空操作，而 `ProfileManager` 的 suspend 方法不依赖该 scope，照旧执行并写库。UI 进程在解绑与真正断开之间发出的 IPC 于是分裂：`setLogObserver` 静默失效（注册成功但永不推送），`create`/`commit` 却照常落库并广播——同一个 binder 上一部分能力活着一部分死了，调用方无从判断，日志里也没有痕迹。
   - 修法：`onDestroy` 把 `clashBinder`/`profileBinder` 置空并让后续 IPC 明确失败（`DeadObjectException` 语义或失败结果），`clash()`/`profile()` 不再用 `!!`；或让 manager 取消后进入显式的"已关闭"状态，所有入口统一先检查。
@@ -1462,59 +1467,59 @@
   - 修法：按领域拆成 `IClashState`/`IProxyControl`/`IObserverRegistry`/`IAdblock` 等窄接口（`IRemoteService` 已经是"返回子接口"的形状，扩展成本很低）；三段中继模板抽成一个带缓冲策略与生命周期的泛型 helper；Room 落库从 `ClashManager` 移到用例层。
   - 清单项：品味（上帝类 / 不一致的丑）
 
-- [ ] **B-186 下载进度逐事件跨进程回调，且一次异常就永久停止上报 (g3)**
+- [x] **B-186 下载进度逐事件跨进程回调，且一次异常就永久停止上报 (g3)**
   - `service/.../ProfileProcessor.kt:195-220`（`:213`）
   - 触发：`Clash.fetchAndValid` 的每一个 `FetchStatus` 事件都直接 `cb?.updateStatus(it)` 做一次跨进程调用，没有节流也没有合并；而 catch 分支把 `cb = null`——只要 UI 侧抛过一次异常（界面正在销毁、binder 短暂不可用），此后整个下载过程都不再上报进度。导入大订阅时进度事件密集，用户旋转屏幕或短暂切后台导致一次回调异常 → 进度条从此静止在中途，用户以为卡死并强行退出，而下载其实还在 `NonCancellable` 里跑（见 A-38）。
   - 修法：服务端按时间窗（约 200ms）或进度增量（每 1%）节流后再跨进程；回调异常只跳过本次（可加连续失败计数），不要一次性永久置空；UI 重新绑定后能重新拿到进度。
 
-- [ ] **B-187 manifest 里的 intent-filter 少了 `$`，且 action 名与常量不一致，是一段死配置（轻微） (g3，g6 同报)**
+- [x] **B-187 manifest 里的 intent-filter 少了 `$`，且 action 名与常量不一致，是一段死配置（轻微） (g3，g6 同报)**
   - `service/src/main/AndroidManifest.xml:98-101`（对照 `common/.../constants/Intents.kt:22` 的 `"$packageName.intent.action.REQUEST_UPDATE"`）
   - 触发：`{applicationId}.intent.action.PROFILE_REQUEST_UPDATE` 缺少 `$`，占位符不会被 manifest merger 替换；即便补上，后缀也与常量不一致。目前没有功能影响——唯一的发送方 `ProfileReceiver.pendingIntentOf` 用 `setComponent` 显式指定了组件。危害是误导：读 manifest 的人会以为这条隐式广播路径可用，一旦有人为了让外部工具触发订阅更新而依赖它，就会遇到"广播发出去但没人收"且 manifest 看起来完全正常。
   - 修法：改成 `${applicationId}.intent.action.REQUEST_UPDATE`，或干脆删掉这条 filter（连同 `<data android:scheme="uuid" />`），让"只接受显式 Intent"成为明确事实。
 
-- [ ] **B-188 `ClashRuntime` 里的 `modules` 列表既无人读取又存在并发写（轻微） (g3)**
+- [x] **B-188 `ClashRuntime` 里的 `modules` 列表既无人读取又存在并发写（轻微） (g3)**
   - `service/.../clash/ClashRuntime.kt:29,36-40`
   - 触发：`val modules = mutableListOf<Module<*>>()` 只在 `install` 的子协程里被 `add`，全文没有任何读取点；而这些子协程可以并发执行，对普通 `ArrayList` 并发 `add` 本身是未定义行为。`install` 被连续调用十余次，多个子协程在 `Dispatchers.IO` 的不同线程上同时 `add`，可能触发 `ArrayIndexOutOfBoundsException` 或元素丢失——由于列表从不被读，异常之外没有可观察后果，但它掩盖了"这里本来想做模块生命周期管理"的意图。
   - 修法：直接删掉 `modules`；如确实需要在关闭时逐个 close 模块，改成在 `install` 的调用协程里 add 而不是在子协程里。
 
-- [ ] **B-189 `PartnerAccessResolver` 里有一条不可达的授权分支（轻微） (g3)**
+- [x] **B-189 `PartnerAccessResolver` 里有一条不可达的授权分支（轻微） (g3)**
   - `service/.../PartnerAccessResolver.kt:62-72`
   - 触发：`signerDigestsOf` 返回 null 时，若 `trust == Verified` 就给 `Full` 并附 `REASON_NO_SIGNATURE`。但 `Verified` 本身来自 `hasPinnedSigner`，它与 `signerDigestsOf` 读的是同一份 `signingCertificatesOf`——有匹配证书必然能取到摘要，这个组合不可能出现。风险不在运行期，而在于它读起来像"没有签名也能拿 Full"的后门，会让后续维护者误判信任模型。
   - 修法：`digests == null` 一律 `Denied + REASON_NO_SIGNATURE`，删掉 `Verified` 特例。
 
-- [ ] **B-190 `isChildDocument` 用 `startsWith` 判断父子关系，前缀相同即误判（轻微） (g3)**
+- [x] **B-190 `isChildDocument` 用 `startsWith` 判断父子关系，前缀相同即误判（轻微） (g3)**
   - `service/.../FilesProvider.kt:180-185`（`queryRoots` 在 `:165` 声明了 `FLAG_SUPPORTS_IS_CHILD`，系统会真的依赖这个判断）
   - 触发：`documentId.startsWith(parentDocumentId)` 没有边界检查，`"/uuid/providers/abc"` 与 `"/uuid/providers/ab"` 会被判为父子。两个 provider 文件名互为前缀（如 `rule.yaml` 与 `rule.yaml.bak`）时，SAF 的树形操作（`ACTION_OPEN_DOCUMENT_TREE` 授权范围、文件管理器的复制/移动）会把不属于该子树的文档算进来。
   - 修法：`documentId == parentDocumentId || documentId.startsWith(parentDocumentId.removeSuffix("/") + "/")`。
 
   - 文档注记已补在 `build.gradle.kts` compileSdk 处：compileSdk 37 由 targetSdk 驱动的平台行为（edge-to-edge/预测性返回/FGS specialUse/INTERACT_ACROSS_USERS）决定，AGP 8.13 测试上限 36.1，gradle.properties 带 `android.suppressUnsupportedCompileSdk=37` 承认工具 gap；勿盲目降级。
-- [ ] **B-191 `serviceRunning` 的 setter 在主线程上做文件读写（轻微） (g3)**
+- [x] **B-191 `serviceRunning` 的 setter 在主线程上做文件读写（轻微） (g3)**
   - `service/.../StatusProvider.kt:207-229`（调用点 `ClashService.onCreate:82`/`onDestroy:102`、`TunService.onCreate:99`/`onDestroy:118`）
   - 触发：`serviceRunning` 的 setter 连带写 `shouldStartClashOnBoot`，而后者是对 `filesDir/service_running.lock` 做 `createNewFile()`/`delete()`/`exists()`，而这个 setter 的调用点全在主线程。启动与停止的关键路径上各有一次主线程磁盘写，低端设备或 IO 繁忙时（恰好是刚拷完大配置的时刻）会拖长停止耗时，也是标准的 StrictMode `DiskWriteViolation`。
   - 修法：把"开机自启标记"从属性 setter 的副作用里拆出来，改成显式调用并投递到 IO 调度器；内存态与持久态分开，不要用一个赋值同时做两件事。
 
-- [ ] **B-192 用类型判断代替进程判断来选 `SharedPreferences` 实现（轻微） (g3)**
+- [x] **B-192 用类型判断代替进程判断来选 `SharedPreferences` 实现（轻微） (g3)**
   - `service/.../PreferenceProvider.kt:17-30`
   - 触发：`when (context) { is BaseService, is TunService -> 直接 getSharedPreferences; else -> MultiProcessPreference }`——用"是不是这两个类"来推断"是不是在 `:background` 进程"，而这两件事只是当前恰好等价。演进期即失效：新增一个跑在 `:background` 但不继承 `BaseService` 的 Service（例如另一个 `VpnService` 变体）会走 `MultiProcessPreference`；反之若某个 `BaseService` 子类被放到 UI 进程，它会绕过跨进程 Provider 直接读写自己进程的偏好，两个进程的偏好从此静默分叉且没有任何报错。
   - 修法：按真实进程名判断（`Application.getProcessName()` 与 `PreferenceProvider` 所在进程比较），或干脆让所有调用方统一走 `MultiProcessPreference`（同进程访问会短路，开销可接受）。
 
-- [ ] **B-193 `apply` 在 pending 变化时静默 no-op，且遗留 `processingDir`（轻微） (g3)**
+- [x] **B-193 `apply` 在 pending 变化时静默 no-op，且遗留 `processingDir`（轻微） (g3)**
   - `service/.../ProfileProcessor.kt:44-101`
   - 触发：`if (PendingDao().queryByUUID(snapshot.uuid) == snapshot)` 为假时整段落库被跳过——没有日志、没有异常，也不清理已经下载好内容的 `processingDir`（`update` 与 `validate` 都会清，只有 `apply` 这条路径不清）。新建配置时点保存（开始下载）→ 返回键触发 `release(uuid)` 删掉 pending → 下载完成后 `apply` 静默丢弃。行为本身是对的（用户已取消），但 `commit()` 对调用方返回"成功"，调用方无法区分"已导入"与"被并发编辑丢弃"，同时一份完整配置内容留在 `processingDir` 直到下次操作才被覆盖。
   - 修法：分支不成立时打日志并给出可区分的结果（或让 `commit` 返回布尔/密封类），同时 `deleteRecursively()` 清理 `processingDir`。
 
-- [ ] **B-194 自动更新路径不做字段校验，与手动导入不一致（轻微） (g3)**
+- [x] **B-194 自动更新路径不做字段校验，与手动导入不一致（轻微） (g3)**
   - `service/.../ProfileProcessor.kt:130-148` 对比 `:275-306`
   - 触发：`apply`/`validate` 经由 `snapshotPending` 调用 `enforceFieldValid()`（scheme 白名单 http/https/content、interval ≥ 15 分钟），而自动更新的 `update` 直接从 `ImportedDao` 取行后就 `fetchProfile`，完全不校验。而 `Imported` 行并不只经由校验路径产生——`LegacyMigration` 会把旧库里的任意 `uri` 迁进来，`MigrationBundle` 也会从外部 bundle 反序列化，这类来源的 source 未经白名单就进入定时下载路径。
   - 修法：把校验提取成一个对 `source`/`interval` 生效的纯函数，`update` 在下载前同样调用；校验失败给出可见的失败通知而不是静默按原样请求。
   - 清单项：④ 输入校验 + ① 一致性
 
-- [ ] **B-195 `TunService` 未覆写 `onRevoke`，授权被撤销与用户主动停止无法区分（轻微） (g3)**
+- [x] **B-195 `TunService` 未覆写 `onRevoke`，授权被撤销与用户主动停止无法区分（轻微） (g3)**
   - `service/.../TunService.kt:25-132`
   - 触发：全类没有 `onRevoke()`，父类默认实现会 `stopSelf()`，所以清理路径能走通，但 `reason` 保持为 null。用户在系统设置里断开 VPN，或另一个 VPN 应用抢占授权 → `onDestroy` 走 `sendClashStopped(null)`、`lastError = null`、日志 `destroyed: successfully`。用户在 CMFA 里看到"已正常停止"，无法得知是被系统撤销、也不知道要去重新授权；伙伴应用读到的 `lastError` 同样为空。
   - 修法：覆写 `onRevoke()`，先设置一个明确的 `reason`（如"VPN 授权已被撤销"）再 `super.onRevoke()`，让 UI 与伙伴侧能给出可操作的提示。
 
-- [ ] **B-196 隧道构建里硬编码了第三方厂商域名的代理排除表（轻微） (g3)**
+- [x] **B-196 隧道构建里硬编码了第三方厂商域名的代理排除表（轻微） (g3)**
   - `service/.../TunService.kt:252-262,308-315`
   - 触发：`HTTP_PROXY_BLACK_LIST = listOf("*jd.com", "100ime-iat-api.xfyun.cn", "*360buyimg.com")` 写死在伴生对象里，用户不可见、不可配置；上面的注释还在解释"历史黑名单把这些域名强制直连造成过问题"，读起来与仍然保留这份名单自相矛盾。使用系统代理时京东与讯飞语音接口被排除在 HTTP 代理之外，用户为这些域名写的分流规则在走系统代理的应用上不生效，且既没有 UI 也没有日志可查证原因。
   - 修法：把排除表移到可配置项（覆盖设置或 override 配置里），默认为空；确需保留内置项时在设置页显式列出并允许关闭，注释说明每一条的具体原因与何时可以删除。

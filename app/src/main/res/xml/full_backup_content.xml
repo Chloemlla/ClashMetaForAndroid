@@ -3,9 +3,14 @@
     <!--
       Only non-sensitive UI preferences are eligible for legacy Auto Backup.
       Domain-level excludes are unnecessary (and rejected by Lint) when those
-      domains are never included.
+      domains are never included; service.xml is a path-level exclude inside an
+      included domain, which is what keeps the age secret key and the partner
+      authorization set out of the backup (B-44).
     -->
     <include
         domain="sharedpref"
         path="." />
+    <exclude
+        domain="sharedpref"
+        path="service.xml" />
 </full-backup-content>

@@ -78,13 +78,14 @@ class ProfileManager(private val context: Context) : IProfileManager,
 
         PendingDao().insert(pending)
 
-        context.pendingDir.resolve(uuid.toString()).apply {
-            deleteRecursively()
-            mkdirs()
+        withContext(Dispatchers.IO) {
+            context.pendingDir.resolve(uuid.toString()).apply {
+                deleteRecursively()
+                mkdirs()
 
-            @Suppress("BlockingMethodInNonBlockingContext")
-            resolve("config.yaml").createNewFile()
-            resolve("providers").mkdir()
+                resolve("config.yaml").createNewFile()
+                resolve("providers").mkdir()
+            }
         }
 
         return uuid
@@ -129,6 +130,8 @@ class ProfileManager(private val context: Context) : IProfileManager,
 
             cloneImportedFiles(uuid)
 
+            // Only update the edited fields; keep the imported traffic/expiry values so a
+            // renamed local (Type.File) profile does not lose its quota display (B-170).
             PendingDao().insert(
                 Pending(
                     uuid = imported.uuid,
@@ -136,10 +139,10 @@ class ProfileManager(private val context: Context) : IProfileManager,
                     type = imported.type,
                     source = source,
                     interval = interval,
-                    upload = 0,
-                    total = 0,
-                    download = 0,
-                    expire = 0,
+                    upload = imported.upload,
+                    total = imported.total,
+                    download = imported.download,
+                    expire = imported.expire,
                     ageSecretKey = ageSecretKey,
                 )
             )
@@ -148,10 +151,6 @@ class ProfileManager(private val context: Context) : IProfileManager,
                 name = name,
                 source = source,
                 interval = interval,
-                upload = 0,
-                total = 0,
-                download = 0,
-                expire = 0,
                 ageSecretKey = ageSecretKey,
             )
 
@@ -288,16 +287,18 @@ class ProfileManager(private val context: Context) : IProfileManager,
             ?: -1
     }
 
-    private fun cloneImportedFiles(source: UUID, target: UUID = source) {
-        val s = context.importedDir.resolve(source.toString())
-        val t = context.pendingDir.resolve(target.toString())
+    private suspend fun cloneImportedFiles(source: UUID, target: UUID = source) {
+        withContext(Dispatchers.IO) {
+            val s = context.importedDir.resolve(source.toString())
+            val t = context.pendingDir.resolve(target.toString())
 
-        if (!s.exists())
-            throw FileNotFoundException("profile $source not found")
+            if (!s.exists())
+                throw FileNotFoundException("profile $source not found")
 
-        t.deleteRecursively()
+            t.deleteRecursively()
 
-        s.copyRecursively(t)
+            s.copyRecursively(t)
+        }
     }
 
     private suspend fun scheduleUpdate(uuid: UUID, startImmediately: Boolean) {

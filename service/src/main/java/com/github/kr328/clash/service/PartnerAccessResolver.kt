@@ -7,6 +7,7 @@ import com.github.kr328.clash.common.constants.PartnerTrust
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.store.PartnerGrantDecision
 import com.github.kr328.clash.service.store.PartnerGrantStore
+import java.util.concurrent.ConcurrentHashMap
 
 /** How much of the exported Clash status one caller may read; ordered by increasing privilege. */
 enum class PartnerAccessTier { Denied, Basic, Full }
@@ -28,18 +29,44 @@ data class PartnerAccess(
  *
  * Two trust sources are combined: the pinned release certificate in [PartnerApps] and the device
  * owner's own answer recorded in [PartnerGrantStore]. The owner always has the last word — an
- * explicit denial outranks the pinned certificate — and an app holding a known applicationId with a
- * different key is served the low-sensitivity tier instead of nothing, so a rotated key can no
- * longer take a partner's proxy-following feature offline.
+ * explicit denial outranks the pinned certificate. An app that merely claims a known partner
+ * applicationId without the pinned certificate is denied until the owner explicitly approves it on
+ * the pairing page (B-175); claiming partner status is for the partner-list UI only.
  */
 object PartnerAccessResolver {
     const val REASON_NOT_PARTNER = "not_partner"
     const val REASON_PENDING_APPROVAL = "pending_user_approval"
     const val REASON_DENIED_BY_USER = "denied_by_user"
-    const val REASON_SIGNER_UNVERIFIED = "signer_unverified"
     const val REASON_NO_SIGNATURE = "no_signature"
 
+    /**
+     * A short TTL keeps repeated callers (a partner polling on a timer, or a hostile app calling
+     * in a loop) from re-running the PackageManager certificate queries and the pairing prompt on
+     * every call (B-174). Grants can change via decide/revoke and packages can be reinstalled, so a
+     * broadcast-keyed invalidation would be tighter; the TTL bounds how long a stale decision is
+     * served.
+     */
+    private const val RESOLVE_CACHE_TTL_MILLIS = 10_000L
+
+    private data class CachedAccess(val access: PartnerAccess, val timestampMillis: Long)
+
+    private val resolveCache = ConcurrentHashMap<String, CachedAccess>()
+
     fun resolve(context: Context, callingPackages: Iterable<String>): PartnerAccess {
+        val cacheKey = callingPackages.sorted().joinToString("|")
+        val now = System.currentTimeMillis()
+        resolveCache[cacheKey]?.let { cached ->
+            if (now - cached.timestampMillis < RESOLVE_CACHE_TTL_MILLIS) {
+                return cached.access
+            }
+        }
+
+        val access = resolveUncached(context, callingPackages)
+        resolveCache[cacheKey] = CachedAccess(access, now)
+        return access
+    }
+
+    private fun resolveUncached(context: Context, callingPackages: Iterable<String>): PartnerAccess {
         var best = PartnerAccess(PartnerAccessTier.Denied, REASON_NOT_PARTNER, null, null)
         for (packageName in callingPackages) {
             val access = resolveOne(context, packageName)
@@ -61,14 +88,12 @@ object PartnerAccessResolver {
 
         val digests = PartnerApps.signerDigestsOf(context, packageName)
             ?: return PartnerAccess(
-                tier = if (trust == PartnerTrust.Verified) {
-                    PartnerAccessTier.Full
-                } else {
-                    PartnerAccessTier.Denied
-                },
-                reason = REASON_NO_SIGNATURE,
-                packageName = packageName,
-                digests = null,
+                // A package with no observable certificate can never be a verified partner,
+                // whatever its trust classification claims (B-189).
+                PartnerAccessTier.Denied,
+                REASON_NO_SIGNATURE,
+                packageName,
+                null,
             )
 
         return when (PartnerGrantStore(context).decisionOf(packageName, digests.sha256)) {
@@ -88,13 +113,9 @@ object PartnerAccessResolver {
                     // confirm; access is not withheld while it is unanswered.
                     PartnerTrust.Verified ->
                         PartnerAccess(PartnerAccessTier.Full, null, packageName, digests)
-                    PartnerTrust.HardcodedUnverified ->
-                        PartnerAccess(
-                            PartnerAccessTier.Basic,
-                            REASON_SIGNER_UNVERIFIED,
-                            packageName,
-                            digests,
-                        )
+                    // Claiming a partner applicationId without the pinned certificate grants
+                    // nothing (B-175): the prompt above queued the request, so the caller is told
+                    // the owner has yet to answer rather than that its key is simply unknown.
                     else ->
                         PartnerAccess(
                             PartnerAccessTier.Denied,

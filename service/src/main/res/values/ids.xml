@@ -3,7 +3,6 @@
     <item name="nf_clash_status" type="id" />
     <item name="nf_vpn_status" type="id" />
     <item name="nf_profile_worker" type="id" />
-    <item name="nf_partner_pairing" type="id" />
     <item name="nf_scene_applied" type="id" />
     <item name="nf_failover_applied" type="id" />
 </resources>

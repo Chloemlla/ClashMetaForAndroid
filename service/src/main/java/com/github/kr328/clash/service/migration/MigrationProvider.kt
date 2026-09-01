@@ -21,6 +21,9 @@ class MigrationProvider : ContentProvider() {
     @Volatile
     private var cachedBundle: File? = null
 
+    @Volatile
+    private var cachedBundleAt: Long = 0L
+
     override fun onCreate(): Boolean {
         val authority = context?.packageName?.let(Migration::authorityFor) ?: return false
         matcher.addURI(authority, Migration.BUNDLE_PATH, CODE_BUNDLE)
@@ -53,7 +56,14 @@ class MigrationProvider : ContentProvider() {
         val ctx = context ?: return null
         val file = ensureBundle(ctx)
             ?: throw IllegalStateException("migration export failed")
-        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        // A-31: the bundle carries service prefs, including the age secret key. Unlink it as
+        // soon as it has been served so the key does not linger in cacheDir; the open
+        // descriptor keeps the file alive for the caller across the binder transfer.
+        cachedBundle = null
+        cachedBundleAt = 0L
+        file.delete()
+        return pfd
     }
 
     override fun getType(uri: Uri): String? {
@@ -70,7 +80,10 @@ class MigrationProvider : ContentProvider() {
     ): Int = 0
 
     private fun ensureBundle(ctx: android.content.Context): File? {
-        cachedBundle?.takeIf { it.isFile && it.length() > 0L }?.let { return it }
+        cachedBundle?.takeIf {
+            it.isFile && it.length() > 0L &&
+                System.currentTimeMillis() - cachedBundleAt < CACHE_TTL_MS
+        }?.let { return it }
 
         // Ensure Room is ready before export.
         Database.database
@@ -93,7 +106,11 @@ class MigrationProvider : ContentProvider() {
             Log.w("MigrationProvider: export failed")
             return null
         }
+        // A-31: also schedule removal at process exit, so a bundle that was exported but
+        // never opened (no openFile) does not linger with the private key in cacheDir.
+        file.deleteOnExit()
         cachedBundle = file
+        cachedBundleAt = System.currentTimeMillis()
         return file
     }
 
@@ -118,5 +135,10 @@ class MigrationProvider : ContentProvider() {
 
         // Upper bound for the synchronous bundle export on a binder thread.
         private const val EXPORT_TIMEOUT_MS = 20_000L
+
+        // A bundle is a point-in-time snapshot of preferences that include private keys.
+        // Never serve a stale snapshot, and never keep one in cacheDir beyond this window
+        // (A-31).
+        private const val CACHE_TTL_MS = 60_000L
     }
 }

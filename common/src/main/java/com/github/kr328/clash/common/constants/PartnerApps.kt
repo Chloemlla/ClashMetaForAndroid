@@ -199,10 +199,17 @@ object PartnerApps {
      * pinned certificate, plus the claimants ([hardcodePackages] and [META_DATA_PARTNER_KEY]
      * declarers) that fail the certificate check — an app presenting the wrong key is exactly what
      * needs to be surfaced.
+     *
+     * [installedPartners] is the certificate-verified set ([installedPartnerPackages]); callers that
+     * already computed it (e.g. a VPN tunnel build) pass it in so the per-package signing lookups
+     * are not repeated (B-182).
      */
-    fun installedCandidatePackages(context: Context): Set<String> {
+    fun installedCandidatePackages(
+        context: Context,
+        installedPartners: Set<String> = installedPartnerPackages(context),
+    ): Set<String> {
         val pm = context.packageManager
-        return installedPartnerPackages(context) +
+        return installedPartners +
             installedHardcodePackages(pm) +
             declaredPartnerCandidates(pm)
     }

@@ -521,6 +521,7 @@
     <string name="logs_empty_tips">启动 Clash 日志捕获运行时信息。历史会话会显示在这里。</string>
 
     <string name="alpha_migration_success">已从 Alpha 导入 %1$d 个配置</string>
+    <string name="legacy_migration_failed">旧版本的配置导入失败，旧数据已保留，重新打开应用可再次尝试</string>
 
     <string name="open_source_notice_title">开源声明</string>
     <string name="open_source_notice_intro"><![CDATA[本应用是 <strong>Clash Meta</strong> 的<strong>开源</strong>客户端。源码公开，可在项目协议下检查、编译与再分发。]]></string>

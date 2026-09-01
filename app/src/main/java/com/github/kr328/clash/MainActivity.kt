@@ -20,6 +20,7 @@ import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.PartnerPairingNotifier
 import com.github.kr328.clash.service.store.PartnerGrantStore
+import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.store.AppStore
 import com.github.kr328.clash.util.applyDynamicShortcuts
 import com.github.kr328.clash.util.startClashService
@@ -92,6 +93,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             design.fetch()
                             maybeShowAlphaMigrationToast(design)
                             if (it == Event.ActivityStart) {
+                                maybeShowLegacyMigrationFailureToast(design)
                                 promptPendingPairing()
                             }
                             maybePromptAdblockDownload()
@@ -242,6 +244,19 @@ class MainActivity : BaseActivity<MainDesign>() {
                 getString(DesignR.string.alpha_migration_success, count),
                 ToastDuration.Long,
             )
+        }
+    }
+
+    private suspend fun maybeShowLegacyMigrationFailureToast(design: MainDesign) {
+        // A-39: the migration keeps the old database and sets this flag when it throws. Without
+        // surfacing it, a failed migration looks exactly like "you had no profiles".
+        val failed = withContext(Dispatchers.IO) {
+            val store = ServiceStore(this@MainActivity)
+            store.legacyMigrationFailed.also { if (it) store.legacyMigrationFailed = false }
+        }
+
+        if (failed) {
+            design.showToast(DesignR.string.legacy_migration_failed, ToastDuration.Long)
         }
     }
 

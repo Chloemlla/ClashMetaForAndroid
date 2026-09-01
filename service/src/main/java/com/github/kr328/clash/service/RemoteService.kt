@@ -32,6 +32,15 @@ class RemoteService : BaseService(), IRemoteService {
         clash?.cancelAndJoinBlocking()
         profile?.cancelAndJoinBlocking()
 
+        // After their scopes are cancelled the managers are half-alive: ClashManager's observer
+        // relays are dead while ProfileManager's suspend methods still write the database. Null the
+        // binders so any IPC that slips in during the unbind window fails loudly instead of silently
+        // splitting "some calls work, others no-op" across the same interface (B-184).
+        clash = null
+        profile = null
+        clashBinder = null
+        profileBinder = null
+
         super.onDestroy()
     }
 
@@ -40,10 +49,10 @@ class RemoteService : BaseService(), IRemoteService {
     }
 
     override fun clash(): IClashManager {
-        return clashBinder!!
+        return clashBinder ?: throw IllegalStateException("RemoteService is destroyed")
     }
 
     override fun profile(): IProfileManager {
-        return profileBinder!!
+        return profileBinder ?: throw IllegalStateException("RemoteService is destroyed")
     }
 }

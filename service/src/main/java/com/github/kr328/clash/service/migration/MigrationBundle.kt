@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.github.kr328.clash.common.constants.Migration
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.service.PreferenceProvider
 import com.github.kr328.clash.service.data.Database
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
@@ -86,7 +87,10 @@ object MigrationBundle {
                     writeTextEntry(
                         zip,
                         Migration.SERVICE_PREFS_FILE,
-                        dumpSharedPreferences(context.getSharedPreferences("service", Context.MODE_PRIVATE)),
+                        // "service" prefs are owned by the :background process and read through
+                        // PreferenceProvider; access them via the same channel so the export
+                        // reflects the authoritative values (A-32).
+                        dumpSharedPreferences(PreferenceProvider.createSharedPreferencesFromContext(context)),
                     )
                     writeTextEntry(
                         zip,
@@ -258,8 +262,12 @@ object MigrationBundle {
                     }
                 }
 
+                // A-32: write the imported "service" prefs through the PreferenceProvider
+                // channel (it owns the file in :background). A direct write from the main
+                // process would be invisible to :background's in-memory cache or clobbered by
+                // its next write — "import succeeded but did not take effect".
                 mergeSharedPreferences(
-                    context.getSharedPreferences("service", Context.MODE_PRIVATE),
+                    PreferenceProvider.createSharedPreferencesFromContext(context),
                     extractRoot.resolve(Migration.SERVICE_PREFS_FILE),
                     preserveKeys = emptySet(),
                 )
@@ -330,7 +338,9 @@ object MigrationBundle {
 
     private fun dumpSharedPreferences(prefs: SharedPreferences): String {
         val root = JSONObject()
-        prefs.all.forEach { (key, value) ->
+        // MultiProcessPreference.getAll() returns null when the owning provider is not up;
+        // treat that as "no values" rather than crashing the export.
+        prefs.all?.forEach { (key, value) ->
             when (value) {
                 is Boolean -> root.put(key, JSONObject().put("t", "b").put("v", value))
                 is Int -> root.put(key, JSONObject().put("t", "i").put("v", value))

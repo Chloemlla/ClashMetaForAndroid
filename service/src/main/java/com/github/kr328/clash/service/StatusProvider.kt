@@ -9,6 +9,7 @@ import android.os.Bundle
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.store.WidgetStateStore
+import kotlinx.coroutines.launch
 
 class StatusProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
@@ -209,7 +210,18 @@ class StatusProvider : ContentProvider() {
             set(value) {
                 field = value
 
-                shouldStartClashOnBoot = value
+                // Persist the boot-autostart intent off the calling (main) thread: call sites run
+                // on the service onCreate/onDestroy path, and a synchronous file write there is a
+                // StrictMode DiskWriteViolation that lengthens startup/stop (B-191). Reading the
+                // volatile field inside the coroutine makes any stale launch write the latest value.
+                Global.launch {
+                    Global.application.filesDir.resolve(CLASH_SERVICE_RUNNING_FILE).apply {
+                        if (serviceRunning)
+                            createNewFile()
+                        else
+                            delete()
+                    }
+                }
             }
         @Volatile
         var vpnRunning: Boolean = false
@@ -217,15 +229,12 @@ class StatusProvider : ContentProvider() {
         var lastError: String? = null
         @Volatile
         var currentProfile: String? = null
-        var shouldStartClashOnBoot: Boolean
+        /**
+         * Whether the tunnel was up when the device went down, i.e. whether it should be brought
+         * back after boot. Derived from the marker file [serviceRunning] maintains, so it has no
+         * setter of its own — a second writer would race that one.
+         */
+        val shouldStartClashOnBoot: Boolean
             get() = Global.application.filesDir.resolve(CLASH_SERVICE_RUNNING_FILE).exists()
-            set(value) {
-                Global.application.filesDir.resolve(CLASH_SERVICE_RUNNING_FILE).apply {
-                    if (value)
-                        createNewFile()
-                    else
-                        delete()
-                }
-            }
     }
 }

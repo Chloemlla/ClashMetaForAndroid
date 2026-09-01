@@ -107,15 +107,20 @@ class ProfileReceiver : BroadcastReceiver() {
             if (imported.interval < MINIMAL_INTERVAL)
                 return
 
-            val current = System.currentTimeMillis()
-            val last = context.importedDir
+            val config = context.importedDir
                 .resolve(imported.uuid.toString())
                 .resolve("config.yaml")
-                .lastModified()
 
-            // file not existed
-            if (last < 0)
+            // File.lastModified() is 0 (never negative) for a missing file, so the old
+            // `last < 0` guard could never detect one and the subscription was scheduled
+            // as "update immediately" on boot — a storm of concurrent updates. A missing
+            // config (interrupted migration/atomic swap) simply gets no alarm until the
+            // next explicit update path runs (B-164).
+            if (!config.isFile)
                 return
+
+            val current = System.currentTimeMillis()
+            val last = config.lastModified()
 
             val interval = (imported.interval - (current - last)).coerceAtLeast(0)
 

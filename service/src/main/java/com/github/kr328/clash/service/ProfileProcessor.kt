@@ -2,6 +2,7 @@ package com.github.kr328.clash.service
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.FetchStatus
@@ -20,28 +21,48 @@ import com.github.kr328.clash.service.util.processingDir
 import com.github.kr328.clash.service.util.replaceDirectoryAtomically
 import com.github.kr328.clash.service.util.sendProfileChanged
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.util.*
 import java.util.concurrent.TimeUnit
+
+// Serializes "Clash.setAgeSecretKey + fetch/load" pairs: the age secret lives in a
+// process-global native variable, so concurrent profile operations must not overwrite
+// each other's key between the set and the use (B-168). ConfigurationModule (active
+// profile load) and ProfileProcessor (download) share this lock.
+internal val ageSecretLock = Mutex()
 
 object ProfileProcessor {
     private val profileLock = Mutex()
     private val processLock = Mutex()
 
-    suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
-        withContext(NonCancellable) {
-            processLock.withLock {
-                val snapshot = snapshotPending(context, uuid)
+    private val PROCESS_LOCK_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(130)
+    private val FETCH_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(120)
+    private val PROGRESS_REPORT_INTERVAL_MS = 200L
 
+    suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
+        withProcessLock {
+            val snapshot = snapshotPending(context, uuid)
+
+            val subscriptionInfo = ageSecretLock.withLock {
                 Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                val force = snapshot.type != Profile.Type.File
-                val subscriptionInfo = fetchProfile(context, snapshot.source, force, callback)
-                val useLocalTraffic = ServiceStore(context)
-                    .getLocalSubscriptionTraffic(snapshot.uuid)
+                fetchProfile(
+                    context = context,
+                    source = snapshot.source,
+                    force = snapshot.type != Profile.Type.File,
+                    callback = callback,
+                )
+            }
+            val useLocalTraffic = ServiceStore(context)
+                .getLocalSubscriptionTraffic(snapshot.uuid)
 
+            // The download above is cancellable; only the DB commit and directory
+            // swap must survive cancellation once the fetch succeeded.
+            withContext(NonCancellable) {
                 profileLock.withLock {
                     val old = ImportedDao().queryByUUID(snapshot.uuid)
                     val updateInterval = subscriptionInfo?.subUpdateInterval
@@ -52,6 +73,8 @@ object ProfileProcessor {
                     // but still persist upstream total/expire so the config UI can show a
                     // progress bar against the subscription quota.
                     // Upstream mode: persist full subscription-userinfo into Imported.
+                    // When userinfo is absent (e.g. a cloned Type.File profile), fall back to
+                    // the values preserved in the pending snapshot instead of zeroing them (B-170).
                     val upload: Long
                     val download: Long
                     val total: Long
@@ -59,13 +82,13 @@ object ProfileProcessor {
                     if (useLocalTraffic) {
                         upload = 0
                         download = 0
-                        total = subscriptionInfo?.subTotal ?: old?.total ?: 0
-                        expire = subscriptionInfo?.subExpire ?: old?.expire ?: 0
+                        total = subscriptionInfo?.subTotal ?: snapshot.total.takeIf { it != 0L } ?: old?.total ?: 0
+                        expire = subscriptionInfo?.subExpire ?: snapshot.expire.takeIf { it != 0L } ?: old?.expire ?: 0
                     } else {
-                        upload = subscriptionInfo?.subUpload ?: 0
-                        download = subscriptionInfo?.subDownload ?: 0
-                        total = subscriptionInfo?.subTotal ?: 0
-                        expire = subscriptionInfo?.subExpire ?: 0
+                        upload = subscriptionInfo?.subUpload ?: snapshot.upload
+                        download = subscriptionInfo?.subDownload ?: snapshot.download
+                        total = subscriptionInfo?.subTotal ?: snapshot.total
+                        expire = subscriptionInfo?.subExpire ?: snapshot.expire
                     }
 
                     val imported = Imported(
@@ -91,6 +114,12 @@ object ProfileProcessor {
                         )
                         context.pendingDir.resolve(snapshot.uuid.toString()).deleteRecursively()
                         context.sendProfileChanged(snapshot.uuid)
+                    } else {
+                        // Pending row was consumed/edited while we were downloading (e.g.
+                        // release() from a back press): the downloaded content is stale,
+                        // so drop it instead of leaking it in processingDir.
+                        Log.w("Apply ${snapshot.uuid}: pending changed during download, drop result")
+                        context.processingDir.deleteRecursively()
                     }
                 }
             }
@@ -102,11 +131,11 @@ object ProfileProcessor {
      * without replacing the imported profile or consuming the pending edit.
      */
     suspend fun validate(context: Context, uuid: UUID) {
-        withContext(NonCancellable) {
-            processLock.withLock {
-                try {
-                    val snapshot = snapshotPending(context, uuid)
+        withProcessLock {
+            try {
+                val snapshot = snapshotPending(context, uuid)
 
+                ageSecretLock.withLock {
                     Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
                     fetchProfile(
                         context = context,
@@ -114,35 +143,41 @@ object ProfileProcessor {
                         force = snapshot.type != Profile.Type.File,
                         callback = null,
                     )
-                } finally {
-                    context.processingDir.deleteRecursively()
                 }
+            } finally {
+                context.processingDir.deleteRecursively()
             }
         }
     }
 
     suspend fun update(context: Context, uuid: UUID, callback: IFetchObserver?) {
-        withContext(NonCancellable) {
-            processLock.withLock {
-                val snapshot = profileLock.withLock {
-                    val imported =
-                        ImportedDao().queryByUUID(uuid) ?: throw IllegalArgumentException("profile $uuid not found")
+        withProcessLock {
+            val snapshot = profileLock.withLock {
+                val imported =
+                    ImportedDao().queryByUUID(uuid) ?: throw IllegalArgumentException("profile $uuid not found")
 
-                    context.processingDir.deleteRecursively()
-                    context.processingDir.mkdirs()
+                // Same input validation as the manual import path (B-194): rows that
+                // arrived via legacy/migration bundles were never checked.
+                imported.enforceFieldValid()
 
-                    context.importedDir.resolve(imported.uuid.toString())
-                        .copyRecursively(context.processingDir, overwrite = true)
+                context.processingDir.deleteRecursively()
+                context.processingDir.mkdirs()
 
-                    imported
-                }
+                context.importedDir.resolve(imported.uuid.toString())
+                    .copyRecursively(context.processingDir, overwrite = true)
 
+                imported
+            }
+
+            val subscriptionInfo = ageSecretLock.withLock {
                 Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                val subscriptionInfo = fetchProfile(context, snapshot.source, true, callback)
-                val useLocalTraffic = ServiceStore(context)
-                    .getLocalSubscriptionTraffic(snapshot.uuid)
+                fetchProfile(context, snapshot.source, true, callback)
+            }
+            val useLocalTraffic = ServiceStore(context)
+                .getLocalSubscriptionTraffic(snapshot.uuid)
 
+            withContext(NonCancellable) {
                 profileLock.withLock {
                     val imported = ImportedDao().queryByUUID(snapshot.uuid)
                     if (imported != null) {
@@ -192,25 +227,62 @@ object ProfileProcessor {
         force: Boolean,
         callback: IFetchObserver?,
     ): FetchStatus? {
-        var subscriptionInfo: FetchStatus? = null
-        var cb = callback
+        return try {
+            withTimeout(FETCH_TIMEOUT_MS) {
+                var subscriptionInfo: FetchStatus? = null
+                var lastReportAt = 0L
 
-        Clash.fetchAndValid(context.processingDir, source, force) {
-            if (it.action == FetchStatus.Action.SubscriptionInfo) {
-                subscriptionInfo = it
-                return@fetchAndValid
+                Clash.fetchAndValid(context.processingDir, source, force) {
+                    if (it.action == FetchStatus.Action.SubscriptionInfo) {
+                        subscriptionInfo = it
+                        return@fetchAndValid
+                    }
+
+                    // Throttle cross-process progress callbacks: the UI only needs a
+                    // handful per second, and a saturated binder must not stall the fetch.
+                    val now = SystemClock.elapsedRealtime()
+                    if (callback != null && now - lastReportAt >= PROGRESS_REPORT_INTERVAL_MS) {
+                        lastReportAt = now
+                        try {
+                            callback.updateStatus(it)
+                        } catch (e: Exception) {
+                            // A dying/rotating UI process must not silence the whole
+                            // progress stream: skip this one event; a re-bound observer
+                            // receives fresh updates (B-186).
+                            Log.w("Report fetch status: $e", e)
+                        }
+                    }
+                }.await()
+
+                subscriptionInfo
             }
+        } catch (e: TimeoutCancellationException) {
+            throw IllegalStateException(
+                "Fetch profile timed out after ${FETCH_TIMEOUT_MS}ms",
+                e,
+            )
+        }
+    }
 
-            try {
-                cb?.updateStatus(it)
-            } catch (e: Exception) {
-                cb = null
-
-                Log.w("Report fetch status: $e", e)
+    /**
+     * Runs [block] while holding [processLock], waiting at most
+     * [PROCESS_LOCK_TIMEOUT_MS] for a stuck predecessor (A-38). The wait itself is
+     * cancellable; a timeout surfaces as "busy" instead of hanging the caller forever.
+     */
+    private suspend fun <T> withProcessLock(block: suspend () -> T): T {
+        try {
+            withTimeout(PROCESS_LOCK_TIMEOUT_MS) {
+                processLock.lock()
             }
-        }.await()
+        } catch (e: TimeoutCancellationException) {
+            throw IllegalStateException("Another profile operation is in progress", e)
+        }
 
-        return subscriptionInfo
+        try {
+            return block()
+        } finally {
+            processLock.unlock()
+        }
     }
 
     suspend fun delete(context: Context, uuid: UUID) {
@@ -283,7 +355,7 @@ object ProfileProcessor {
         }
     }
 
-    private fun Pending.enforceFieldValid() {
+    private fun enforceFieldValid(name: String, source: String, type: Profile.Type, interval: Long) {
         val scheme = Uri.parse(source)?.scheme?.lowercase(Locale.getDefault())
 
         when {
@@ -297,6 +369,14 @@ object ProfileProcessor {
 
             interval != 0L && TimeUnit.MILLISECONDS.toMinutes(interval) < 15 -> throw IllegalArgumentException("Invalid interval")
         }
+    }
+
+    private fun Pending.enforceFieldValid() {
+        enforceFieldValid(name, source, type, interval)
+    }
+
+    private fun Imported.enforceFieldValid() {
+        enforceFieldValid(name, source, type, interval)
     }
 
 }

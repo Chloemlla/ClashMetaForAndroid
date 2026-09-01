@@ -4,7 +4,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.PartnerApps
 import com.github.kr328.clash.common.constants.PartnerTrust
@@ -15,7 +14,6 @@ import com.github.kr328.clash.service.store.PartnerGrantStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.github.kr328.clash.service.R as ServiceR
 
 /**
  * Floating host for the partner pairing prompt. Deliberately not a [BaseActivity]: its window must
@@ -34,13 +32,15 @@ class PartnerPairingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        NotificationManagerCompat.from(this).cancel(ServiceR.id.nf_partner_pairing)
-
         val request = resolveRequest() ?: run {
             finish()
             return
         }
         val (target, sha256) = request
+
+        // The prompt notification is keyed by package (B-176), so it can only be cleared once the
+        // package being asked about is known.
+        PartnerPairingNotifier.dismiss(this, target)
 
         lifecycleScope.launch {
             // Cross-process SharedPreferences go through the PreferenceProvider ContentProvider;

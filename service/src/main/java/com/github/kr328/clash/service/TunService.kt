@@ -26,6 +26,9 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
     private val self: TunService
         get() = this
 
+    // Written from the runtime coroutine (Dispatchers.IO/Default) and read on the main thread in
+    // onDestroy; without @Volatile the write can stay un-visible and the stop reason is lost (B-179).
+    @Volatile
     private var reason: String? = null
 
     private val runtime = clashRuntime {
@@ -135,7 +138,18 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
 
-        runtime.requestGc()
+        runtime.requestGc(level)
+    }
+
+    override fun onRevoke() {
+        // The system revokes the VPN grant (user toggled it off, or another VPN took over) and
+        // stops this service. Set a reason first so onDestroy can tell "authorization revoked"
+        // apart from a normal user stop (B-195).
+        if (reason == null) {
+            reason = "VPN authorization revoked"
+        }
+
+        super.onRevoke()
     }
 
     /**
@@ -147,8 +161,9 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         store: ServiceStore,
         partnerPackages: Set<String>,
         partnerDenyExclude: Set<String>,
+        partnerCandidates: Set<String>,
     ): Set<String> {
-        val candidates = PartnerApps.installedCandidatePackages(self) + partnerPackages
+        val candidates = partnerCandidates + partnerPackages
         return when (store.accessControlMode) {
             AccessControlMode.AcceptAll -> candidates
             AccessControlMode.AcceptSelected ->
@@ -196,14 +211,20 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             // explicit device-owner approval from the pairing prompt. A known applicationId or
             // the partner meta-data flag alone does not — see PartnerApps KDoc for the rule.
             val grants = PartnerGrantStore(self)
+            // installedPartnerPackages does per-package signing-certificate lookups and
+            // installedCandidatePackages additionally enumerates all installed apps; compute both
+            // once and reuse them for access control and the tunneled-partners record so the
+            // tunnel build does not repeat the enumeration (B-182).
+            val installedPartners = PartnerApps.installedPartnerPackages(self)
             val partnerPackages = if (store.partnerAppAutoAdapt) {
-                PartnerApps.installedPartnerPackages(self) + grants.tunnelablePackages(self)
+                installedPartners + grants.tunnelablePackages(self)
             } else {
                 emptySet()
             }
             // Deny-list exclusion covers the same set, so an impostor squatting a partner
             // applicationId stays excluded from the tunnel.
             val partnerDenyExclude = partnerPackages
+            val partnerCandidates = PartnerApps.installedCandidatePackages(self, installedPartners)
             when (store.accessControlMode) {
                 AccessControlMode.AcceptAll -> Unit
                 AccessControlMode.AcceptSelected -> {
@@ -217,7 +238,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                     }
                 }
             }
-            grants.tunneledPackages = tunneledPartners(store, partnerPackages, partnerDenyExclude)
+            grants.tunneledPackages =
+                tunneledPartners(store, partnerPackages, partnerDenyExclude, partnerCandidates)
 
             // Blocking
             setBlocking(false)
@@ -306,12 +328,19 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             "172.31.*",
             "192.168.*"
         )
-        // Partner clients (e.g. Zhihu++) must keep zhihu/zhimg on the proxy path.
-        // Historical blacklist forced those hosts "direct", which with allowBypass
-        // let apps leave the VPN and never re-enter Clash.
+        // HTTP-proxy exclusion list: hosts that bypass the system HTTP proxy (go direct) even when
+        // the proxy is on. These entries are preserved deliberately — they are third-party vendor
+        // domains that partner clients route through the VPN, and a historical blacklist forced them
+        // "direct", which with allowBypass let apps leave the VPN entirely and never re-enter Clash.
+        // Removing an entry changes runtime behavior for those apps, so each is documented; do not
+        // drop any without verifying the partner client still functions. No UI/config surfaces this
+        // today; it is kept behavior-identical per B-196.
         private val HTTP_PROXY_BLACK_LIST: List<String> = listOf(
+            // JD.com root domain (jd.com app traffic).
             "*jd.com",
+            // iFlytek (Xunfei) IAT speech API used by partner input/assistant integrations.
             "100ime-iat-api.xfyun.cn",
+            // JD.com image CDN (360buy is JD's legacy corporate domain).
             "*360buyimg.com",
         )
     }

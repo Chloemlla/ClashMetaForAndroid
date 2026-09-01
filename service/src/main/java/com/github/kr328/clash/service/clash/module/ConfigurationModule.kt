@@ -5,6 +5,7 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.StatusProvider
+import com.github.kr328.clash.service.ageSecretLock
 import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.store.ServiceStore
@@ -12,6 +13,7 @@ import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendProfileLoaded
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.sync.withLock
 import java.util.*
 
 class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadException>(service) {
@@ -58,9 +60,14 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 val active = ImportedDao().queryByUUID(current)
                     ?: throw NullPointerException("No profile selected")
 
-                Clash.setAgeSecretKey(active.ageSecretKey?.takeIf { it.isNotBlank() })
+                // The age secret is a process-global native variable; hold the shared
+                // lock across "set key + load" so a concurrent profile download cannot
+                // overwrite it mid-load and break decryption (B-168).
+                ageSecretLock.withLock {
+                    Clash.setAgeSecretKey(active.ageSecretKey?.takeIf { it.isNotBlank() })
 
-                Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
+                    Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
+                }
 
                 val remove = SelectionDao().querySelections(active.uuid)
                     .filterNot { Clash.patchSelector(it.proxy, it.selected) }

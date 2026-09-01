@@ -61,6 +61,11 @@
                 <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
             </intent-filter>
         </provider>
+        <!-- No manifest-level android:permission on StatusProvider (B-174): a signature-level
+             permission would require every partner app to declare a uses-permission for a name
+             only CMFA controls, breaking the current partner surface until they are all updated.
+             The real gate is the runtime tier decision in PartnerAccessResolver (pinned certificate
+             / owner grant), with a short-TTL resolve cache and rate-limited pairing prompt. -->
         <provider
             android:name=".StatusProvider"
             android:authorities="${applicationId}.status"
@@ -97,10 +102,6 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="{applicationId}.intent.action.PROFILE_REQUEST_UPDATE" />
-                <data android:scheme="uuid" />
             </intent-filter>
         </receiver>
     </application>

@@ -49,27 +49,30 @@ enum class PartnerGrantDecision { Unknown, Allowed, Denied }
  * pinned. It is bound to the certificate the app presented, so re-signing invalidates it.
  */
 class PartnerGrantStore(context: Context) {
-    private val store = Store(
-        PreferenceProvider.createSharedPreferencesFromContext(context).asStoreProvider()
-    )
+    // Held directly as well as behind [store]: the grant sets must be written in one editor
+    // transaction (B-44), which the per-key Store delegates cannot express. Both views must be
+    // the same instance so a batched write is immediately visible to the delegate readers.
+    private val preferences = PreferenceProvider.createSharedPreferencesFromContext(context)
+
+    private val store = Store(preferences.asStoreProvider())
 
     private var allowedEntries by store.stringSet(
-        key = "partner_grants_allowed",
+        key = KEY_ALLOWED_GRANTS,
         defaultValue = emptySet(),
     )
 
     private var deniedEntries by store.stringSet(
-        key = "partner_grants_denied",
+        key = KEY_DENIED_GRANTS,
         defaultValue = emptySet(),
     )
 
     private var pendingEntries by store.stringSet(
-        key = "partner_grants_pending",
+        key = KEY_PENDING_GRANTS,
         defaultValue = emptySet(),
     )
 
     private var tunneledEntries by store.stringSet(
-        key = "partner_tunneled",
+        key = KEY_TUNNELED_PACKAGES,
         defaultValue = emptySet(),
     )
 
@@ -84,6 +87,14 @@ class PartnerGrantStore(context: Context) {
             tunneledEntries = value
         }
 
+    /**
+     * The decision recorded for [packageName] under [sha256].
+     *
+     * [sha256] must be the digest just read off the *installed* package (see
+     * `PartnerApps.signerDigestsOf`), never one carried in from storage or from the caller: that is
+     * what makes this path enforce the same signer check as [tunnelablePackages], so a package name
+     * reused by a different signer after an uninstall inherits nothing (B-44).
+     */
     fun decisionOf(packageName: String, sha256: String): PartnerGrantDecision {
         val now = System.currentTimeMillis()
         if (matches(allowedEntries, packageName, sha256, now)) {
@@ -102,20 +113,40 @@ class PartnerGrantStore(context: Context) {
     fun decide(packageName: String, sha256: String, allow: Boolean, remember: Boolean) {
         val expiresAt = if (remember) 0L else System.currentTimeMillis() + TRANSIENT_GRANT_MILLIS
         val grant = PartnerGrant(packageName, sha256, expiresAt)
-        allowedEntries = allowedEntries.without(packageName).let {
-            if (allow) it + grant.encode() else it
-        }
-        deniedEntries = deniedEntries.without(packageName).let {
-            if (allow) it else it + grant.encode()
-        }
-        clearPending(packageName)
+        commitGrantChanges(
+            allowed = allowedEntries.without(packageName).let {
+                if (allow) it + grant.encode() else it
+            },
+            denied = deniedEntries.without(packageName).let {
+                if (allow) it else it + grant.encode()
+            },
+            pending = pendingEntries.without(packageName),
+        )
     }
 
     /** Drops every decision about [packageName], returning it to "not yet asked". */
     fun revoke(packageName: String) {
-        allowedEntries = allowedEntries.without(packageName)
-        deniedEntries = deniedEntries.without(packageName)
-        clearPending(packageName)
+        commitGrantChanges(
+            allowed = allowedEntries.without(packageName),
+            denied = deniedEntries.without(packageName),
+            pending = pendingEntries.without(packageName),
+        )
+    }
+
+    /**
+     * Writes all three grant sets in one editor transaction so a kill between them cannot leave a
+     * half-applied decision (e.g. approved but still pending) behind (B-44).
+     */
+    private fun commitGrantChanges(
+        allowed: Set<String>,
+        denied: Set<String>,
+        pending: Set<String>,
+    ) {
+        preferences.edit()
+            .putStringSet(KEY_ALLOWED_GRANTS, allowed)
+            .putStringSet(KEY_DENIED_GRANTS, denied)
+            .putStringSet(KEY_PENDING_GRANTS, pending)
+            .apply()
     }
 
     /** Valid grants, expired entries pruned from storage as a side effect. */
@@ -178,5 +209,10 @@ class PartnerGrantStore(context: Context) {
     companion object {
         /** Lifetime of a "just this once" answer. */
         const val TRANSIENT_GRANT_MILLIS = 10 * 60 * 1000L
+
+        private const val KEY_ALLOWED_GRANTS = "partner_grants_allowed"
+        private const val KEY_DENIED_GRANTS = "partner_grants_denied"
+        private const val KEY_PENDING_GRANTS = "partner_grants_pending"
+        private const val KEY_TUNNELED_PACKAGES = "partner_tunneled"
     }
 }
