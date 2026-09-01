@@ -5,7 +5,7 @@
 ## 当前进度
 
 - 清单总计 249 条：**已修 218，剩余 31**。
-- 已推送批次（main）：`b7ee23f6` → `b51f339c` → `971d2b63`（第三批，CI 全绿 run 33416566471），第四批见下。
+- 已推送批次（main）：`b7ee23f6` → `b51f339c` → `971d2b63`（第三批，CI 全绿 run 33416566471）→ `225ba3c6`（第四批）→ `1b5b27aa`（第四批的备份规则策略修正，CI 全绿 run 33525051456：Verify / AlphaPreRelease / MetaRelease 三 job 全 success）。
 
 ## 工作方式（硬约束，务必遵守）
 
@@ -18,6 +18,9 @@
   轮询用 until 循环，`gh run watch --exit-status` 在 Windows 上不可靠。
 - 子代理的完成报告不可信，只有 `git diff` 与读代码算验证（本批已两次抓到子代理虚报）。
 - 并行修复时给每个子代理**互不相交**的文件集，否则互相覆盖。
+- **推送前先在本地跑 `python .github/scripts/verify-repository-policy.py`**：它是纯静态检查（不是 Gradle 构建，不违反禁本地构建），Verify job 里第一个跑，能省掉一整轮 CI。
+  本地会多报一条 `release.keystore is still reachable from Git history`——CI 是浅克隆看不到，属已知未决项，可忽略。
+  这个脚本会硬性约束一些设计选择，例如备份规则必须是「按文件 opt-in、不得出现 `<exclude>`」，第四批就是先撞了这条才改成 `app.xml` / `ui.xml` 白名单。
 
 ## 提交签名状态（需要用户决定）
 
