@@ -142,8 +142,8 @@ subprojects {
             // predictive back, FGS specialUse, and INTERACT_ACROSS_USERS.
             targetSdk = 37
 
-            versionName = "2.11.33"
-            versionCode = 211033
+            versionName = "2.11.34"
+            versionCode = 211034
 
             if (isApp) {
                 val commitHash = gitCommitHash(rootProject.projectDir)
